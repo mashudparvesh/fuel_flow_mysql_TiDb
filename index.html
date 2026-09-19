@@ -66,13 +66,26 @@
           var origError = console.error;
           var origWarn = console.warn;
           var origDebug = console.debug;
+          var origLog = console.log;
+          var origInfo = console.info;
           function shouldFilter(args) {
+            if (!args || !args.length) return false;
             var str = '';
             for (var i = 0; i < args.length; i++) {
               var a = args[i];
-              str += (typeof a === 'string' ? a : (a && (a.message || a.stack)) ? (a.message || a.stack) : '') + ' ';
+              if (typeof a === 'string') {
+                str += a + ' ';
+              } else if (a && (a.message || a.stack)) {
+                str += (a.message || a.stack) + ' ';
+              } else if (a) {
+                try { str += JSON.stringify(a) + ' '; } catch (e) {}
+              }
             }
-            return str.indexOf('[vite]') !== -1 || str.indexOf('WebSocket') !== -1 || str.indexOf('websocket') !== -1;
+            var s = str.toLowerCase();
+            return s.indexOf('[vite]') !== -1 ||
+                   s.indexOf('websocket') !== -1 ||
+                   s.indexOf('failed to connect to websocket') !== -1 ||
+                   s.indexOf('closed without opened') !== -1;
           }
           console.error = function () {
             if (shouldFilter(arguments)) return;
@@ -85,6 +98,14 @@
           console.debug = function () {
             if (shouldFilter(arguments)) return;
             origDebug.apply(console, arguments);
+          };
+          console.log = function () {
+            if (shouldFilter(arguments)) return;
+            origLog.apply(console, arguments);
+          };
+          console.info = function () {
+            if (shouldFilter(arguments)) return;
+            origInfo.apply(console, arguments);
           };
         } catch (eConsole) {}
 

@@ -1171,9 +1171,24 @@ app.get("/api/database/status", async (req, res) => {
   try {
     const retry = req.query.retry === "true";
     const status = await getMySQLStatus(retry);
-    res.json({ success: true, ...status });
+    const safeError = typeof status.error === "string" ? status.error : status.error && typeof status.error === "object" ? status.error.message || status.error.code || JSON.stringify(status.error) : null;
+    res.json({
+      success: true,
+      ...status,
+      error: safeError
+    });
   } catch (err) {
-    res.status(500).json({ success: false, error: err?.message || "Error checking database status" });
+    const errMsg = typeof err?.message === "string" ? err.message : String(err || "Error checking database status");
+    res.json({
+      success: true,
+      configured: true,
+      connected: false,
+      provider: "TiDB Cloud (Local Fallback Active)",
+      host: "gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
+      port: 4e3,
+      database: "test",
+      error: errMsg
+    });
   }
 });
 app.post("/api/database/sync", async (req, res) => {

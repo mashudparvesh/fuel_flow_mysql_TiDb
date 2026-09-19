@@ -54,6 +54,23 @@ const DEFAULT_TIDB_CONFIG: DBStatusData = {
   lastChecked: new Date().toISOString()
 };
 
+// Safe helper to convert any potential error object ({ code, message }) into a renderable string
+function sanitizeErrorString(err: any): string {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  if (typeof err === 'object') {
+    if (err.message && err.code) return `${err.message} (${err.code})`;
+    if (err.message) return String(err.message);
+    if (err.code) return `Error code: ${err.code}`;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'An unexpected error occurred';
+    }
+  }
+  return String(err);
+}
+
 export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen, onClose }) => {
   const {
     allTenants,
@@ -94,14 +111,21 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
 
       const data = await res.json();
       if (data && typeof data === 'object') {
+        const extractedError = sanitizeErrorString(data.error) ||
+          (!data.success && data.message ? sanitizeErrorString(data.message) : '');
+
         setStatus(prev => ({
-          ...prev,
-          ...data,
-          configured: true,
-          host: data.host || prev.host,
-          port: data.port || prev.port,
-          database: data.database || prev.database,
-          user: data.user || prev.user || '3vs45pD8HohQ35M.root',
+          success: Boolean(data.success),
+          configured: Boolean(data.configured ?? true),
+          connected: Boolean(data.connected),
+          provider: typeof data.provider === 'string' ? data.provider : prev.provider,
+          host: typeof data.host === 'string' ? data.host : prev.host,
+          port: typeof data.port === 'number' ? data.port : prev.port,
+          database: typeof data.database === 'string' ? data.database : prev.database,
+          user: typeof data.user === 'string' ? data.user : prev.user || '3vs45pD8HohQ35M.root',
+          pingMs: typeof data.pingMs === 'number' ? data.pingMs : prev.pingMs,
+          tableCounts: (data.tableCounts && typeof data.tableCounts === 'object') ? data.tableCounts : prev.tableCounts,
+          error: extractedError || null,
           lastChecked: new Date().toISOString()
         }));
       }
@@ -165,9 +189,10 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
         });
         await fetchStatus(true);
       } else {
+        const syncErrMsg = sanitizeErrorString(result.error) || sanitizeErrorString(result.message) || 'সিঙ্ক ব্যর্থ হয়েছে। ডাটাবেস সংযোগ পরীক্ষা করুন।';
         setSyncResult({
           success: false,
-          message: result.error || 'সিঙ্ক ব্যর্থ হয়েছে। ডাটাবেস সংযোগ পরীক্ষা করুন।'
+          message: syncErrMsg
         });
       }
     } catch (err: any) {
@@ -355,7 +380,7 @@ MYSQL_SSL=true`;
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                       {status.connected
                         ? `Host: ${status.host} | Database: ${status.database} | Ping Latency: ${status.pingMs || 120}ms`
-                        : (status.error || 'আপনার নতুন তৈরি করা সাবস্ক্রাইবার ও সকল ডাটা নিরাপদে লোকাল স্টোরেজে সংরক্ষিত রয়েছে।')}
+                        : (sanitizeErrorString(status.error) || 'আপনার নতুন তৈরি করা সাবস্ক্রাইবার ও সকল ডাটা নিরাপদে লোকাল স্টোরেজে সংরক্ষিত রয়েছে।')}
                     </p>
                   </div>
                 </div>
