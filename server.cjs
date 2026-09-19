@@ -4,6 +4,10 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -20,8 +24,15 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // server.ts
+var server_exports = {};
+__export(server_exports, {
+  app: () => app,
+  default: () => server_default
+});
+module.exports = __toCommonJS(server_exports);
 var import_express = __toESM(require("express"), 1);
 var import_path2 = __toESM(require("path"), 1);
 var import_fs2 = __toESM(require("fs"), 1);
@@ -968,346 +979,346 @@ function saveUsers(usersList) {
 }
 var activeTenants = loadTenants();
 var activeUsers = loadUsers();
-async function startServer() {
-  const app = (0, import_express.default)();
-  initMySQLDatabase().catch((err) => {
-    console.warn("[MySQL] Auto-initialization error (running fallback mode):", err?.message || err);
-  });
-  app.use(import_express.default.json());
-  app.use("/api", (req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("Surrogate-Control", "no-store");
-    next();
-  });
-  const checkTenantStatusMiddleware = (req, res, next) => {
-    const tenantIdOrCode = req.headers["x-tenant-id"] || req.headers["x-tenant-code"] || req.query.tenant_id || req.body?.tenant_id;
-    if (tenantIdOrCode) {
-      const tenant = activeTenants.find(
-        (t) => t.id === tenantIdOrCode || t.code?.toUpperCase() === String(tenantIdOrCode).toUpperCase()
-      );
-      if (tenant) {
-        if (tenant.deleted_at) {
-          res.status(403).json({
-            success: false,
-            suspended: true,
-            error: "Your company account has been suspended. Please contact support."
-          });
-          return;
-        }
-        if (tenant.status === "suspended" || tenant.status === "inactive" || tenant.subscription?.status === "suspended") {
-          res.status(403).json({
-            success: false,
-            suspended: true,
-            error: "Your company account has been suspended. Please contact support."
-          });
-          return;
-        }
-      }
-    }
-    next();
-  };
-  app.use("/api/fleet", checkTenantStatusMiddleware);
-  app.get("/api/tenants", async (req, res) => {
-    const dbTenants = await fetchTenantsFromDB();
-    if (dbTenants && dbTenants.length > 0) {
-      activeTenants = dbTenants;
-    } else {
-      activeTenants = loadTenants();
-    }
-    const publicCompanies = activeTenants.filter((t) => !t.deleted_at && (t.status === "active" || !t.status && t.subscription?.status === "active")).map((t) => ({
-      id: t.id,
-      name: t.name,
-      code: t.code,
-      status: t.status || t.subscription?.status || "active",
-      currency: t.currency || "BDT",
-      phone: t.phone,
-      address: t.address,
-      created_at: t.created_at,
-      subscription_plan: t.subscription?.plan,
-      subscription_status: t.subscription?.status || "active"
-    }));
-    res.json({
-      success: true,
-      data: publicCompanies,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  });
-  app.get("/api/tenants/all", async (req, res) => {
-    const dbTenants = await fetchTenantsFromDB();
-    if (dbTenants && dbTenants.length > 0) {
-      activeTenants = dbTenants;
-    } else {
-      activeTenants = loadTenants();
-    }
-    res.json({
-      success: true,
-      data: activeTenants,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  });
-  app.post("/api/tenants", async (req, res) => {
-    try {
-      const newTenant = req.body;
-      if (!newTenant.id || !newTenant.name || !newTenant.code) {
-        res.status(400).json({ success: false, message: "Missing required tenant fields: id, name, code" });
+var app = (0, import_express.default)();
+initMySQLDatabase().catch((err) => {
+  console.warn("[MySQL] Auto-initialization error (running fallback mode):", err?.message || err);
+});
+app.use(import_express.default.json());
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+var checkTenantStatusMiddleware = (req, res, next) => {
+  const tenantIdOrCode = req.headers["x-tenant-id"] || req.headers["x-tenant-code"] || req.query.tenant_id || req.body?.tenant_id;
+  if (tenantIdOrCode) {
+    const tenant = activeTenants.find(
+      (t) => t.id === tenantIdOrCode || t.code?.toUpperCase() === String(tenantIdOrCode).toUpperCase()
+    );
+    if (tenant) {
+      if (tenant.deleted_at) {
+        res.status(403).json({
+          success: false,
+          suspended: true,
+          error: "Your company account has been suspended. Please contact support."
+        });
         return;
       }
-      activeTenants = loadTenants();
-      const existingIdx = activeTenants.findIndex((t) => t.id === newTenant.id || t.code.toUpperCase() === newTenant.code.toUpperCase());
-      const tenantRecord = {
-        ...newTenant,
-        status: newTenant.status || "active",
-        deleted_at: null,
-        created_at: newTenant.created_at || (/* @__PURE__ */ new Date()).toISOString().split("T")[0]
-      };
-      if (existingIdx >= 0) {
-        activeTenants[existingIdx] = tenantRecord;
-      } else {
-        activeTenants.unshift(tenantRecord);
-      }
-      saveTenants(activeTenants);
-      await upsertTenantInDB(tenantRecord).catch((e) => console.warn("[MySQL] Background tenant save error:", e));
-      res.status(201).json({
-        success: true,
-        message: "Subscriber created and synchronized across all sessions successfully.",
-        tenant: tenantRecord
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err?.message || "Server error creating tenant" });
-    }
-  });
-  app.patch("/api/tenants/:id/status", async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    activeTenants = loadTenants();
-    const tenant = activeTenants.find((t) => t.id === id);
-    if (!tenant) {
-      res.status(404).json({ success: false, message: "Tenant not found." });
-      return;
-    }
-    tenant.status = status;
-    if (tenant.subscription) {
-      tenant.subscription.status = status;
-    }
-    saveTenants(activeTenants);
-    await updateTenantStatusInDB(id, status).catch((e) => console.warn("[MySQL] Status update error:", e));
-    res.json({
-      success: true,
-      message: `Tenant ${tenant.name} status updated to ${status}.`,
-      tenant
-    });
-  });
-  app.delete("/api/tenants/:id", async (req, res) => {
-    const { id } = req.params;
-    activeTenants = loadTenants();
-    const tenant = activeTenants.find((t) => t.id === id);
-    if (!tenant) {
-      res.status(404).json({ success: false, message: "Tenant not found." });
-      return;
-    }
-    tenant.deleted_at = (/* @__PURE__ */ new Date()).toISOString();
-    tenant.status = "inactive";
-    if (tenant.subscription) {
-      tenant.subscription.status = "suspended";
-    }
-    saveTenants(activeTenants);
-    await softDeleteTenantInDB(id).catch((e) => console.warn("[MySQL] Soft delete error:", e));
-    res.json({
-      success: true,
-      message: `Tenant ${tenant.name} soft-deleted successfully.`
-    });
-  });
-  app.get("/api/users", async (req, res) => {
-    const dbUsers = await fetchUsersFromDB();
-    if (dbUsers && dbUsers.length > 0) {
-      activeUsers = dbUsers;
-    } else {
-      activeUsers = loadUsers();
-    }
-    res.json({
-      success: true,
-      data: activeUsers,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  });
-  app.post("/api/users", async (req, res) => {
-    try {
-      const newUser = req.body;
-      if (!newUser.id || !newUser.username || !newUser.tenant_id) {
-        res.status(400).json({ success: false, message: "Missing user fields: id, username, tenant_id" });
+      if (tenant.status === "suspended" || tenant.status === "inactive" || tenant.subscription?.status === "suspended") {
+        res.status(403).json({
+          success: false,
+          suspended: true,
+          error: "Your company account has been suspended. Please contact support."
+        });
         return;
       }
-      activeUsers = loadUsers();
-      const existingIdx = activeUsers.findIndex((u) => u.id === newUser.id || u.tenant_id === newUser.tenant_id && u.username.toLowerCase() === newUser.username.toLowerCase());
-      if (existingIdx >= 0) {
-        activeUsers[existingIdx] = { ...activeUsers[existingIdx], ...newUser };
-      } else {
-        activeUsers.unshift(newUser);
-      }
-      saveUsers(activeUsers);
-      await upsertUserInDB(newUser).catch((e) => console.warn("[MySQL] User save error:", e));
-      res.status(201).json({
-        success: true,
-        message: "User synchronized successfully across all browser sessions.",
-        user: newUser
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err?.message || "Server error syncing user" });
     }
-  });
-  app.get("/api/database/status", async (req, res) => {
-    try {
-      const retry = req.query.retry === "true";
-      const status = await getMySQLStatus(retry);
-      res.json({ success: true, ...status });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err?.message || "Error checking database status" });
-    }
-  });
-  app.post("/api/database/sync", async (req, res) => {
-    try {
-      const result = await syncAllDataToMySQL(req.body);
-      if (req.body.tenants && Array.isArray(req.body.tenants) && req.body.tenants.length > 0) {
-        activeTenants = req.body.tenants;
-        saveTenants(activeTenants);
-      }
-      if (req.body.users && Array.isArray(req.body.users) && req.body.users.length > 0) {
-        activeUsers = req.body.users;
-        saveUsers(activeUsers);
-      }
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ success: false, error: err?.message || "Sync failed" });
-    }
-  });
-  app.get("/api/database/schema-sql", (req, res) => {
-    try {
-      const schemaPath = import_path2.default.join(process.cwd(), "fuelflow_schema.sql");
-      if (import_fs2.default.existsSync(schemaPath)) {
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        res.setHeader("Content-Disposition", 'attachment; filename="fuelflow_mysql_schema.sql"');
-        res.sendFile(schemaPath);
-      } else {
-        res.status(404).send("Schema file not found");
-      }
-    } catch (err) {
-      res.status(500).send(err?.message || "Error reading schema file");
-    }
-  });
-  app.get("/api/database/guide", (req, res) => {
-    res.json({
-      success: true,
-      recommendation: {
-        provider: "TiDB Cloud Serverless",
-        url: "https://tidbcloud.com",
-        benefits: [
-          "100% MySQL 8.0 wire-compatible",
-          "5 GB storage FREE forever (no credit card required)",
-          "High availability, automatic backups, and SSL encryption",
-          "Scale-to-zero with zero cold-start delay"
-        ],
-        steps: [
-          "1. Go to https://tidbcloud.com and sign up for free (Google Login supported).",
-          '2. Click "Create Cluster" -> Select "Serverless" (Free Tier).',
-          "3. Choose region nearest to you (e.g., Singapore or Mumbai).",
-          "4. Create cluster (takes 5-10 seconds).",
-          '5. Click "Connect" -> Note Host, Port (4000), User, Password, and Database name (test or fuelflow).',
-          "6. Set MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_SSL=true in your environment variables.",
-          "7. Run fuelflow_schema.sql in TiDB SQL Editor or let FuelNest auto-migrate!"
-        ]
-      },
-      alternatives: [
-        {
-          name: "Aiven MySQL",
-          url: "https://aiven.io",
-          info: "Free trial & cloud instances available."
-        },
-        {
-          name: "FreeDB",
-          url: "https://freedb.tech",
-          info: "Free remote MySQL databases."
-        },
-        {
-          name: "Local / cPanel MySQL",
-          url: "localhost / cPanel phpMyAdmin",
-          info: "Self-hosted MySQL or standard web hosting MySQL."
-        }
-      ]
-    });
-  });
-  app.post("/api/auth/login", (req, res) => {
-    const { tenant_id, tenant_code, username, password } = req.body;
+  }
+  next();
+};
+app.use("/api/fleet", checkTenantStatusMiddleware);
+app.get("/api/tenants", async (req, res) => {
+  const dbTenants = await fetchTenantsFromDB();
+  if (dbTenants && dbTenants.length > 0) {
+    activeTenants = dbTenants;
+  } else {
     activeTenants = loadTenants();
+  }
+  const publicCompanies = activeTenants.filter((t) => !t.deleted_at && (t.status === "active" || !t.status && t.subscription?.status === "active")).map((t) => ({
+    id: t.id,
+    name: t.name,
+    code: t.code,
+    status: t.status || t.subscription?.status || "active",
+    currency: t.currency || "BDT",
+    phone: t.phone,
+    address: t.address,
+    created_at: t.created_at,
+    subscription_plan: t.subscription?.plan,
+    subscription_status: t.subscription?.status || "active"
+  }));
+  res.json({
+    success: true,
+    data: publicCompanies,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+app.get("/api/tenants/all", async (req, res) => {
+  const dbTenants = await fetchTenantsFromDB();
+  if (dbTenants && dbTenants.length > 0) {
+    activeTenants = dbTenants;
+  } else {
+    activeTenants = loadTenants();
+  }
+  res.json({
+    success: true,
+    data: activeTenants,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+app.post("/api/tenants", async (req, res) => {
+  try {
+    const newTenant = req.body;
+    if (!newTenant.id || !newTenant.name || !newTenant.code) {
+      res.status(400).json({ success: false, message: "Missing required tenant fields: id, name, code" });
+      return;
+    }
+    activeTenants = loadTenants();
+    const existingIdx = activeTenants.findIndex((t) => t.id === newTenant.id || t.code.toUpperCase() === newTenant.code.toUpperCase());
+    const tenantRecord = {
+      ...newTenant,
+      status: newTenant.status || "active",
+      deleted_at: null,
+      created_at: newTenant.created_at || (/* @__PURE__ */ new Date()).toISOString().split("T")[0]
+    };
+    if (existingIdx >= 0) {
+      activeTenants[existingIdx] = tenantRecord;
+    } else {
+      activeTenants.unshift(tenantRecord);
+    }
+    saveTenants(activeTenants);
+    await upsertTenantInDB(tenantRecord).catch((e) => console.warn("[MySQL] Background tenant save error:", e));
+    res.status(201).json({
+      success: true,
+      message: "Subscriber created and synchronized across all sessions successfully.",
+      tenant: tenantRecord
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || "Server error creating tenant" });
+  }
+});
+app.patch("/api/tenants/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  activeTenants = loadTenants();
+  const tenant = activeTenants.find((t) => t.id === id);
+  if (!tenant) {
+    res.status(404).json({ success: false, message: "Tenant not found." });
+    return;
+  }
+  tenant.status = status;
+  if (tenant.subscription) {
+    tenant.subscription.status = status;
+  }
+  saveTenants(activeTenants);
+  await updateTenantStatusInDB(id, status).catch((e) => console.warn("[MySQL] Status update error:", e));
+  res.json({
+    success: true,
+    message: `Tenant ${tenant.name} status updated to ${status}.`,
+    tenant
+  });
+});
+app.delete("/api/tenants/:id", async (req, res) => {
+  const { id } = req.params;
+  activeTenants = loadTenants();
+  const tenant = activeTenants.find((t) => t.id === id);
+  if (!tenant) {
+    res.status(404).json({ success: false, message: "Tenant not found." });
+    return;
+  }
+  tenant.deleted_at = (/* @__PURE__ */ new Date()).toISOString();
+  tenant.status = "inactive";
+  if (tenant.subscription) {
+    tenant.subscription.status = "suspended";
+  }
+  saveTenants(activeTenants);
+  await softDeleteTenantInDB(id).catch((e) => console.warn("[MySQL] Soft delete error:", e));
+  res.json({
+    success: true,
+    message: `Tenant ${tenant.name} soft-deleted successfully.`
+  });
+});
+app.get("/api/users", async (req, res) => {
+  const dbUsers = await fetchUsersFromDB();
+  if (dbUsers && dbUsers.length > 0) {
+    activeUsers = dbUsers;
+  } else {
     activeUsers = loadUsers();
-    const cleanUser = String(username || "").trim().toLowerCase();
-    const cleanPass = String(password || "").trim();
-    let targetTenant = activeTenants.find(
-      (t) => tenant_id && t.id === tenant_id || tenant_code && t.code.toUpperCase() === String(tenant_code).toUpperCase()
-    );
-    if (!targetTenant) {
-      targetTenant = activeTenants.find(
-        (t) => t.subscription?.super_admin_username?.toLowerCase() === cleanUser || activeUsers.some((u) => u.tenant_id === t.id && (u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser))
-      );
-    }
-    if (!targetTenant) {
-      res.status(404).json({ success: false, message: "Company / Tenant not found." });
+  }
+  res.json({
+    success: true,
+    data: activeUsers,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+app.post("/api/users", async (req, res) => {
+  try {
+    const newUser = req.body;
+    if (!newUser.id || !newUser.username || !newUser.tenant_id) {
+      res.status(400).json({ success: false, message: "Missing user fields: id, username, tenant_id" });
       return;
     }
-    if (targetTenant.deleted_at || targetTenant.status === "suspended" || targetTenant.status === "inactive" || targetTenant.subscription?.status === "suspended" || targetTenant.subscription?.status === "inactive") {
-      res.status(403).json({
-        success: false,
-        suspended: true,
-        message: "This account is suspended. Please contact the support team."
-      });
-      return;
+    activeUsers = loadUsers();
+    const existingIdx = activeUsers.findIndex((u) => u.id === newUser.id || u.tenant_id === newUser.tenant_id && u.username.toLowerCase() === newUser.username.toLowerCase());
+    if (existingIdx >= 0) {
+      activeUsers[existingIdx] = { ...activeUsers[existingIdx], ...newUser };
+    } else {
+      activeUsers.unshift(newUser);
     }
-    let matchedUser = activeUsers.find(
-      (u) => u.tenant_id === targetTenant.id && (u.username.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser)
-    );
-    if (!matchedUser && targetTenant.subscription?.super_admin_username) {
-      if (targetTenant.subscription.super_admin_username.toLowerCase() === cleanUser) {
-        matchedUser = {
-          id: "usr_sa_" + targetTenant.id,
-          tenant_id: targetTenant.id,
-          name: targetTenant.contact_person || `${targetTenant.name} Admin`,
-          email: targetTenant.email || `${cleanUser}@example.com`,
-          username: targetTenant.subscription.super_admin_username,
-          password: targetTenant.subscription.super_admin_password,
-          phone: targetTenant.phone || "",
-          role: "super_admin",
-          role_title_bn: "\u0995\u09CB\u09AE\u09CD\u09AA\u09BE\u09A8\u09BF \u09B8\u09C1\u09AA\u09BE\u09B0 \u0985\u09CD\u09AF\u09BE\u09A1\u09AE\u09BF\u09A8 (Super Admin)",
-          status: "active",
-          allowed_category_ids: ["all"],
-          allowed_pump_ids: ["all"],
-          permissions: {
-            can_add_fuel: true,
-            can_manage_vehicles: true,
-            can_manage_pumps: true,
-            can_view_reports: true,
-            can_manage_users: true,
-            can_edit_settings: true
-          },
-          created_at: targetTenant.created_at || "2026-08-01"
-        };
-        activeUsers.unshift(matchedUser);
-        saveUsers(activeUsers);
-      }
-    }
-    res.json({
+    saveUsers(activeUsers);
+    await upsertUserInDB(newUser).catch((e) => console.warn("[MySQL] User save error:", e));
+    res.status(201).json({
       success: true,
-      message: "Credentials verified.",
-      tenant: targetTenant,
-      user: matchedUser
+      message: "User synchronized successfully across all browser sessions.",
+      user: newUser
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message || "Server error syncing user" });
+  }
+});
+app.get("/api/database/status", async (req, res) => {
+  try {
+    const retry = req.query.retry === "true";
+    const status = await getMySQLStatus(retry);
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || "Error checking database status" });
+  }
+});
+app.post("/api/database/sync", async (req, res) => {
+  try {
+    const result = await syncAllDataToMySQL(req.body);
+    if (req.body.tenants && Array.isArray(req.body.tenants) && req.body.tenants.length > 0) {
+      activeTenants = req.body.tenants;
+      saveTenants(activeTenants);
+    }
+    if (req.body.users && Array.isArray(req.body.users) && req.body.users.length > 0) {
+      activeUsers = req.body.users;
+      saveUsers(activeUsers);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || "Sync failed" });
+  }
+});
+app.get("/api/database/schema-sql", (req, res) => {
+  try {
+    const schemaPath = import_path2.default.join(process.cwd(), "fuelflow_schema.sql");
+    if (import_fs2.default.existsSync(schemaPath)) {
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="fuelflow_mysql_schema.sql"');
+      res.sendFile(schemaPath);
+    } else {
+      res.status(404).send("Schema file not found");
+    }
+  } catch (err) {
+    res.status(500).send(err?.message || "Error reading schema file");
+  }
+});
+app.get("/api/database/guide", (req, res) => {
+  res.json({
+    success: true,
+    recommendation: {
+      provider: "TiDB Cloud Serverless",
+      url: "https://tidbcloud.com",
+      benefits: [
+        "100% MySQL 8.0 wire-compatible",
+        "5 GB storage FREE forever (no credit card required)",
+        "High availability, automatic backups, and SSL encryption",
+        "Scale-to-zero with zero cold-start delay"
+      ],
+      steps: [
+        "1. Go to https://tidbcloud.com and sign up for free (Google Login supported).",
+        '2. Click "Create Cluster" -> Select "Serverless" (Free Tier).',
+        "3. Choose region nearest to you (e.g., Singapore or Mumbai).",
+        "4. Create cluster (takes 5-10 seconds).",
+        '5. Click "Connect" -> Note Host, Port (4000), User, Password, and Database name (test or fuelflow).',
+        "6. Set MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_SSL=true in your environment variables.",
+        "7. Run fuelflow_schema.sql in TiDB SQL Editor or let FuelNest auto-migrate!"
+      ]
+    },
+    alternatives: [
+      {
+        name: "Aiven MySQL",
+        url: "https://aiven.io",
+        info: "Free trial & cloud instances available."
+      },
+      {
+        name: "FreeDB",
+        url: "https://freedb.tech",
+        info: "Free remote MySQL databases."
+      },
+      {
+        name: "Local / cPanel MySQL",
+        url: "localhost / cPanel phpMyAdmin",
+        info: "Self-hosted MySQL or standard web hosting MySQL."
+      }
+    ]
   });
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+});
+app.post("/api/auth/login", (req, res) => {
+  const { tenant_id, tenant_code, username, password } = req.body;
+  activeTenants = loadTenants();
+  activeUsers = loadUsers();
+  const cleanUser = String(username || "").trim().toLowerCase();
+  const cleanPass = String(password || "").trim();
+  let targetTenant = activeTenants.find(
+    (t) => tenant_id && t.id === tenant_id || tenant_code && t.code.toUpperCase() === String(tenant_code).toUpperCase()
+  );
+  if (!targetTenant) {
+    targetTenant = activeTenants.find(
+      (t) => t.subscription?.super_admin_username?.toLowerCase() === cleanUser || activeUsers.some((u) => u.tenant_id === t.id && (u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser))
+    );
+  }
+  if (!targetTenant) {
+    res.status(404).json({ success: false, message: "Company / Tenant not found." });
+    return;
+  }
+  if (targetTenant.deleted_at || targetTenant.status === "suspended" || targetTenant.status === "inactive" || targetTenant.subscription?.status === "suspended" || targetTenant.subscription?.status === "inactive") {
+    res.status(403).json({
+      success: false,
+      suspended: true,
+      message: "This account is suspended. Please contact the support team."
+    });
+    return;
+  }
+  let matchedUser = activeUsers.find(
+    (u) => u.tenant_id === targetTenant.id && (u.username.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser)
+  );
+  if (!matchedUser && targetTenant.subscription?.super_admin_username) {
+    if (targetTenant.subscription.super_admin_username.toLowerCase() === cleanUser) {
+      matchedUser = {
+        id: "usr_sa_" + targetTenant.id,
+        tenant_id: targetTenant.id,
+        name: targetTenant.contact_person || `${targetTenant.name} Admin`,
+        email: targetTenant.email || `${cleanUser}@example.com`,
+        username: targetTenant.subscription.super_admin_username,
+        password: targetTenant.subscription.super_admin_password,
+        phone: targetTenant.phone || "",
+        role: "super_admin",
+        role_title_bn: "\u0995\u09CB\u09AE\u09CD\u09AA\u09BE\u09A8\u09BF \u09B8\u09C1\u09AA\u09BE\u09B0 \u0985\u09CD\u09AF\u09BE\u09A1\u09AE\u09BF\u09A8 (Super Admin)",
+        status: "active",
+        allowed_category_ids: ["all"],
+        allowed_pump_ids: ["all"],
+        permissions: {
+          can_add_fuel: true,
+          can_manage_vehicles: true,
+          can_manage_pumps: true,
+          can_view_reports: true,
+          can_manage_users: true,
+          can_edit_settings: true
+        },
+        created_at: targetTenant.created_at || "2026-08-01"
+      };
+      activeUsers.unshift(matchedUser);
+      saveUsers(activeUsers);
+    }
+  }
+  res.json({
+    success: true,
+    message: "Credentials verified.",
+    tenant: targetTenant,
+    user: matchedUser
   });
-  const isBundled = Boolean(true);
-  const isDev = !isBundled && process.env.NODE_ENV === "development";
-  const isProduction = !isDev;
+});
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+});
+var isBundled = Boolean(true);
+var isDev = !isBundled && process.env.NODE_ENV === "development";
+var isProduction = !isDev;
+async function startServer() {
   if (isDev) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -1334,5 +1345,12 @@ async function startServer() {
     console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? "production" : "development"})`);
   });
 }
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+var server_default = app;
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  app
+});
 //# sourceMappingURL=server.cjs.map

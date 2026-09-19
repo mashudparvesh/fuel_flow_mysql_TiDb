@@ -1,7 +1,7 @@
 export type UserRole = 'super_admin' | 'company_owner' | 'supervisor' | 'operator' | 'accountant' | 'client_viewer';
 
 export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise' | 'custom';
-export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial';
+export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial' | 'inactive';
 
 export interface TenantSubscription {
   plan: SubscriptionPlan;
@@ -84,6 +84,8 @@ export interface SaasOwnerProfile {
 
 export interface ModeratorPermissions {
   can_manage_subscribers: boolean;
+  can_manage_subscriptions?: boolean;
+  can_add_subscribers?: boolean;
   can_extend_subscriptions: boolean;
   can_manage_pricing: boolean;
   can_view_financials: boolean;
@@ -169,6 +171,7 @@ export interface VehicleCategory {
   name: string;
   metric_type: 'kmpl' | 'lph'; // KMPL = km/liter for vehicles, LPH = liters/hour for heavy equipment & generators
   default_benchmark: number;
+  tolerance_percentage?: number;
   icon_name: string;
   description: string;
 }

@@ -386,7 +386,9 @@ export const CompanyUserManagementView: React.FC = () => {
                     <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-1.5">
                       {u.name}
                       {u.role === 'super_admin' && (
-                        <Crown className="w-4 h-4 text-amber-500 inline" title="Primary Company Super Admin" />
+                        <span title="Primary Company Super Admin">
+                          <Crown className="w-4 h-4 text-amber-500 inline" />
+                        </span>
                       )}
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">

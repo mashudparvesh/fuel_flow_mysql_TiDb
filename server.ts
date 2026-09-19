@@ -291,26 +291,25 @@ function saveUsers(usersList: any[]) {
 let activeTenants = loadTenants();
 let activeUsers = loadUsers();
 
-async function startServer() {
-  const app = express();
+export const app = express();
 
-  // Initialize MySQL connection in background (non-blocking)
-  initMySQLDatabase().catch(err => {
-    console.warn('[MySQL] Auto-initialization error (running fallback mode):', err?.message || err);
-  });
+// Initialize MySQL connection in background (non-blocking)
+initMySQLDatabase().catch(err => {
+  console.warn('[MySQL] Auto-initialization error (running fallback mode):', err?.message || err);
+});
 
-  app.use(express.json());
+app.use(express.json());
 
-  // Prevent ANY client or intermediary HTTP caching on all /api/* routes (ISSUE 1 Fix)
-  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
-    next();
-  });
+// Prevent ANY client or intermediary HTTP caching on all /api/* routes (ISSUE 1 Fix)
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
 
-  // Global CheckTenantStatus Middleware for all fleet and tenant scoped operations (ISSUE 2 Fix)
+// Global CheckTenantStatus Middleware for all fleet and tenant scoped operations (ISSUE 2 Fix)
   const checkTenantStatusMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const tenantIdOrCode = req.headers['x-tenant-id'] || req.headers['x-tenant-code'] || req.query.tenant_id || req.body?.tenant_id;
     if (tenantIdOrCode) {
@@ -719,36 +718,42 @@ async function startServer() {
   const isDev = !isBundled && process.env.NODE_ENV === "development";
   const isProduction = !isDev;
 
-  if (isDev) {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-      },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-
-    app.use(express.static(distPath));
-    app.get("*", (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, "index.html"), (err) => {
-        if (err && !res.headersSent) {
-          res.status(500).send("FuelNest application index could not be loaded.");
-        }
+  async function startServer() {
+    if (isDev) {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: {
+          middlewareMode: true,
+          hmr: false,
+        },
+        appType: "spa",
       });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+
+      app.use(express.static(distPath));
+      app.get("*", (req: Request, res: Response) => {
+        res.sendFile(path.join(distPath, "index.html"), (err) => {
+          if (err && !res.headersSent) {
+            res.status(500).send("FuelNest application index could not be loaded.");
+          }
+        });
+      });
+    }
+
+    // Port 3000 is the hardcoded entrypoint required by the platform infrastructure.
+    // The nginx reverse proxy listens on 8080 and proxies all requests to port 3000.
+    const PORT = 3000;
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
     });
   }
 
-  // Port 3000 is the hardcoded entrypoint required by the platform infrastructure.
-  // The nginx reverse proxy listens on 8080 and proxies all requests to port 3000.
-  const PORT = 3000;
+  // Only start standalone HTTP server when not running in Vercel Serverless environment
+  if (!process.env.VERCEL) {
+    startServer();
+  }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
-  });
-}
-
-startServer();
+  export default app;

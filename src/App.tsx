@@ -16,6 +16,7 @@ import { CompanyUserManagementView } from './components/CompanyUserManagementVie
 import { AuthSwitcherModal } from './components/AuthSwitcherModal';
 import { LoginPage } from './components/LoginPage';
 import { DatabaseStatusModal } from './components/DatabaseStatusModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Fuel, QrCode, PanelLeftOpen } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -227,8 +228,10 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

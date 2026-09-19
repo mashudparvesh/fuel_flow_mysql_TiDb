@@ -44,7 +44,7 @@ import {
   X
 } from 'lucide-react';
 
-export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void }> = ({ onOpenCompanyUserManagement }) => {
+export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void; onSwitchToFleetView?: () => void }> = ({ onOpenCompanyUserManagement, onSwitchToFleetView }) => {
   const {
     language,
     saasOwner,
@@ -334,10 +334,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       phone: newModForm.phone,
       status: 'active',
       permissions: {
-        can_manage_subscriptions: newModForm.can_manage_subscriptions,
-        can_reset_passwords: newModForm.can_reset_passwords,
-        can_add_subscribers: newModForm.can_add_subscribers,
-        can_view_financials: newModForm.can_view_financials
+        can_manage_subscribers: Boolean(newModForm.can_add_subscribers || newModForm.can_manage_subscriptions),
+        can_extend_subscriptions: Boolean(newModForm.can_manage_subscriptions),
+        can_manage_pricing: false,
+        can_view_financials: Boolean(newModForm.can_view_financials),
+        can_impersonate: false,
+        can_reset_passwords: Boolean(newModForm.can_reset_passwords),
+        can_manage_subscriptions: Boolean(newModForm.can_manage_subscriptions),
+        can_add_subscribers: Boolean(newModForm.can_add_subscribers)
       }
     });
 

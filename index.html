@@ -63,6 +63,32 @@
         }, true);
 
         try {
+          var origError = console.error;
+          var origWarn = console.warn;
+          var origDebug = console.debug;
+          function shouldFilter(args) {
+            var str = '';
+            for (var i = 0; i < args.length; i++) {
+              var a = args[i];
+              str += (typeof a === 'string' ? a : (a && (a.message || a.stack)) ? (a.message || a.stack) : '') + ' ';
+            }
+            return str.indexOf('[vite]') !== -1 || str.indexOf('WebSocket') !== -1 || str.indexOf('websocket') !== -1;
+          }
+          console.error = function () {
+            if (shouldFilter(arguments)) return;
+            origError.apply(console, arguments);
+          };
+          console.warn = function () {
+            if (shouldFilter(arguments)) return;
+            origWarn.apply(console, arguments);
+          };
+          console.debug = function () {
+            if (shouldFilter(arguments)) return;
+            origDebug.apply(console, arguments);
+          };
+        } catch (eConsole) {}
+
+        try {
           var savedTheme = localStorage.getItem('fuelflow_v1_theme');
           // Default is 'dark', only switch to light if explicitly saved as 'light'
           var isLight = savedTheme === 'light';
