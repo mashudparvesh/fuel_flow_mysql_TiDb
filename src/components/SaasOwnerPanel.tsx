@@ -367,7 +367,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <span>SaaS Master Control Panel (প্ল্যাটফর্ম ওনার)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              {language === 'bn' ? 'ফুয়েলফ্লো SaaS প্ল্যাটফর্ম কন্ট্রোল প্যানেল' : 'FuelFlow SaaS Platform Master Control'}
+              {language === 'bn' ? 'ফুয়েলনেস্ট (FuelNest) SaaS প্ল্যাটফর্ম কন্ট্রোল প্যানেল' : 'FuelNest SaaS Platform Master Control • fuelnest.xyz'}
             </h1>
             <p className="text-slate-300 text-sm leading-relaxed">
               {language === 'bn'

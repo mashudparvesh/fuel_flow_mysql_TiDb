@@ -348,7 +348,7 @@ export const TankerBowzerView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `FuelFlow_Bowzer_Stock_${currentTanker?.tanker_name.replace(/\s+/g, '_')}_${dateFrom || 'all'}_to_${dateTo || 'all'}.csv`;
+    a.download = `FuelNest_Bowzer_Stock_${currentTanker?.tanker_name.replace(/\s+/g, '_')}_${dateFrom || 'all'}_to_${dateTo || 'all'}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

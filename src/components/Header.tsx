@@ -73,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const t = {
-    appName: 'FuelFlow',
-    tagline: 'Fleet & Fuel Management System',
+    appName: 'FuelNest',
+    tagline: 'Fleet & Fuel Intelligence • fuelnest.xyz',
     quickEntry: 'New Fuel Entry',
     scanQr: 'QR Scan',
     schemaBtn: 'Laravel Schema',

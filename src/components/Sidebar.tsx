@@ -277,8 +277,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer Info */}
         <div className="p-3 border-t border-slate-200 dark:border-blue-900/60 bg-slate-50/50 dark:bg-[#080e1e]/60 space-y-2">
           <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-            <span>FuelFlow Engine</span>
-            <span className="font-mono text-slate-400 dark:text-slate-500">SaaS Multi-Tenant</span>
+            <span className="font-bold text-amber-500">FuelNest Engine</span>
+            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">fuelnest.xyz</span>
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 leading-snug">
             All DB models include <code className="text-slate-600 dark:text-slate-300 font-semibold">user_id</code> & <code className="text-slate-600 dark:text-slate-300 font-semibold">tenant_id</code>

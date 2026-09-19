@@ -197,9 +197,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' 
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-black text-lg tracking-tight text-white">FuelFlow</span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                SaaS Fleet Edition
+              <span className="font-black text-lg tracking-tight text-white">FuelNest</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                fuelnest.xyz
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
@@ -583,7 +583,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' 
 
       {/* Footer */}
       <footer className="w-full px-4 py-4 text-center text-xs text-slate-500 border-t border-slate-800/60 z-10">
-        <span>FuelFlow SaaS Multi-Tenant Cloud Architecture • 100% Isolated Databases & RBAC</span>
+        <span>FuelNest SaaS Multi-Tenant Cloud Architecture • fuelnest.xyz • 100% Isolated Databases & RBAC</span>
       </footer>
     </div>
   );

@@ -103,7 +103,7 @@ export const PumpCreditView: React.FC = () => {
       name: currentUser?.name || 'Authorized Accounts In-charge',
       roleTitle: currentUser?.role_title_bn ? `${currentUser.role_title_bn} (${currentUser.role})` : (currentUser?.role || 'Fleet Operator'),
       roleTitleBn: currentUser?.role_title_bn || 'Fleet In-charge',
-      email: currentUser?.email || 'accounts@fuelflow.cloud',
+      email: currentUser?.email || 'accounts@fuelnest.xyz',
       phone: currentUser?.phone || '',
       username: currentUser?.username || currentUser?.id || 'EMP-001'
     };
@@ -792,7 +792,7 @@ export const PumpCreditView: React.FC = () => {
       selectedPumpFilter === 'all'
         ? 'All_Pumps'
         : pumps.find(p => p.id === selectedPumpFilter)?.name.replace(/\s+/g, '_') || 'Pump';
-    a.download = `FuelFlow_Pump_Ledger_${filterPumpName}_${dateFrom || 'start'}_to_${dateTo || 'end'}.csv`;
+    a.download = `FuelNest_Pump_Ledger_${filterPumpName}_${dateFrom || 'start'}_to_${dateTo || 'end'}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

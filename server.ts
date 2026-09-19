@@ -594,7 +594,7 @@ async function startServer() {
           '4. Create cluster (takes 5-10 seconds).',
           '5. Click "Connect" -> Note Host, Port (4000), User, Password, and Database name (test or fuelflow).',
           '6. Set MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_SSL=true in your environment variables.',
-          '7. Run fuelflow_schema.sql in TiDB SQL Editor or let FuelFlow auto-migrate!'
+          '7. Run fuelflow_schema.sql in TiDB SQL Editor or let FuelNest auto-migrate!'
         ]
       },
       alternatives: [
@@ -736,7 +736,7 @@ async function startServer() {
     app.get("*", (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, "index.html"), (err) => {
         if (err && !res.headersSent) {
-          res.status(500).send("FuelFlow application index could not be loaded.");
+          res.status(500).send("FuelNest application index could not be loaded.");
         }
       });
     });
@@ -747,14 +747,14 @@ async function startServer() {
   const PORT = isProduction ? (Number(process.env.PORT) || 3000) : 3000;
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`FuelFlow Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
+    console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
   });
 
   // If running in production on a custom port like 8080, also bind 3000 as fallback
   if (isProduction && PORT !== 3000) {
     try {
       const backupServer = app.listen(3000, "0.0.0.0", () => {
-        console.log(`FuelFlow Server also listening on http://0.0.0.0:3000`);
+        console.log(`FuelNest Server also listening on http://0.0.0.0:3000`);
       });
       backupServer.on("error", () => {
         // Silently ignore if port 3000 is occupied

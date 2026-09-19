@@ -185,7 +185,7 @@ export async function generateCleanVectorPdf(
         pdf.setFontSize(8);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 6, { align: 'center' });
-        pdf.text('FuelFlow Cloud Audit & Fleet Intelligence System', margin, pageHeight - 6);
+        pdf.text('FuelNest Cloud Audit & Fleet Intelligence System • fuelnest.xyz', margin, pageHeight - 6);
       }
     });
 
@@ -239,7 +239,7 @@ export async function generateCleanVectorPdf(
     }
 
     onProgress?.('Saving PDF file...');
-    pdf.save(data.filename || 'FuelFlow_Audit_Report.pdf');
+    pdf.save(data.filename || 'FuelNest_Audit_Report.pdf');
 
     return { success: true };
   } catch (err: any) {
@@ -484,7 +484,7 @@ export async function generateCleanPumpStatementPdf(
         pdf.setFontSize(7.5);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 5, { align: 'center' });
-        pdf.text('FuelFlow Fleet Audit & Reconciliation System', margin, pageHeight - 5);
+        pdf.text('FuelNest Fleet Audit & Reconciliation System • fuelnest.xyz', margin, pageHeight - 5);
       }
     });
 
@@ -550,7 +550,7 @@ export async function generateCleanPumpStatementPdf(
         pdf.setFontSize(7.5);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 5, { align: 'center' });
-        pdf.text('FuelFlow Fleet Audit & Reconciliation System', margin, pageHeight - 5);
+        pdf.text('FuelNest Fleet Audit & Reconciliation System • fuelnest.xyz', margin, pageHeight - 5);
       }
     });
 
@@ -622,7 +622,7 @@ export async function downloadElementAsA4Pdf(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const {
-      filename = `FuelFlow_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+      filename = `FuelNest_Report_${new Date().toISOString().split('T')[0]}.pdf`,
       orientation = 'landscape',
       scale = 2,
       onProgress

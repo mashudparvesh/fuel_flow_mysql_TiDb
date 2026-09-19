@@ -482,7 +482,7 @@ export const ReportsView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `FuelFlow_${reportType}_(${rows.length}_records)_${dateFrom || 'all'}_to_${dateTo || 'present'}.csv`;
+    link.download = `FuelNest_${reportType}_(${rows.length}_records)_${dateFrom || 'all'}_to_${dateTo || 'present'}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -517,7 +517,7 @@ export const ReportsView: React.FC = () => {
       name: currentUser?.name || 'Authorized Fleet In-charge',
       roleTitle: currentUser?.role_title_bn ? `${currentUser.role_title_bn} (${currentUser.role})` : (currentUser?.role || 'Fleet Operator'),
       roleTitleBn: currentUser?.role_title_bn || 'Fleet In-charge',
-      email: currentUser?.email || 'operator@fuelflow.cloud',
+      email: currentUser?.email || 'operator@fuelnest.xyz',
       phone: currentUser?.phone || '',
       username: currentUser?.username || currentUser?.id || 'EMP-001',
       designation: currentUser?.role_title_bn || 'Fleet In-charge'
@@ -558,7 +558,7 @@ export const ReportsView: React.FC = () => {
 
     const targetCompanySlug = selectedTargetCompany ? `_${selectedTargetCompany.code}` : '';
     const dateRangeSlug = `${dateFrom || 'start'}_to_${dateTo || 'end'}`;
-    const filename = `FuelFlow_${reportType}${targetCompanySlug}_${dateRangeSlug}_A4.pdf`;
+    const filename = `FuelNest_${reportType}${targetCompanySlug}_${dateRangeSlug}_A4.pdf`;
 
     let reportTitle = t.reportTypeVehicle;
     let tableHeaders: string[] = [];

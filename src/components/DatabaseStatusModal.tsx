@@ -481,7 +481,7 @@ MYSQL_SSL=true`}
               </div>
 
               <div className="rounded-xl bg-slate-900 p-4 border border-slate-800 text-slate-200 font-mono text-[11px] max-h-72 overflow-y-auto">
-                <pre>{`-- FuelFlow Database Schema (fuelflow_schema.sql)
+                <pre>{`-- FuelNest Database Schema (fuelnest.xyz / TiDB Cloud)
 CREATE TABLE IF NOT EXISTS tenants (...);
 CREATE TABLE IF NOT EXISTS users (...);
 CREATE TABLE IF NOT EXISTS vehicles (...);

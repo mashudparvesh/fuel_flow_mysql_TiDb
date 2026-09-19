@@ -1,6 +1,6 @@
 {
-  "name": "FuelFlow v7 Mysql",
-  "description": "Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system.",
+  "name": "FuelNest",
+  "description": "Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system for fuelnest.xyz.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

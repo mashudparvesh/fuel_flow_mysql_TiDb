@@ -32,7 +32,7 @@ export const INITIAL_MODERATORS: SaasModerator[] = [
     name: 'Tanvir Ahmed (SaaS Ops)',
     username: 'tanvir_ops',
     password: 'mod12345',
-    email: 'ops@fuelflow.cloud',
+    email: 'ops@fuelnest.xyz',
     phone: '+880 1911-223344',
     role: 'saas_moderator',
     status: 'active',
