@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function () {
+        try {
+          var _origFetch = window.fetch;
+          var currentFetch = typeof _origFetch === 'function' ? _origFetch.bind(window) : _origFetch;
+          try {
+            Object.defineProperty(window, 'fetch', {
+              get: function () {
+                return currentFetch;
+              },
+              set: function (newFetch) {
+                currentFetch = newFetch;
+              },
+              configurable: true,
+              enumerable: true,
+            });
+          } catch (e1) {
+            try {
+              Object.defineProperty(Window.prototype, 'fetch', {
+                get: function () {
+                  return currentFetch;
+                },
+                set: function (newFetch) {
+                  currentFetch = newFetch;
+                },
+                configurable: true,
+                enumerable: true,
+              });
+            } catch (e2) {}
+          }
+        } catch (e) {}
+
+        window.addEventListener('error', function (event) {
+          var msg = event && (event.message || (event.error && event.error.message) || '');
+          if (msg && (
+            (msg.indexOf('fetch') !== -1 && msg.indexOf('getter') !== -1) ||
+            msg.indexOf('WebSocket') !== -1 ||
+            msg.indexOf('websocket') !== -1 ||
+            msg.indexOf('[vite]') !== -1
+          )) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event && event.reason;
+          var msg = (typeof reason === 'string') ? reason : (reason && (reason.message || reason.stack) ? (reason.message || reason.stack) : '');
+          if (msg && (
+            msg.indexOf('WebSocket') !== -1 ||
+            msg.indexOf('websocket') !== -1 ||
+            msg.indexOf('[vite]') !== -1
+          )) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+
+        try {
+          var savedTheme = localStorage.getItem('fuelflow_v1_theme');
+          // Default is 'dark', only switch to light if explicitly saved as 'light'
+          var isLight = savedTheme === 'light';
+          if (isLight) {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FuelFlow v7 Mysql</title>
+    <meta name="description" content="Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system." />
+    <meta property="og:title" content="FuelFlow v7 Mysql" />
+    <meta property="og:description" content="Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-amber-500 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

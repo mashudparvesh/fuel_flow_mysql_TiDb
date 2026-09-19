@@ -1,0 +1,447 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   FuelFlow Typography & Theming
+   Professional English & Bengali Typography
+   Deep Blue & Yellow High-Contrast Aesthetic
+   ============================================================ */
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Times New Roman", Times, "Tiro Bangla", Georgia, serif;
+}
+
+html {
+  font-family: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Light mode defaults */
+body {
+  font-family: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+/* Professional Bengali typography */
+:lang(bn),
+[lang="bn"],
+.font-bangla {
+  font-family: "Hind Siliguri", "Anek Bangla", "Noto Sans Bengali", sans-serif;
+  letter-spacing: 0;
+  line-height: 1.55;
+}
+
+/* Dedicated Times New Roman A4 Document & Print Styling */
+.font-times-new-roman,
+.a4-document-container {
+  font-family: "Times New Roman", Times, "Tiro Bangla", serif !important;
+}
+
+.a4-document-container * {
+  font-family: inherit;
+}
+
+/* Exact A4 Print Dimensions: 210mm x 297mm */
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
+@media print {
+  /* Hide all app navigation, headers, sidebars, buttons, modals, and toolbars (ISSUE 5 Fix) */
+  aside,
+  header,
+  nav,
+  .sidebar,
+  .no-print,
+  button,
+  .print\:hidden,
+  [data-no-print="true"],
+  #desktop-reopen-sidebar-btn {
+    display: none !important;
+  }
+
+  body, html, html.dark body, html.dark {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  #root, main, .flex-1 {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: block !important;
+  }
+
+  /* Isolate and expand printable report sheet */
+  #printable-report-area,
+  #printable-pump-statement-area,
+  .a4-document-container {
+    display: block !important;
+    visibility: visible !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  /* Page break rules for clean multi-page document printing */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  tr, td, th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  /* Avoid splitting signature blocks or KPI summary cards across pages */
+  .signature-block,
+  .audit-signatures,
+  .kpi-summary-box,
+  .letterhead-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Dark Mode Canvas & Body */
+html.dark body {
+  background-color: #060b18;
+  color: #f8fafc;
+}
+
+/* ------------------------------------------------------------
+   Deep Blue Surface Hierarchy
+   Canvas: #060b18 | Header/Nav: #0a1226 | Cards: #0f1a36 | Surface 2: #142247
+   ------------------------------------------------------------ */
+html.dark .bg-white {
+  background-color: #0f1a36 !important;
+  color: #f8fafc;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #060b18 !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #142247 !important;
+  color: #f8fafc;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #1c3060 !important;
+  color: #f8fafc;
+}
+
+html.dark .bg-slate-800 {
+  background-color: #0c152e !important;
+  color: #f8fafc;
+}
+
+/* Deep Blue button with Yellow accent */
+html.dark .bg-slate-900 {
+  background-color: #14244d !important;
+  color: #fde047 !important;
+  border-color: #294680 !important;
+}
+
+/* ------------------------------------------------------------
+   Borders & Dividers: Clean, visible Navy Blue Borders
+   ------------------------------------------------------------ */
+html.dark .border-slate-200,
+html.dark .border-slate-100 {
+  border-color: #1e3567 !important;
+}
+
+html.dark .border-slate-300 {
+  border-color: #26427e !important;
+}
+
+html.dark .border-slate-700,
+html.dark .border-slate-800 {
+  border-color: #1e3567 !important;
+}
+
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #16284e !important;
+}
+
+/* ------------------------------------------------------------
+   Typography: Ultra-Clear, High-Contrast Visibility
+   Eliminates all low-contrast, dim, or unreadable text
+   ------------------------------------------------------------ */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #ffffff !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-gray-700 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-gray-500 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-400,
+html.dark .text-gray-400 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-300 {
+  color: #e2e8f0 !important;
+}
+
+/* ------------------------------------------------------------
+   Yellow & Amber Accents (Deep Blue + Yellow Palette)
+   High visibility callouts, badges, headers, and highlights
+   ------------------------------------------------------------ */
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700,
+html.dark .text-amber-600 {
+  color: #fde047 !important;
+}
+
+html.dark .text-amber-500,
+html.dark .text-amber-400 {
+  color: #facc15 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 {
+  background-color: rgba(250, 204, 21, 0.16) !important;
+  border-color: rgba(250, 204, 21, 0.45) !important;
+  color: #fde047 !important;
+}
+
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+  border-color: rgba(250, 204, 21, 0.5) !important;
+}
+
+html.dark .bg-amber-500 {
+  background-color: #facc15 !important;
+  color: #060b18 !important;
+  font-weight: 800;
+}
+
+/* ------------------------------------------------------------
+   Status Badges (Vibrant against Deep Blue)
+   ------------------------------------------------------------ */
+/* Blue */
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  color: #93c5fd !important;
+}
+
+html.dark .text-blue-900,
+html.dark .text-blue-800,
+html.dark .text-blue-700 {
+  color: #93c5fd !important;
+}
+
+/* Emerald / Green */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-emerald-700,
+html.dark .text-emerald-600,
+html.dark .text-emerald-500 {
+  color: #34d399 !important;
+}
+
+/* Red / Danger */
+html.dark .bg-red-50,
+html.dark .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark .text-red-900,
+html.dark .text-red-800,
+html.dark .text-red-700,
+html.dark .text-red-600,
+html.dark .text-red-500 {
+  color: #f87171 !important;
+}
+
+/* Purple */
+html.dark .bg-purple-50,
+html.dark .bg-purple-100 {
+  background-color: rgba(168, 85, 247, 0.2) !important;
+  border-color: rgba(168, 85, 247, 0.45) !important;
+  color: #d8b4fe !important;
+}
+
+html.dark .text-purple-900,
+html.dark .text-purple-800,
+html.dark .text-purple-700 {
+  color: #d8b4fe !important;
+}
+
+/* ------------------------------------------------------------
+   Form Controls (Inputs, Selects, Dropdowns, Textareas)
+   ------------------------------------------------------------ */
+html.dark input:not([type="radio"]):not([type="checkbox"]),
+html.dark select,
+html.dark textarea {
+  background-color: #091226 !important;
+  color: #ffffff !important;
+  border-color: #243f75 !important;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #facc15 !important;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25) !important;
+  outline: none !important;
+}
+
+html.dark select option {
+  background-color: #0f1a36 !important;
+  color: #ffffff !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* ------------------------------------------------------------
+   Tables & Data Grids
+   ------------------------------------------------------------ */
+html.dark table th {
+  background-color: #132247 !important;
+  color: #fde047 !important;
+  border-color: #1e3567 !important;
+  font-weight: 700;
+}
+
+html.dark table td {
+  color: #f1f5f9 !important;
+  border-color: #16284e !important;
+}
+
+html.dark table tr:hover td {
+  background-color: #172a56 !important;
+}
+
+/* ------------------------------------------------------------
+   Dropdowns, Modals & Floating Panels
+   ------------------------------------------------------------ */
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(2, 6, 18, 0.9) !important;
+}
+
+/* ------------------------------------------------------------
+   Hover & Interactive States
+   ------------------------------------------------------------ */
+html.dark [class*="hover:bg-slate-50"]:hover {
+  background-color: #142247 !important;
+}
+
+html.dark [class*="hover:bg-slate-100"]:hover {
+  background-color: #182a55 !important;
+}
+
+html.dark [class*="hover:bg-slate-200"]:hover {
+  background-color: #20366b !important;
+}
+
+html.dark [class*="hover:text-slate-900"]:hover,
+html.dark [class*="hover:text-slate-800"]:hover {
+  color: #ffffff !important;
+}
+
+html.dark [class*="hover:text-amber-600"]:hover {
+  color: #fde047 !important;
+}
+
+/* Custom Scrollbar for Dark Mode */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #060b18;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e3567;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #2b498a;
+}
+
+/* ------------------------------------------------------------
+   Print Media Styling for Official Pump Statements
+   ------------------------------------------------------------ */
+@media print {
+  body, html, html.dark body, html.dark {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .printable-statement {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+}
+
