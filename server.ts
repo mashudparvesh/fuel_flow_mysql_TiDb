@@ -742,27 +742,13 @@ async function startServer() {
     });
   }
 
-  // Cloud Run assigns an ingress port via process.env.PORT (typically 8080).
-  // In development, the dev reverse proxy strictly requires port 3000.
-  const PORT = isProduction ? (Number(process.env.PORT) || 3000) : 3000;
+  // Port 3000 is the hardcoded entrypoint required by the platform infrastructure.
+  // The nginx reverse proxy listens on 8080 and proxies all requests to port 3000.
+  const PORT = 3000;
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
   });
-
-  // If running in production on a custom port like 8080, also bind 3000 as fallback
-  if (isProduction && PORT !== 3000) {
-    try {
-      const backupServer = app.listen(3000, "0.0.0.0", () => {
-        console.log(`FuelNest Server also listening on http://0.0.0.0:3000`);
-      });
-      backupServer.on("error", () => {
-        // Silently ignore if port 3000 is occupied
-      });
-    } catch {
-      // Ignore
-    }
-  }
 }
 
 startServer();

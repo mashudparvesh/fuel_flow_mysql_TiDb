@@ -58,16 +58,35 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
   const fetchStatus = async (forceRetry: boolean = false) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/database/status${forceRetry ? '?retry=true' : ''}`);
+      const res = await fetch(`/api/database/status${forceRetry ? '?retry=true' : ''}`, {
+        headers: { Accept: 'application/json' }
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setStatus({
+          success: false,
+          configured: false,
+          connected: false,
+          provider: 'Local Storage Mode',
+          error: `API সার্ভার রেসপন্স (HTTP ${res.status})। আপনার নতুন সাবস্ক্রাইবার ও সমস্ত ডাটা লোকাল স্টোরেজে ১০০% সুরক্ষিত রয়েছে।`,
+          lastChecked: new Date().toISOString()
+        });
+        return;
+      }
+
       const data = await res.json();
       setStatus(data);
     } catch (err: any) {
+      const msg = err?.message || '';
+      const isJsonParseError = msg.includes('JSON') || msg.includes('Unexpected token');
       setStatus({
         success: false,
         configured: false,
         connected: false,
-        provider: 'Connection Error',
-        error: err?.message || 'Could not reach server',
+        provider: 'Local Storage Mode',
+        error: isJsonParseError
+          ? 'সার্ভার থেকে অ-JSON রেসপন্স এসেছে। অ্যাপটি সুরক্ষিত লোকাল ফাইল/ব্রাউজার মোডে চলছে।'
+          : (err?.message || 'Could not reach server'),
         lastChecked: new Date().toISOString()
       });
     } finally {
@@ -97,9 +116,21 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
 
       const res = await fetch('/api/database/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
         body: JSON.stringify(payload)
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setSyncResult({
+          success: false,
+          message: `সার্ভার API রেসপন্স পাওয়া যায়নি (HTTP ${res.status})। আপনার ডাটা লোকাল স্টোরেজে সুরক্ষিত রয়েছে।`
+        });
+        return;
+      }
+
       const result = await res.json();
       if (result.success) {
         setSyncResult({
@@ -114,9 +145,13 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
         });
       }
     } catch (err: any) {
+      const msg = err?.message || '';
+      const isJsonParseError = msg.includes('JSON') || msg.includes('Unexpected token');
       setSyncResult({
         success: false,
-        message: err?.message || 'Network error during sync'
+        message: isJsonParseError
+          ? 'সার্ভার সংযোগ ত্রুটি (Non-JSON response)। ডাটা লোকাল স্টোরেজে সুরক্ষিত আছে।'
+          : (err?.message || 'Network error during sync')
       });
     } finally {
       setIsSyncing(false);
