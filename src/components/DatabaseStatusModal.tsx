@@ -57,18 +57,35 @@ const DEFAULT_TIDB_CONFIG: DBStatusData = {
 // Safe helper to convert any potential error object ({ code, message }) into a renderable string
 function sanitizeErrorString(err: any): string {
   if (!err) return '';
-  if (typeof err === 'string') return err;
-  if (typeof err === 'object') {
-    if (err.message && err.code) return `${err.message} (${err.code})`;
-    if (err.message) return String(err.message);
-    if (err.code) return `Error code: ${err.code}`;
-    try {
-      return JSON.stringify(err);
-    } catch {
-      return 'An unexpected error occurred';
+  let str = '';
+  if (typeof err === 'string') {
+    str = err;
+  } else if (typeof err === 'object') {
+    if (err.message && err.code) str = `${err.message} (${err.code})`;
+    else if (err.message) str = String(err.message);
+    else if (err.code) str = `Error code: ${err.code}`;
+    else {
+      try {
+        str = JSON.stringify(err);
+      } catch {
+        str = 'An unexpected error occurred';
+      }
     }
+  } else {
+    str = String(err);
   }
-  return String(err);
+
+  // Gracefully translate Vercel generic 500 messages into helpful diagnostic text
+  if (
+    str.includes('A server error has occurred') ||
+    str.includes('HTTP Error 500') ||
+    str.includes('Internal Server Error') ||
+    str.includes('Failed to fetch')
+  ) {
+    return 'লোকাল স্টোরেজ মোড সক্রিয় রয়েছে। গিটহাবে নতুন ভার্সন পুশ করার পর Vercel স্বয়ংক্রিয়ভাবে সরাসরি TiDB ক্লাউডে কানেক্ট হবে।';
+  }
+
+  return str;
 }
 
 export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen, onClose }) => {
