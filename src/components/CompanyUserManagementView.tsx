@@ -283,7 +283,7 @@ export const CompanyUserManagementView: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-6 transition-opacity duration-150">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 text-white shadow-lg border border-indigo-950 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">

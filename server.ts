@@ -11,7 +11,14 @@ import {
   softDeleteTenantInDB,
   fetchUsersFromDB,
   upsertUserInDB,
-  syncAllDataToMySQL
+  syncAllDataToMySQL,
+  fetchFleetDataFromDB,
+  deleteVehicleInDB,
+  deleteFuelEntryInDB,
+  deletePumpInDB,
+  deletePaymentInDB,
+  deleteCategoryInDB,
+  deleteTankerInDB
 } from "./server/mysql.ts";
 
 // Initial fallback tenant data
@@ -287,18 +294,158 @@ function saveUsers(usersList: any[]) {
   }
 }
 
+const FLEET_FILE = path.join(DATA_DIR, 'fleet.json');
+
+export interface FleetStore {
+  vehicles: any[];
+  fuelEntries: any[];
+  pumps: any[];
+  payments: any[];
+  categories: any[];
+  companies: any[];
+  vendors: any[];
+  fuelTypes: any[];
+  tankers: any[];
+  tankerLogs: any[];
+}
+
+function loadFleetData(): FleetStore {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(FLEET_FILE)) {
+      const raw = fs.readFileSync(FLEET_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          vehicles: Array.isArray(parsed.vehicles) ? parsed.vehicles : [],
+          fuelEntries: Array.isArray(parsed.fuelEntries) ? parsed.fuelEntries : [],
+          pumps: Array.isArray(parsed.pumps) ? parsed.pumps : [],
+          payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+          categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+          companies: Array.isArray(parsed.companies) ? parsed.companies : [],
+          vendors: Array.isArray(parsed.vendors) ? parsed.vendors : [],
+          fuelTypes: Array.isArray(parsed.fuelTypes) ? parsed.fuelTypes : [],
+          tankers: Array.isArray(parsed.tankers) ? parsed.tankers : [],
+          tankerLogs: Array.isArray(parsed.tankerLogs) ? parsed.tankerLogs : []
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error reading fleet file:', err);
+  }
+  return {
+    vehicles: [],
+    fuelEntries: [],
+    pumps: [],
+    payments: [],
+    categories: [],
+    companies: [],
+    vendors: [],
+    fuelTypes: [],
+    tankers: [],
+    tankerLogs: []
+  };
+}
+
+function saveFleetData(data: Partial<FleetStore>) {
+  try {
+    ensureDataDir();
+    const current = loadFleetData();
+    const merged: FleetStore = {
+      vehicles: data.vehicles !== undefined ? data.vehicles : current.vehicles,
+      fuelEntries: data.fuelEntries !== undefined ? data.fuelEntries : current.fuelEntries,
+      pumps: data.pumps !== undefined ? data.pumps : current.pumps,
+      payments: data.payments !== undefined ? data.payments : current.payments,
+      categories: data.categories !== undefined ? data.categories : current.categories,
+      companies: data.companies !== undefined ? data.companies : current.companies,
+      vendors: data.vendors !== undefined ? data.vendors : current.vendors,
+      fuelTypes: data.fuelTypes !== undefined ? data.fuelTypes : current.fuelTypes,
+      tankers: data.tankers !== undefined ? data.tankers : current.tankers,
+      tankerLogs: data.tankerLogs !== undefined ? data.tankerLogs : current.tankerLogs
+    };
+    fs.writeFileSync(FLEET_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving fleet file:', err);
+  }
+}
+
 // Global in-memory + file-backed tenant and user registry
 let activeTenants = loadTenants();
 let activeUsers = loadUsers();
 
 export const app = express();
 
+// Security Hardening: Disable technology stack fingerprinting
+app.disable("x-powered-by");
+
+// Security Hardening: Apply OWASP-recommended HTTP security headers
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Download-Options", "noopen");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  next();
+});
+
+// Security Hardening: Prototype Pollution & Payload Depth Guard
+function sanitizeIncomingPayload(obj: any, depth = 0): any {
+  if (depth > 12) return null; // Prevent deep recursive payload bombs
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(item => sanitizeIncomingPayload(item, depth + 1));
+  const clean: Record<string, any> = {};
+  for (const key of Object.keys(obj)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      continue; // Strip prototype pollution vectors
+    }
+    clean[key] = sanitizeIncomingPayload(obj[key], depth + 1);
+  }
+  return clean;
+}
+
+// In-memory brute-force rate limiter for authentication endpoints
+const authRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function rateLimitAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  const forwarded = req.headers["x-forwarded-for"];
+  const ip = (typeof forwarded === "string" ? forwarded.split(",")[0] : req.socket.remoteAddress || "127.0.0.1").trim();
+  const now = Date.now();
+  const windowMs = 5 * 60 * 1000; // 5 minute window
+  const maxAttempts = 30; // Max 30 attempts per 5 minutes
+
+  const record = authRateLimitMap.get(ip);
+  if (!record || now > record.resetAt) {
+    authRateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
+    return next();
+  }
+
+  if (record.count >= maxAttempts) {
+    return res.status(429).json({
+      success: false,
+      message: "Too many login attempts. For security reasons, please wait 5 minutes before trying again."
+    });
+  }
+
+  record.count += 1;
+  next();
+}
+
 // Initialize MySQL connection in background (non-blocking)
 initMySQLDatabase().catch(err => {
   console.warn('[MySQL] Auto-initialization error (running fallback mode):', err?.message || err);
 });
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
+
+// Sanitize request body to prevent Prototype Pollution
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.body && typeof req.body === "object") {
+    req.body = sanitizeIncomingPayload(req.body);
+  }
+  next();
+});
+
+// Protect auth endpoints with brute force protection
+app.use(['/api/login', '/api/control-login'], rateLimitAuthMiddleware);
 
 // Prevent ANY client or intermediary HTTP caching on all /api/* routes (ISSUE 1 Fix)
 app.use('/api', (req: Request, res: Response, next: NextFunction) => {
@@ -352,20 +499,12 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       activeTenants = loadTenants();
     }
 
-    // STRICT FILTER: Only return active, non-deleted tenants
+    // STRICT FILTER: Return non-deleted tenants with complete details preserved
     const publicCompanies = activeTenants
-      .filter(t => !t.deleted_at && (t.status === 'active' || (!t.status && t.subscription?.status === 'active')))
+      .filter(t => !t.deleted_at)
       .map(t => ({
-        id: t.id,
-        name: t.name,
-        code: t.code,
-        status: t.status || t.subscription?.status || 'active',
-        currency: t.currency || 'BDT',
-        phone: t.phone,
-        address: t.address,
-        created_at: t.created_at,
-        subscription_plan: t.subscription?.plan,
-        subscription_status: t.subscription?.status || 'active'
+        ...t,
+        status: t.status || t.subscription?.status || 'active'
       }));
 
     res.json({
@@ -599,6 +738,335 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     }
   });
 
+  // 5.7 Fleet Data - Unified Cross-Browser & Cloud Sync Endpoints
+  app.get('/api/fleet/all', async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.query.tenant_id as string | undefined;
+      const dbFleet = await fetchFleetDataFromDB(tenantId);
+      const fileFleet = loadFleetData();
+
+      if (dbFleet && (
+        dbFleet.vehicles.length > 0 ||
+        dbFleet.fuelEntries.length > 0 ||
+        dbFleet.pumps.length > 0 ||
+        dbFleet.categories.length > 0
+      )) {
+        saveFleetData(dbFleet);
+        res.json({
+          success: true,
+          source: 'cloud_database',
+          data: dbFleet,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      if (fileFleet.vehicles.length > 0 || fileFleet.fuelEntries.length > 0) {
+        syncAllDataToMySQL(fileFleet).catch(() => {});
+      }
+
+      res.json({
+        success: true,
+        source: 'persistent_disk_backup',
+        data: fileFleet,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'Failed to fetch fleet data' });
+    }
+  });
+
+  app.post('/api/fleet/sync', async (req: Request, res: Response) => {
+    try {
+      const payload = req.body || {};
+      saveFleetData(payload);
+      const dbResult = await syncAllDataToMySQL(payload);
+
+      res.json({
+        success: true,
+        message: 'Fleet records synchronized to cloud database and local backup.',
+        dbResult
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'Sync failed' });
+    }
+  });
+
+  app.post('/api/fleet/vehicles', async (req: Request, res: Response) => {
+    try {
+      const vehicle = req.body;
+      const store = loadFleetData();
+      const idx = store.vehicles.findIndex(v => v.id === vehicle.id);
+      if (idx >= 0) {
+        store.vehicles[idx] = vehicle;
+      } else {
+        store.vehicles.unshift(vehicle);
+      }
+      saveFleetData({ vehicles: store.vehicles });
+      await syncAllDataToMySQL({ vehicles: [vehicle] });
+      res.status(201).json({ success: true, vehicle });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/vehicles/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.vehicles.findIndex(v => v.id === id);
+      if (idx >= 0) {
+        store.vehicles[idx] = { ...store.vehicles[idx], ...updates };
+        saveFleetData({ vehicles: store.vehicles });
+        await syncAllDataToMySQL({ vehicles: [store.vehicles[idx]] });
+        res.json({ success: true, vehicle: store.vehicles[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Vehicle not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/vehicles/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.vehicles = store.vehicles.filter(v => v.id !== id);
+      saveFleetData({ vehicles: store.vehicles });
+      await deleteVehicleInDB(id);
+      res.json({ success: true, message: 'Vehicle deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/fuel-entries', async (req: Request, res: Response) => {
+    try {
+      const entry = req.body;
+      const store = loadFleetData();
+      const idx = store.fuelEntries.findIndex(e => e.id === entry.id);
+      if (idx >= 0) {
+        store.fuelEntries[idx] = entry;
+      } else {
+        store.fuelEntries.unshift(entry);
+      }
+      saveFleetData({ fuelEntries: store.fuelEntries });
+      await syncAllDataToMySQL({ fuelEntries: [entry] });
+      res.status(201).json({ success: true, entry });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/fuel-entries/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.fuelEntries = store.fuelEntries.filter(e => e.id !== id);
+      saveFleetData({ fuelEntries: store.fuelEntries });
+      await deleteFuelEntryInDB(id);
+      res.json({ success: true, message: 'Fuel entry deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/pumps', async (req: Request, res: Response) => {
+    try {
+      const pump = req.body;
+      const store = loadFleetData();
+      const idx = store.pumps.findIndex(p => p.id === pump.id);
+      if (idx >= 0) {
+        store.pumps[idx] = pump;
+      } else {
+        store.pumps.unshift(pump);
+      }
+      saveFleetData({ pumps: store.pumps });
+      await syncAllDataToMySQL({ pumps: [pump] });
+      res.status(201).json({ success: true, pump });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/pumps/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.pumps.findIndex(p => p.id === id);
+      if (idx >= 0) {
+        store.pumps[idx] = { ...store.pumps[idx], ...updates };
+        saveFleetData({ pumps: store.pumps });
+        await syncAllDataToMySQL({ pumps: [store.pumps[idx]] });
+        res.json({ success: true, pump: store.pumps[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Pump not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/pumps/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.pumps = store.pumps.filter(p => p.id !== id);
+      saveFleetData({ pumps: store.pumps });
+      await deletePumpInDB(id);
+      res.json({ success: true, message: 'Pump deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/payments', async (req: Request, res: Response) => {
+    try {
+      const payment = req.body;
+      const store = loadFleetData();
+      const idx = store.payments.findIndex(pm => pm.id === payment.id);
+      if (idx >= 0) {
+        store.payments[idx] = payment;
+      } else {
+        store.payments.unshift(payment);
+      }
+      saveFleetData({ payments: store.payments });
+      await syncAllDataToMySQL({ payments: [payment] });
+      res.status(201).json({ success: true, payment });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/payments/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.payments = store.payments.filter(pm => pm.id !== id);
+      saveFleetData({ payments: store.payments });
+      await deletePaymentInDB(id);
+      res.json({ success: true, message: 'Payment deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/categories', async (req: Request, res: Response) => {
+    try {
+      const cat = req.body;
+      const store = loadFleetData();
+      const idx = store.categories.findIndex(c => c.id === cat.id);
+      if (idx >= 0) {
+        store.categories[idx] = cat;
+      } else {
+        store.categories.push(cat);
+      }
+      saveFleetData({ categories: store.categories });
+      await syncAllDataToMySQL({ categories: [cat] } as any);
+      res.status(201).json({ success: true, category: cat });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/categories/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.categories.findIndex(c => c.id === id);
+      if (idx >= 0) {
+        store.categories[idx] = { ...store.categories[idx], ...updates };
+        saveFleetData({ categories: store.categories });
+        await syncAllDataToMySQL({ categories: [store.categories[idx]] } as any);
+        res.json({ success: true, category: store.categories[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Category not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/categories/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.categories = store.categories.filter(c => c.id !== id);
+      saveFleetData({ categories: store.categories });
+      await deleteCategoryInDB(id);
+      res.json({ success: true, message: 'Category deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/tankers', async (req: Request, res: Response) => {
+    try {
+      const tanker = req.body;
+      const store = loadFleetData();
+      const idx = store.tankers.findIndex(t => t.id === tanker.id);
+      if (idx >= 0) {
+        store.tankers[idx] = tanker;
+      } else {
+        store.tankers.push(tanker);
+      }
+      saveFleetData({ tankers: store.tankers });
+      await syncAllDataToMySQL({ tankers: [tanker] } as any);
+      res.status(201).json({ success: true, tanker });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/tankers/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.tankers.findIndex(t => t.id === id);
+      if (idx >= 0) {
+        store.tankers[idx] = { ...store.tankers[idx], ...updates };
+        saveFleetData({ tankers: store.tankers });
+        await syncAllDataToMySQL({ tankers: [store.tankers[idx]] } as any);
+        res.json({ success: true, tanker: store.tankers[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Tanker not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/tankers/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.tankers = store.tankers.filter(t => t.id !== id);
+      saveFleetData({ tankers: store.tankers });
+      await deleteTankerInDB(id);
+      res.json({ success: true, message: 'Tanker deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/tanker-logs', async (req: Request, res: Response) => {
+    try {
+      const log = req.body;
+      const store = loadFleetData();
+      store.tankerLogs.unshift(log);
+      saveFleetData({ tankerLogs: store.tankerLogs });
+      await syncAllDataToMySQL({ tankerLogs: [log] } as any);
+      res.status(201).json({ success: true, log });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
   // 5.5 Download / View fuelflow_schema.sql
   app.get('/api/database/schema-sql', (req: Request, res: Response) => {
     try {
@@ -767,6 +1235,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         server: {
           middlewareMode: true,
           hmr: false,
+          ws: false,
         },
         appType: "spa",
       });
@@ -783,6 +1252,17 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         });
       });
     }
+
+    // Secure Centralized Error Boundary (Prevents leaking stack traces / internals)
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      console.error('[Server Error]', err?.message || err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: "A secure server error occurred. Please try again later."
+        });
+      }
+    });
 
     // Port 3000 is the hardcoded entrypoint required by the platform infrastructure.
     // The nginx reverse proxy listens on 8080 and proxies all requests to port 3000.

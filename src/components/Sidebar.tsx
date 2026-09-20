@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: labels.anomalies,
       icon: <AlertTriangle className="w-5 h-5" />,
       badge: kpis.anomalyCount > 0 ? kpis.anomalyCount : undefined,
-      badgeColor: 'bg-red-500 text-white animate-pulse'
+      badgeColor: 'bg-red-500 text-white'
     },
     {
       id: 'reports',
@@ -225,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </span>
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 {labels.systemActive}
               </span>
             </div>

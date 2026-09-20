@@ -269,95 +269,95 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Step 5.1: Top 4 KPI Widgets */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Today's Fuel Consumed & Cost */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex items-center justify-between text-slate-500 mb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.kpiTodayLiters}
             </span>
-            <div className="p-2 rounded-xl bg-amber-100/80 text-amber-700">
-              <Fuel className="w-4 h-4" />
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border border-amber-500/20 dark:border-amber-400/30 shadow-2xs">
+              <Fuel className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 font-mono">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
               {kpis.todayFuelLiters.toLocaleString()}
             </span>
-            <span className="text-xs font-semibold text-slate-500">{t.litersLabel}</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.litersLabel}</span>
           </div>
-          <div className="mt-2 text-xs font-semibold text-amber-600 flex items-center justify-between">
-            <span>{t.totalCostLabel}: BDT {kpis.todayFuelCost.toLocaleString()}</span>
-            <span className="text-[10px] text-slate-400 font-normal">{t.todayLabel}</span>
+          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center justify-between">
+            <span>{t.totalCostLabel}: <strong className="font-mono text-slate-800 dark:text-amber-300">BDT {kpis.todayFuelCost.toLocaleString()}</strong></span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{t.todayLabel}</span>
           </div>
         </div>
 
         {/* KPI 2: Total Pump Outstanding (Due) */}
         <div 
           onClick={onNavigateToPumpCredit}
-          className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+          className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="flex items-center justify-between text-slate-500 mb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">
               {t.kpiPumpDue}
             </span>
-            <div className="p-2 rounded-xl bg-red-100/80 text-red-700 group-hover:scale-105 transition-transform">
-              <CreditCard className="w-4 h-4" />
+            <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/20 dark:border-rose-400/30 shadow-2xs group-hover:scale-110 transition-transform">
+              <CreditCard className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-red-600 font-mono">
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 font-mono">
               BDT {kpis.totalPumpOutstanding.toLocaleString()}
             </span>
           </div>
-          <div className="mt-2 text-xs font-semibold text-slate-600 flex items-center justify-between">
-            <span>{`Across ${pumps.length} pumps`}</span>
-            <span className="text-[10px] text-red-600 underline font-bold">{t.viewLedger} &rarr;</span>
+          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-between">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">{`Across ${pumps.length} pumps`}</span>
+            <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">{t.viewLedger} &rarr;</span>
           </div>
         </div>
 
         {/* KPI 3: This Month Fuel Usage */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex items-center justify-between text-slate-500 mb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.kpiMonthFuel}
             </span>
-            <div className="p-2 rounded-xl bg-blue-100/80 text-blue-700">
-              <Calendar className="w-4 h-4" />
+            <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:bg-sky-400/20 dark:text-sky-300 border border-sky-500/20 dark:border-sky-400/30 shadow-2xs">
+              <Calendar className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 font-mono">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
               {kpis.monthFuelLiters.toLocaleString()}
             </span>
-            <span className="text-xs font-semibold text-slate-500">{t.litersLabel}</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.litersLabel}</span>
           </div>
-          <div className="mt-2 text-xs font-semibold text-blue-700 flex items-center justify-between">
-            <span>{t.totalCostLabel}: BDT {kpis.monthFuelCost.toLocaleString()}</span>
-            <span className="text-[10px] text-slate-400 font-normal">{t.thisMonthLabel}</span>
+          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-sky-700 dark:text-sky-400 flex items-center justify-between">
+            <span>{t.totalCostLabel}: <strong className="font-mono text-slate-800 dark:text-sky-300">BDT {kpis.monthFuelCost.toLocaleString()}</strong></span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{t.thisMonthLabel}</span>
           </div>
         </div>
 
         {/* KPI 4: Active Fleet & Bowzer Stock */}
         <div 
           onClick={onNavigateToTanker}
-          className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+          className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="flex items-center justify-between text-slate-500 mb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.kpiActiveFleet}
             </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-700 group-hover:scale-105 transition-transform">
-              <Truck className="w-4 h-4" />
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-400/30 shadow-2xs group-hover:scale-110 transition-transform">
+              <Truck className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 font-mono">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
               {kpis.activeVehiclesCount}
             </span>
-            <span className="text-xs font-semibold text-slate-500">{t.activeVehiclesLabel}</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.activeVehiclesLabel}</span>
           </div>
-          <div className="mt-2 text-xs font-semibold text-emerald-700 flex items-center justify-between">
-            <span>{t.bowzerStockLabel}: {primaryTanker?.current_stock_liters?.toLocaleString() || 0} L</span>
-            <span className="text-[10px] text-emerald-600 underline font-bold">&rarr;</span>
+          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+            <span>{t.bowzerStockLabel}: <strong className="font-mono text-slate-800 dark:text-emerald-300">{primaryTanker?.current_stock_liters?.toLocaleString() || 0} L</strong></span>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold group-hover:translate-x-0.5 transition-transform">&rarr;</span>
           </div>
         </div>
       </div>
@@ -367,7 +367,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="p-4 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3">
             <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-xs shrink-0">
-              <AlertTriangle className="w-6 h-6 text-white animate-bounce" />
+              <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
               <h3 className="text-sm font-black flex items-center gap-2">
@@ -394,11 +394,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Analytical Section: Company Fuel Breakdown & Bowzer Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Company Expense Breakdown */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+        <div className="lg:col-span-2 p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Building className="w-4 h-4 text-amber-600" />
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border border-amber-500/20 dark:border-amber-400/30">
+                <Building className="w-4 h-4" />
+              </div>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">
                 {t.companyDistribution}
               </h3>
             </div>
@@ -409,14 +411,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {companyStats.map(stat => (
               <div key={stat.id}>
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="font-bold text-slate-800">{stat.name}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{stat.name}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-slate-500 font-mono">{stat.liters} L</span>
-                    <span className="font-bold font-mono text-slate-900">BDT {stat.cost.toLocaleString()}</span>
-                    <span className="text-slate-400 text-[10px] w-8 text-right font-semibold">{stat.percent}%</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-mono">{stat.liters} L</span>
+                    <span className="font-bold font-mono text-slate-900 dark:text-amber-300">BDT {stat.cost.toLocaleString()}</span>
+                    <span className="text-slate-400 dark:text-slate-500 text-[10px] w-8 text-right font-semibold">{stat.percent}%</span>
                   </div>
                 </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-slate-100 dark:bg-blue-950/60 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-amber-500 rounded-full transition-all duration-500"
                     style={{ width: `${stat.percent}%` }}
@@ -428,16 +430,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Bowzer / Internal Stock Widget */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Container className="w-4 h-4 text-blue-600" />
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:bg-sky-400/20 dark:text-sky-300 border border-sky-500/20 dark:border-sky-400/30">
+                  <Container className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">
                   {t.bowzerStatus}
                 </h3>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+              <span className="px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 text-[10px] font-bold border border-sky-200 dark:border-sky-800">
                 Diesel
               </span>
             </div>
@@ -445,18 +449,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {primaryTanker ? (
               <div className="space-y-4">
                 <div>
-                  <div className="text-xs font-bold text-slate-800 mb-0.5">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-0.5">
                     {primaryTanker.tanker_name}
                   </div>
-                  <div className="text-[11px] text-slate-500">{primaryTanker.location}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">{primaryTanker.location}</div>
                 </div>
 
                 {/* Fuel Tank Visual Gauge */}
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                  <div className="text-2xl font-black text-slate-900 font-mono">
-                    {primaryTanker.current_stock_liters.toLocaleString()} <span className="text-sm font-semibold text-slate-500">/ {primaryTanker.capacity_liters.toLocaleString()} L</span>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/60 text-center">
+                  <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                    {primaryTanker.current_stock_liters.toLocaleString()} <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/ {primaryTanker.capacity_liters.toLocaleString()} L</span>
                   </div>
-                  <div className="mt-2.5 w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="mt-2.5 w-full h-3 bg-slate-200 dark:bg-blue-900/60 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         (primaryTanker.current_stock_liters / primaryTanker.capacity_liters) < 0.25
@@ -468,9 +472,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       }}
                     />
                   </div>
-                  <div className="mt-2 flex justify-between text-[11px] text-slate-500 font-medium">
+                  <div className="mt-2 flex justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                     <span>{t.stockLevel}</span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
                       {Math.round((primaryTanker.current_stock_liters / primaryTanker.capacity_liters) * 100)}% {t.available}
                     </span>
                   </div>
@@ -483,7 +487,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onNavigateToTanker}
-            className="w-full mt-4 py-2 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors text-center"
+            className="w-full mt-4 py-2 px-3 rounded-xl border border-slate-200 dark:border-blue-900/60 hover:bg-slate-50 dark:hover:bg-blue-950/40 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors text-center"
           >
             {t.manageBowzer} &rarr;
           </button>
@@ -491,11 +495,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Step 5.2: Interactive Filters & Data Table */}
-      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+      <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-amber-600" />
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border border-amber-500/20 dark:border-amber-400/30">
+              <Layers className="w-4 h-4" />
+            </div>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
               {t.recentEntries} ({filteredEntries.length})
             </h3>
           </div>

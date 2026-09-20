@@ -276,6 +276,9 @@ async function runMigrations(p: Pool): Promise<void> {
           }
         }
       }
+      try {
+        await p.query('ALTER TABLE `tenants` ADD COLUMN `logo` LONGTEXT DEFAULT NULL');
+      } catch (e) {}
       console.log('[MySQL] Schema migration completed.');
     } catch (err) {
       console.error('[MySQL] Error reading fuelflow_schema.sql:', err);
@@ -399,6 +402,7 @@ export async function fetchTenantsFromDB(): Promise<any[] | null> {
         id: r.id,
         name: r.name,
         code: r.code,
+        logo: r.logo || sub?.logo || null,
         currency: r.currency || 'BDT',
         phone: r.phone || '',
         address: r.address || '',
@@ -443,7 +447,10 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
         \`subscription_raw\` = VALUES(\`subscription_raw\`);
     `;
 
-    const sub = tenant.subscription || {};
+    const sub = { ...(tenant.subscription || {}) };
+    if (tenant.logo) {
+      sub.logo = tenant.logo;
+    }
     const values = [
       tenant.id,
       tenant.name,
@@ -741,9 +748,314 @@ export async function syncAllDataToMySQL(data: {
       }
     }
 
+    // Categories
+    if ((data as any).categories && Array.isArray((data as any).categories)) {
+      for (const c of (data as any).categories) {
+        try {
+          await pool.query(`
+            INSERT INTO \`vehicle_categories\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`metric_type\`, \`default_benchmark\`, \`icon_name\`, \`description\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`name\` = VALUES(\`name\`),
+              \`metric_type\` = VALUES(\`metric_type\`),
+              \`default_benchmark\` = VALUES(\`default_benchmark\`),
+              \`icon_name\` = VALUES(\`icon_name\`),
+              \`description\` = VALUES(\`description\`);
+          `, [
+            c.id, c.tenant_id, c.user_id || null, c.name, c.metric_type || 'kmpl',
+            c.default_benchmark || 10, c.icon_name || 'Truck', c.description || ''
+          ]);
+        } catch (e) {}
+      }
+    }
+
+    // Companies
+    if ((data as any).companies && Array.isArray((data as any).companies)) {
+      for (const comp of (data as any).companies) {
+        try {
+          await pool.query(`
+            INSERT INTO \`companies\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`code\`, \`contact_person\`, \`phone\`, \`email\`, \`address\`, \`created_at\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`name\` = VALUES(\`name\`),
+              \`code\` = VALUES(\`code\`),
+              \`contact_person\` = VALUES(\`contact_person\`),
+              \`phone\` = VALUES(\`phone\`),
+              \`email\` = VALUES(\`email\`),
+              \`address\` = VALUES(\`address\`);
+          `, [
+            comp.id, comp.tenant_id, comp.user_id || null, comp.name, comp.code || '',
+            comp.contact_person || '', comp.phone || '', comp.email || '', comp.address || '',
+            comp.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          ]);
+        } catch (e) {}
+      }
+    }
+
+    // Vendors
+    if ((data as any).vendors && Array.isArray((data as any).vendors)) {
+      for (const v of (data as any).vendors) {
+        try {
+          await pool.query(`
+            INSERT INTO \`vendors\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`contact_person\`, \`phone\`, \`email\`, \`address\`, \`created_at\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`name\` = VALUES(\`name\`),
+              \`contact_person\` = VALUES(\`contact_person\`),
+              \`phone\` = VALUES(\`phone\`),
+              \`email\` = VALUES(\`email\`),
+              \`address\` = VALUES(\`address\`);
+          `, [
+            v.id, v.tenant_id, v.user_id || null, v.name, v.contact_person || '',
+            v.phone || '', v.email || '', v.address || '',
+            v.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          ]);
+        } catch (e) {}
+      }
+    }
+
+    // Fuel Types
+    if ((data as any).fuelTypes && Array.isArray((data as any).fuelTypes)) {
+      for (const ft of (data as any).fuelTypes) {
+        try {
+          await pool.query(`
+            INSERT INTO \`fuel_types\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`code\`, \`unit\`, \`current_price\`, \`price_history\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`name\` = VALUES(\`name\`),
+              \`current_price\` = VALUES(\`current_price\`),
+              \`price_history\` = VALUES(\`price_history\`);
+          `, [
+            ft.id, ft.tenant_id, ft.user_id || null, ft.name, ft.code || '',
+            ft.unit || 'Liter', ft.current_price || 0,
+            JSON.stringify(ft.price_history || [])
+          ]);
+        } catch (e) {}
+      }
+    }
+
+    // Tankers
+    if ((data as any).tankers && Array.isArray((data as any).tankers)) {
+      for (const tk of (data as any).tankers) {
+        try {
+          await pool.query(`
+            INSERT INTO \`tanker_inventories\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`tanker_name\`, \`location\`, \`capacity_liters\`,
+              \`current_stock_liters\`, \`fuel_type_id\`, \`min_alert_threshold\`, \`last_restocked_at\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`tanker_name\` = VALUES(\`tanker_name\`),
+              \`location\` = VALUES(\`location\`),
+              \`capacity_liters\` = VALUES(\`capacity_liters\`),
+              \`current_stock_liters\` = VALUES(\`current_stock_liters\`),
+              \`min_alert_threshold\` = VALUES(\`min_alert_threshold\`);
+          `, [
+            tk.id, tk.tenant_id, tk.user_id || null, tk.tanker_name, tk.location || '',
+            tk.capacity_liters || 0, tk.current_stock_liters || 0, tk.fuel_type_id || '',
+            tk.min_alert_threshold || 1000, tk.last_restocked_at || null
+          ]);
+        } catch (e) {}
+      }
+    }
+
+    // Tanker Logs
+    if ((data as any).tankerLogs && Array.isArray((data as any).tankerLogs)) {
+      for (const tl of (data as any).tankerLogs) {
+        try {
+          await pool.query(`
+            INSERT INTO \`tanker_logs\` (
+              \`id\`, \`tenant_id\`, \`user_id\`, \`tanker_id\`, \`log_type\`, \`date\`,
+              \`liters\`,\`unit_cost\`, \`source_or_vehicle\`, \`notes\`, \`previous_stock\`, \`new_stock\`, \`created_at\`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              \`liters\` = VALUES(\`liters\`),
+              \`unit_cost\` = VALUES(\`unit_cost\`),
+              \`new_stock\` = VALUES(\`new_stock\`);
+          `, [
+            tl.id, tl.tenant_id, tl.user_id || null, tl.tanker_id, tl.log_type,
+            tl.date, tl.liters || 0, tl.unit_cost || 0, tl.source_or_vehicle || '',
+            tl.notes || '', tl.previous_stock || 0, tl.new_stock || 0,
+            tl.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          ]);
+        } catch (e) {}
+      }
+    }
+
     await updateTableCounts();
     return { success: true, synced };
   } catch (err: any) {
     return { success: false, synced, error: err?.message || 'Sync failed' };
+  }
+}
+
+/**
+ * Fetches all fleet management data from MySQL database
+ */
+export async function fetchFleetDataFromDB(tenantId?: string): Promise<{
+  vehicles: any[];
+  fuelEntries: any[];
+  pumps: any[];
+  payments: any[];
+  categories: any[];
+  companies: any[];
+  vendors: any[];
+  fuelTypes: any[];
+  tankers: any[];
+  tankerLogs: any[];
+} | null> {
+  if (!pool || !lastStatus.connected) return null;
+  try {
+    const where = tenantId ? ' WHERE `tenant_id` = ?' : '';
+    const params = tenantId ? [tenantId] : [];
+
+    const [vehicles]: any = await pool.query(`SELECT * FROM \`vehicles\`${where} ORDER BY \`created_at\` DESC`, params);
+    const [fuelEntries]: any = await pool.query(`SELECT * FROM \`fuel_entries\`${where} ORDER BY \`entry_date\` DESC, \`created_at\` DESC`, params);
+    const [pumps]: any = await pool.query(`SELECT * FROM \`fuel_pumps\`${where} ORDER BY \`created_at\` DESC`, params);
+    const [payments]: any = await pool.query(`SELECT * FROM \`pump_payments\`${where} ORDER BY \`payment_date\` DESC`, params);
+    const [categories]: any = await pool.query(`SELECT * FROM \`vehicle_categories\`${where}`, params);
+    const [companies]: any = await pool.query(`SELECT * FROM \`companies\`${where} ORDER BY \`created_at\` DESC`, params);
+    const [vendors]: any = await pool.query(`SELECT * FROM \`vendors\`${where} ORDER BY \`created_at\` DESC`, params);
+    const [fuelTypes]: any = await pool.query(`SELECT * FROM \`fuel_types\`${where}`, params);
+    const [tankers]: any = await pool.query(`SELECT * FROM \`tanker_inventories\`${where}`, params);
+    const [tankerLogs]: any = await pool.query(`SELECT * FROM \`tanker_logs\`${where} ORDER BY \`date\` DESC, \`created_at\` DESC`, params);
+
+    return {
+      vehicles: vehicles.map((v: any) => ({
+        ...v,
+        expected_benchmark: Number(v.expected_benchmark) || 10,
+        current_odometer: Number(v.current_odometer) || 0
+      })),
+      fuelEntries: fuelEntries.map((f: any) => ({
+        ...f,
+        entry_date: f.entry_date instanceof Date ? f.entry_date.toISOString().split('T')[0] : String(f.entry_date).split('T')[0],
+        previous_meter: Number(f.previous_meter) || 0,
+        current_meter: Number(f.current_meter) || 0,
+        distance_traveled: Number(f.distance_traveled) || 0,
+        fuel_liters: Number(f.fuel_liters) || 0,
+        unit_price: Number(f.unit_price) || 0,
+        total_amount: Number(f.total_amount) || 0,
+        calculated_mileage: Number(f.calculated_mileage) || 0,
+        benchmark_mileage: Number(f.benchmark_mileage) || 0,
+        is_anomaly: Boolean(f.is_anomaly),
+        anomaly_diff_percent: Number(f.anomaly_diff_percent) || 0
+      })),
+      pumps: pumps.map((p: any) => ({
+        ...p,
+        credit_limit: Number(p.credit_limit) || 0,
+        opening_balance: Number(p.opening_balance) || 0,
+        current_balance: Number(p.current_balance) || 0
+      })),
+      payments: payments.map((pm: any) => ({
+        ...pm,
+        payment_date: pm.payment_date instanceof Date ? pm.payment_date.toISOString().split('T')[0] : String(pm.payment_date).split('T')[0],
+        amount: Number(pm.amount) || 0
+      })),
+      categories: categories.map((c: any) => ({
+        ...c,
+        default_benchmark: Number(c.default_benchmark) || 10
+      })),
+      companies,
+      vendors,
+      fuelTypes: fuelTypes.map((ft: any) => {
+        let history = [];
+        try {
+          if (ft.price_history) {
+            history = typeof ft.price_history === 'string' ? JSON.parse(ft.price_history) : ft.price_history;
+          }
+        } catch (e) {}
+        return {
+          ...ft,
+          current_price: Number(ft.current_price) || 0,
+          price_history: Array.isArray(history) ? history : []
+        };
+      }),
+      tankers: tankers.map((t: any) => ({
+        ...t,
+        capacity_liters: Number(t.capacity_liters) || 0,
+        current_stock_liters: Number(t.current_stock_liters) || 0,
+        min_alert_threshold: Number(t.min_alert_threshold) || 1000
+      })),
+      tankerLogs: tankerLogs.map((tl: any) => ({
+        ...tl,
+        date: tl.date instanceof Date ? tl.date.toISOString().split('T')[0] : String(tl.date).split('T')[0],
+        liters: Number(tl.liters) || 0,
+        unit_cost: Number(tl.unit_cost) || 0,
+        previous_stock: Number(tl.previous_stock) || 0,
+        new_stock: Number(tl.new_stock) || 0
+      }))
+    };
+  } catch (err) {
+    console.error('[MySQL] Error fetching fleet data:', err);
+    return null;
+  }
+}
+
+export async function deleteVehicleInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `vehicles` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting vehicle:', err);
+    return false;
+  }
+}
+
+export async function deleteFuelEntryInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `fuel_entries` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting fuel entry:', err);
+    return false;
+  }
+}
+
+export async function deletePumpInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `fuel_pumps` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting pump:', err);
+    return false;
+  }
+}
+
+export async function deletePaymentInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `pump_payments` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting payment:', err);
+    return false;
+  }
+}
+
+export async function deleteCategoryInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `vehicle_categories` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting category:', err);
+    return false;
+  }
+}
+
+export async function deleteTankerInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `tanker_inventories` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting tanker:', err);
+    return false;
   }
 }

@@ -261,7 +261,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' 
 
           {/* TAB 1: SUBSCRIBER FLEET LOGIN */}
           {activeTab === 'subscriber' && (
-            <div className="rounded-3xl bg-slate-950/90 border border-slate-800/80 p-6 sm:p-8 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-300">
+            <div className="rounded-3xl bg-slate-950/90 border border-slate-800/80 p-6 sm:p-8 shadow-2xl backdrop-blur-xl transition-opacity duration-150">
               <div className="mb-6">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
                   <Building2 className="w-3.5 h-3.5" />
@@ -488,7 +488,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' 
 
           {/* TAB 2: CONTROL LOGIN (SAAS OWNER & MODERATOR) */}
           {activeTab === 'control' && (
-            <div className="rounded-3xl bg-slate-950/95 border border-amber-500/30 p-6 sm:p-8 shadow-2xl shadow-amber-500/10 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-300">
+            <div className="rounded-3xl bg-slate-950/95 border border-amber-500/30 p-6 sm:p-8 shadow-2xl shadow-amber-500/10 backdrop-blur-xl transition-opacity duration-150">
               <div className="mb-6">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold mb-2">
                   <Crown className="w-3.5 h-3.5 text-amber-400" />

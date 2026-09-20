@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {showTenantMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 transition-opacity duration-150">
                   <div className="px-2 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     {t.switchTenant}
                   </div>
@@ -373,7 +373,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 transition-opacity duration-150">
                   <div className="px-2 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     {t.switchUser}
                   </div>
@@ -440,7 +440,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Bell className="w-4 h-4" />
             {kpis.anomalyCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white animate-pulse">
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
                 {kpis.anomalyCount}
               </span>
             )}

@@ -526,7 +526,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cross-browser & server-side tenant fetch (Safe merge with persistent storage and self-healing auto-push)
   const refreshTenantsFromServer = async () => {
     try {
-      const res = await fetch(`/api/tenants?t=${Date.now()}`, {
+      const res = await fetch(`/api/tenants/all?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -544,7 +544,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const merged = [...serverTenants];
             // Retain any locally registered subscribers that might not have reached server yet and auto-heal
             prev.forEach(pt => {
-              if (!merged.some(st => st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase()))) {
+              const existingIdx = merged.findIndex(st => st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase()));
+              if (existingIdx === -1) {
                 merged.push(pt);
                 // Self-healing: automatically sync any subscriber present locally to the server backend
                 try {
@@ -554,6 +555,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     body: JSON.stringify(pt)
                   }).catch(() => {});
                 } catch (e) {}
+              } else {
+                // Merge fields like logo or subscription credentials if missing on server
+                const st = merged[existingIdx];
+                merged[existingIdx] = {
+                  ...pt,
+                  ...st,
+                  logo: st.logo || pt.logo,
+                  subscription: (st.subscription || pt.subscription) ? ({
+                    ...(pt.subscription || {}),
+                    ...(st.subscription || {})
+                  } as TenantSubscription) : undefined
+                };
               }
             });
             return merged;
@@ -604,19 +617,240 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Cross-browser, cloud database & server disk fleet data fetch (Safe merge and self-healing auto-push)
+  const refreshFleetDataFromServer = async () => {
+    try {
+      const res = await fetch(`/api/fleet/all?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const fleetData = json.data;
+
+          // Merge vehicles
+          if (Array.isArray(fleetData.vehicles) && fleetData.vehicles.length > 0) {
+            setVehicles(prev => {
+              const serverVehicles: Vehicle[] = fleetData.vehicles;
+              const merged = [...serverVehicles];
+              const missingOnServer: Vehicle[] = [];
+              prev.forEach(pv => {
+                if (!merged.some(sv => sv.id === pv.id)) {
+                  merged.push(pv);
+                  missingOnServer.push(pv);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ vehicles: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge fuelEntries
+          if (Array.isArray(fleetData.fuelEntries) && fleetData.fuelEntries.length > 0) {
+            setFuelEntries(prev => {
+              const serverEntries: FuelEntry[] = fleetData.fuelEntries;
+              const merged = [...serverEntries];
+              const missingOnServer: FuelEntry[] = [];
+              prev.forEach(pe => {
+                if (!merged.some(se => se.id === pe.id)) {
+                  merged.push(pe);
+                  missingOnServer.push(pe);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fuelEntries: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge pumps
+          if (Array.isArray(fleetData.pumps) && fleetData.pumps.length > 0) {
+            setPumps(prev => {
+              const serverPumps: FuelPump[] = fleetData.pumps;
+              const merged = [...serverPumps];
+              const missingOnServer: FuelPump[] = [];
+              prev.forEach(pp => {
+                if (!merged.some(sp => sp.id === pp.id)) {
+                  merged.push(pp);
+                  missingOnServer.push(pp);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ pumps: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge payments
+          if (Array.isArray(fleetData.payments) && fleetData.payments.length > 0) {
+            setPayments(prev => {
+              const serverPayments: PumpPayment[] = fleetData.payments;
+              const merged = [...serverPayments];
+              const missingOnServer: PumpPayment[] = [];
+              prev.forEach(pm => {
+                if (!merged.some(spm => spm.id === pm.id)) {
+                  merged.push(pm);
+                  missingOnServer.push(pm);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ payments: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge categories
+          if (Array.isArray(fleetData.categories) && fleetData.categories.length > 0) {
+            setCategories(prev => {
+              const serverCats: VehicleCategory[] = fleetData.categories;
+              const merged = [...serverCats];
+              const missingOnServer: VehicleCategory[] = [];
+              prev.forEach(pc => {
+                if (!merged.some(sc => sc.id === pc.id)) {
+                  merged.push(pc);
+                  missingOnServer.push(pc);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ categories: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge tankers
+          if (Array.isArray(fleetData.tankers) && fleetData.tankers.length > 0) {
+            setTankers(prev => {
+              const serverTankers: TankerInventory[] = fleetData.tankers;
+              const merged = [...serverTankers];
+              const missingOnServer: TankerInventory[] = [];
+              prev.forEach(pt => {
+                if (!merged.some(st => st.id === pt.id)) {
+                  merged.push(pt);
+                  missingOnServer.push(pt);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tankers: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge tankerLogs
+          if (Array.isArray(fleetData.tankerLogs) && fleetData.tankerLogs.length > 0) {
+            setTankerLogs(prev => {
+              const serverLogs: TankerLog[] = fleetData.tankerLogs;
+              const merged = [...serverLogs];
+              const missingOnServer: TankerLog[] = [];
+              prev.forEach(pl => {
+                if (!merged.some(sl => sl.id === pl.id)) {
+                  merged.push(pl);
+                  missingOnServer.push(pl);
+                }
+              });
+              if (missingOnServer.length > 0) {
+                fetch('/api/fleet/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tankerLogs: missingOnServer })
+                }).catch(() => {});
+              }
+              return merged;
+            });
+          }
+
+          // Merge companies
+          if (Array.isArray(fleetData.companies) && fleetData.companies.length > 0) {
+            setCompanies(prev => {
+              const serverCompanies: Company[] = fleetData.companies;
+              const merged = [...serverCompanies];
+              prev.forEach(pc => {
+                if (!merged.some(sc => sc.id === pc.id)) merged.push(pc);
+              });
+              return merged;
+            });
+          }
+
+          // Merge vendors
+          if (Array.isArray(fleetData.vendors) && fleetData.vendors.length > 0) {
+            setVendors(prev => {
+              const serverVendors: Vendor[] = fleetData.vendors;
+              const merged = [...serverVendors];
+              prev.forEach(pv => {
+                if (!merged.some(sv => sv.id === pv.id)) merged.push(pv);
+              });
+              return merged;
+            });
+          }
+
+          // Merge fuelTypes
+          if (Array.isArray(fleetData.fuelTypes) && fleetData.fuelTypes.length > 0) {
+            setFuelTypes(prev => {
+              const serverFuelTypes: FuelType[] = fleetData.fuelTypes;
+              const merged = [...serverFuelTypes];
+              prev.forEach(pf => {
+                if (!merged.some(sf => sf.id === pf.id)) merged.push(pf);
+              });
+              return merged;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Offline fallback active
+    }
+  };
+
   useEffect(() => {
     refreshTenantsFromServer();
     refreshUsersFromServer();
+    refreshFleetDataFromServer();
 
     const handleFocus = () => {
       refreshTenantsFromServer();
       refreshUsersFromServer();
+      refreshFleetDataFromServer();
     };
     window.addEventListener('focus', handleFocus);
     const interval = setInterval(() => {
       refreshTenantsFromServer();
       refreshUsersFromServer();
-    }, 5000);
+      refreshFleetDataFromServer();
+    }, 6000);
 
     let channel: BroadcastChannel | null = null;
     try {
@@ -627,6 +861,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (event.data?.type === 'REFRESH_USERS') {
           refreshUsersFromServer();
+        }
+        if (event.data?.type === 'REFRESH_FLEET') {
+          refreshFleetDataFromServer();
         }
       };
     } catch (e) {}
@@ -817,6 +1054,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().split('T')[0]
     };
     setCompanies(prev => [newComp, ...prev]);
+    fetch('/api/fleet/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companies: [newComp] })
+    }).catch(() => {});
   };
 
   const updateCompany = (id: string, comp: Partial<Company>) => {
@@ -837,6 +1079,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().split('T')[0]
     };
     setVendors(prev => [newVend, ...prev]);
+    fetch('/api/fleet/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vendors: [newVend] })
+    }).catch(() => {});
   };
 
   const updateVendor = (id: string, vend: Partial<Vendor>) => {
@@ -858,31 +1105,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().split('T')[0]
     };
     setPumps(prev => [newPump, ...prev]);
+    fetch('/api/fleet/pumps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPump)
+    }).catch(() => {});
   };
 
   const updatePump = (id: string, pump: Partial<FuelPump>) => {
     setPumps(prev => prev.map(p => p.id === id ? { ...p, ...pump } : p));
+    fetch(`/api/fleet/pumps/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pump)
+    }).catch(() => {});
   };
 
   const deletePump = (id: string) => {
     setPumps(prev => prev.filter(p => p.id !== id));
+    fetch(`/api/fleet/pumps/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Fuel Price Update
   const updateFuelPrice = (fuelTypeId: string, newPrice: number) => {
     const today = new Date().toISOString().split('T')[0];
+    let updatedFuelType: FuelType | null = null;
     setFuelTypes(prev => prev.map(ft => {
       if (ft.id === fuelTypeId) {
         const history = [...ft.price_history, { date: today, price: newPrice, changed_by: currentUser.name }];
-        return {
+        updatedFuelType = {
           ...ft,
           current_price: newPrice,
           price_history: history,
           updated_at: today
         };
+        return updatedFuelType;
       }
       return ft;
     }));
+    if (updatedFuelType) {
+      fetch('/api/fleet/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fuelTypes: [updatedFuelType] })
+      }).catch(() => {});
+    }
   };
 
   // Category CRUD
@@ -894,14 +1163,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user_id: currentUser.id
     };
     setCategories(prev => [...prev, newCat]);
+    fetch('/api/fleet/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCat)
+    }).catch(() => {});
   };
 
   const updateCategory = (id: string, cat: Partial<VehicleCategory>) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, ...cat } : c));
+    fetch(`/api/fleet/categories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cat)
+    }).catch(() => {});
   };
 
   const deleteCategory = (id: string) => {
     setCategories(prev => prev.filter(c => c.id !== id));
+    fetch(`/api/fleet/categories/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Vehicle CRUD
@@ -914,14 +1196,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().split('T')[0]
     };
     setVehicles(prev => [newVeh, ...prev]);
+    fetch('/api/fleet/vehicles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVeh)
+    }).catch(() => {});
   };
 
   const updateVehicle = (id: string, veh: Partial<Vehicle>) => {
     setVehicles(prev => prev.map(v => v.id === id ? { ...v, ...veh } : v));
+    fetch(`/api/fleet/vehicles/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(veh)
+    }).catch(() => {});
   };
 
   const deleteVehicle = (id: string) => {
     setVehicles(prev => prev.filter(v => v.id !== id));
+    fetch(`/api/fleet/vehicles/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Core Ultra-Fast Fuel Entry with Smart Calculations
@@ -1019,12 +1314,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update vehicle's current odometer
     setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, current_odometer: entryData.current_meter } : v));
+    fetch(`/api/fleet/vehicles/${vehicle.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_odometer: entryData.current_meter })
+    }).catch(() => {});
 
     // If source is Pump, increase pump's current_balance
     if (entryData.source_type === 'pump' && entryData.pump_id) {
       setPumps(prev => prev.map(p => {
         if (p.id === entryData.pump_id) {
-          return { ...p, current_balance: (p.current_balance || 0) + totalAmount };
+          const newBal = (p.current_balance || 0) + totalAmount;
+          fetch(`/api/fleet/pumps/${p.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_balance: newBal })
+          }).catch(() => {});
+          return { ...p, current_balance: newBal };
         }
         return p;
       }));
@@ -1037,6 +1343,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const prevStock = tanker.current_stock_liters;
         const newStock = Math.max(0, prevStock - entryData.fuel_liters);
         setTankers(prev => prev.map(t => t.id === tanker.id ? { ...t, current_stock_liters: newStock } : t));
+        fetch(`/api/fleet/tankers/${tanker.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_stock_liters: newStock })
+        }).catch(() => {});
         
         const newLog: TankerLog = {
           id: 'tlog_' + Date.now(),
@@ -1053,10 +1364,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           created_at: new Date().toISOString()
         };
         setTankerLogs(prev => [newLog, ...prev]);
+        fetch('/api/fleet/tanker-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newLog)
+        }).catch(() => {});
       }
     }
 
     setFuelEntries(prev => [newEntry, ...prev]);
+    fetch('/api/fleet/fuel-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEntry)
+    }).catch(() => {});
     return { success: true, isAnomaly };
   };
 
@@ -1067,7 +1388,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (target.source_type === 'pump' && target.pump_id) {
         setPumps(prev => prev.map(p => {
           if (p.id === target.pump_id) {
-            return { ...p, current_balance: (p.current_balance || 0) - target.total_amount };
+            const newBal = (p.current_balance || 0) - target.total_amount;
+            fetch(`/api/fleet/pumps/${p.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_balance: newBal })
+            }).catch(() => {});
+            return { ...p, current_balance: newBal };
           }
           return p;
         }));
@@ -1076,13 +1403,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (target.source_type === 'tanker' && target.tanker_id) {
         setTankers(prev => prev.map(t => {
           if (t.id === target.tanker_id) {
-            return { ...t, current_stock_liters: t.current_stock_liters + target.fuel_liters };
+            const newStock = t.current_stock_liters + target.fuel_liters;
+            fetch(`/api/fleet/tankers/${t.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_stock_liters: newStock })
+            }).catch(() => {});
+            return { ...t, current_stock_liters: newStock };
           }
           return t;
         }));
       }
     }
     setFuelEntries(prev => prev.filter(e => e.id !== id));
+    fetch(`/api/fleet/fuel-entries/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Pump Payment Handlers
@@ -1109,11 +1445,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setPayments(prev => [newPayment, ...prev]);
+    fetch('/api/fleet/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPayment)
+    }).catch(() => {});
 
     // Decrease the pump's current balance (settled due or advance)
     setPumps(prev => prev.map(p => {
       if (p.id === paymentData.pump_id) {
-        return { ...p, current_balance: (p.current_balance || 0) - paymentData.amount };
+        const newBal = (p.current_balance || 0) - paymentData.amount;
+        fetch(`/api/fleet/pumps/${p.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_balance: newBal })
+        }).catch(() => {});
+        return { ...p, current_balance: newBal };
       }
       return p;
     }));
@@ -1125,12 +1472,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Revert the payment by restoring due to the pump
       setPumps(prev => prev.map(p => {
         if (p.id === payment.pump_id) {
-          return { ...p, current_balance: (p.current_balance || 0) + payment.amount };
+          const newBal = (p.current_balance || 0) + payment.amount;
+          fetch(`/api/fleet/pumps/${p.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_balance: newBal })
+          }).catch(() => {});
+          return { ...p, current_balance: newBal };
         }
         return p;
       }));
     }
     setPayments(prev => prev.filter(p => p.id !== paymentId));
+    fetch(`/api/fleet/payments/${paymentId}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Tanker / Bowzer Management
@@ -1142,14 +1498,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user_id: currentUser.id
     };
     setTankers(prev => [newTanker, ...prev]);
+    fetch('/api/fleet/tankers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTanker)
+    }).catch(() => {});
   };
 
   const updateTanker = (id: string, tanker: Partial<TankerInventory>) => {
     setTankers(prev => prev.map(t => t.id === id ? { ...t, ...tanker } : t));
+    fetch(`/api/fleet/tankers/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tanker)
+    }).catch(() => {});
   };
 
   const deleteTanker = (id: string) => {
     setTankers(prev => prev.filter(t => t.id !== id));
+    fetch(`/api/fleet/tankers/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Tanker Stock In
@@ -1162,6 +1531,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const today = new Date().toISOString().split('T')[0];
 
     setTankers(prev => prev.map(t => t.id === tankerId ? { ...t, current_stock_liters: newStock, last_restocked_at: today } : t));
+    fetch(`/api/fleet/tankers/${tankerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_stock_liters: newStock, last_restocked_at: today })
+    }).catch(() => {});
 
     const newLog: TankerLog = {
       id: 'tlog_' + Date.now(),
@@ -1180,6 +1554,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setTankerLogs(prev => [newLog, ...prev]);
+    fetch('/api/fleet/tanker-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    }).catch(() => {});
   };
 
   // Tanker Dispense Out or Dip Adjustment
@@ -1194,6 +1573,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const today = new Date().toISOString().split('T')[0];
     setTankers(prev => prev.map(t => t.id === tankerId ? { ...t, current_stock_liters: newStock } : t));
+    fetch(`/api/fleet/tankers/${tankerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_stock_liters: newStock })
+    }).catch(() => {});
 
     const newLog: TankerLog = {
       id: 'tlog_' + Date.now(),
@@ -1211,6 +1595,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setTankerLogs(prev => [newLog, ...prev]);
+    fetch('/api/fleet/tanker-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    }).catch(() => {});
   };
 
   // SaaS Owner Profile & Credentials Management
@@ -1653,12 +2042,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTenantSubscription = (tenantId: string, subscriptionUpdates: Partial<TenantSubscription>) => {
     setTenants(prev => prev.map(t => {
       if (t.id !== tenantId || !t.subscription) return t;
+      const updatedSub = {
+        ...t.subscription,
+        ...subscriptionUpdates
+      };
+      fetch(`/api/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: updatedSub })
+      }).catch(() => {});
       return {
         ...t,
-        subscription: {
-          ...t.subscription,
-          ...subscriptionUpdates
-        }
+        subscription: updatedSub
       };
     }));
   };
@@ -1672,13 +2067,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       baseDate.setDate(baseDate.getDate() + additionalDays);
       const newEndDate = baseDate.toISOString().split('T')[0];
 
+      const updatedSub = {
+        ...t.subscription,
+        end_date: newEndDate,
+        status: 'active' as SubscriptionStatus
+      };
+      fetch(`/api/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: updatedSub, status: 'active' })
+      }).catch(() => {});
+
       return {
         ...t,
-        subscription: {
-          ...t.subscription,
-          end_date: newEndDate,
-          status: 'active'
-        }
+        status: 'active',
+        subscription: updatedSub
       };
     }));
   };
@@ -1875,6 +2278,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().split('T')[0]
     };
     setUsers(prev => [newUser, ...prev]);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newUser)
+    }).catch(() => {});
     return { success: true, userId: newUserId };
   };
 
@@ -1898,6 +2306,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       processedUpdates.password = isHashed(raw) ? raw : hashPassword(raw);
     }
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...processedUpdates } : u));
+    fetch(`/api/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(processedUpdates)
+    }).catch(() => {});
     return { success: true };
   };
 
@@ -1907,6 +2320,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Primary Company Super Admin account cannot be deleted.' };
     }
     setUsers(prev => prev.filter(u => u.id !== id));
+    fetch(`/api/users/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
     return { success: true };
   };
 

@@ -200,6 +200,7 @@ html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
    Typography: Ultra-Clear, High-Contrast Visibility
    Eliminates all low-contrast, dim, or unreadable text
    ------------------------------------------------------------ */
+html.dark .text-black,
 html.dark .text-slate-900,
 html.dark .text-slate-800,
 html.dark .text-gray-900,
@@ -435,7 +436,9 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   .no-print {
     display: none !important;
   }
-  .printable-statement {
+  .printable-statement,
+  #printable-report-area,
+  .a4-document-container {
     background-color: #ffffff !important;
     color: #000000 !important;
     border: none !important;
@@ -443,6 +446,15 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     padding: 0 !important;
     width: 100% !important;
   }
+  #printable-report-area h1,
+  .a4-document-container h1 {
+    color: #000000 !important;
+  }
+}
+
+html.dark #printable-report-area h1,
+html.dark .a4-document-container h1 {
+  color: #fde047 !important;
 }
 
 /* ============================================================

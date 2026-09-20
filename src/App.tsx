@@ -132,7 +132,7 @@ const AppContent: React.FC = () => {
 
         {/* View Routing Area */}
         <main className="flex-1 min-w-0 pb-16 w-full">
-          <div className="w-full transition-opacity duration-200 ease-out">
+          <div key={isSaasControlOpen ? 'saas' : currentView} className="w-full transition-opacity duration-150 ease-out">
             {/* If SaaS control panel mode is toggled by SaaS Owner/Moderator, show SaasOwnerPanel */}
             {isSaasControlOpen && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
               <SaasOwnerPanel onSwitchToFleetView={() => setIsSaasControlOpen(false)} />

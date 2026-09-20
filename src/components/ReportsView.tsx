@@ -997,74 +997,72 @@ export const ReportsView: React.FC = () => {
       <div
         ref={a4ReportRef}
         id="printable-report-area"
-        className="a4-document-container p-6 sm:p-10 bg-white text-slate-900 rounded-2xl border border-slate-300 shadow-sm space-y-6"
+        className="a4-document-container p-6 sm:p-10 bg-white dark:bg-[#0f1a36] text-slate-900 dark:text-slate-100 rounded-2xl border border-slate-300 dark:border-blue-900/60 shadow-sm space-y-6"
         style={{
           fontFamily: '"Times New Roman", Times, "Tiro Bangla", serif',
-          color: '#000000',
-          backgroundColor: '#ffffff'
         }}
       >
         {/* =========================================================================
             1. COMPANY OFFICIAL LETTERHEAD (Uses complete company details)
             ========================================================================= */}
-        <div className="border-b-4 border-double border-slate-900 pb-5">
+        <div className="border-b-4 border-double border-slate-900 dark:border-amber-400/80 pb-5">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             {/* Primary Issuer / Fleet Operator Company Details */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-9 h-9 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center font-serif font-black text-lg shadow-sm">
+                <div className="w-9 h-9 rounded-lg bg-slate-900 dark:bg-amber-400 text-amber-400 dark:text-slate-950 flex items-center justify-center font-serif font-black text-lg shadow-sm">
                   {letterheadInfo.tenantCode.slice(0, 2)}
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-black leading-tight">
+                  <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-amber-300 leading-tight">
                     {letterheadInfo.tenantName}
                   </h1>
-                  <span className="text-[11px] font-semibold text-slate-600 block">
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block">
                     Enterprise Fleet Logistics & Fuel Operations
                   </span>
                 </div>
               </div>
 
-              <div className="text-xs text-slate-800 space-y-0.5 mt-2 pl-1 border-l-2 border-amber-500">
+              <div className="text-xs text-slate-800 dark:text-slate-200 space-y-0.5 mt-2 pl-1 border-l-2 border-amber-500">
                 <p>
-                  <span className="font-bold">Corporate Office:</span> {letterheadInfo.tenantAddress}
+                  <span className="font-bold text-slate-900 dark:text-amber-300">Corporate Office:</span> {letterheadInfo.tenantAddress}
                 </p>
                 <p>
-                  <span className="font-bold">Helpline / Phone:</span> {letterheadInfo.tenantPhone} &nbsp;|&nbsp;{' '}
-                  <span className="font-bold">Email:</span> {letterheadInfo.tenantEmail}
+                  <span className="font-bold text-slate-900 dark:text-amber-300">Helpline / Phone:</span> {letterheadInfo.tenantPhone} &nbsp;|&nbsp;{' '}
+                  <span className="font-bold text-slate-900 dark:text-amber-300">Email:</span> {letterheadInfo.tenantEmail}
                 </p>
                 <p>
-                  <span className="font-bold">System Ref / Tenant Code:</span> {letterheadInfo.tenantCode} &nbsp;|&nbsp;{' '}
-                  <span className="font-bold">Fleet In-charge:</span> {letterheadInfo.tenantContactPerson}
+                  <span className="font-bold text-slate-900 dark:text-amber-300">System Ref / Tenant Code:</span> {letterheadInfo.tenantCode} &nbsp;|&nbsp;{' '}
+                  <span className="font-bold text-slate-900 dark:text-amber-300">Fleet In-charge:</span> {letterheadInfo.tenantContactPerson}
                 </p>
               </div>
             </div>
 
             {/* Document Metadata Box */}
-            <div className="sm:text-right text-xs bg-slate-50 border border-slate-300 p-3 rounded-xl min-w-[240px]">
-              <span className="inline-block px-2.5 py-1 rounded bg-slate-900 text-white font-bold uppercase text-[11px] mb-2 tracking-wide">
+            <div className="sm:text-right text-xs bg-slate-50 dark:bg-[#121f3f] border border-slate-300 dark:border-blue-900/60 p-3 rounded-xl min-w-[240px]">
+              <span className="inline-block px-2.5 py-1 rounded bg-slate-900 dark:bg-amber-400 text-white dark:text-slate-950 font-bold uppercase text-[11px] mb-2 tracking-wide">
                 {reportType === 'vehicle_performance' && t.reportTypeVehicle}
                 {reportType === 'company_monthly' && t.reportTypeCompany}
                 {reportType === 'days_wise' && t.reportTypeDays}
                 {reportType === 'pump_reconciliation' && t.reportTypePump}
                 {reportType === 'raw_ledger' && t.reportTypeRaw}
               </span>
-              <div className="font-semibold text-slate-800 space-y-0.5 text-[11px]">
+              <div className="font-semibold text-slate-800 dark:text-slate-200 space-y-0.5 text-[11px]">
                 <div>
-                  <span className="text-slate-600">Document Ref:</span>{' '}
-                  <span className="font-mono font-bold">
+                  <span className="text-slate-600 dark:text-slate-400">Document Ref:</span>{' '}
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">
                     {letterheadInfo.tenantCode}/AUD/{reportType.slice(0, 4).toUpperCase()}/{dateFrom?.replace(/-/g, '') || 'ALL'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-600">{t.filterRangePrefix}</span>{' '}
-                  <span>{dateFrom || 'Inception'} {t.toText} {dateTo || 'Current'}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t.filterRangePrefix}</span>{' '}
+                  <span className="text-slate-800 dark:text-slate-200">{dateFrom || 'Inception'} {t.toText} {dateTo || 'Current'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">{t.generatedDatePrefix}</span>{' '}
-                  <span>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t.generatedDatePrefix}</span>{' '}
+                  <span className="text-slate-800 dark:text-slate-200">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-200 mt-1">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-blue-900/40 mt-1">
                   Format: A4 ({pdfOrientation}) • Font: Times New Roman
                 </div>
               </div>
@@ -1073,11 +1071,11 @@ export const ReportsView: React.FC = () => {
 
           {/* Specific Client Company Details (If a client company is selected) */}
           {letterheadInfo.clientCompany && (
-            <div className="mt-4 p-3 bg-amber-50/70 border border-amber-300 rounded-xl text-xs">
-              <div className="font-bold uppercase tracking-wider text-amber-950 text-[11px] mb-1">
+            <div className="mt-4 p-3 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-xl text-xs">
+              <div className="font-bold uppercase tracking-wider text-amber-950 dark:text-amber-300 text-[11px] mb-1">
                 Client / Customer Company Information:
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-slate-900">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-slate-900 dark:text-slate-100">
                 <div>
                   <span className="font-bold">Company Name:</span> {letterheadInfo.clientCompany.name} ({letterheadInfo.clientCompany.code})
                 </div>
@@ -1099,22 +1097,22 @@ export const ReportsView: React.FC = () => {
         </div>
 
         {/* Top Summary Stat Pills in Times New Roman */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-300">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-[#121f3f] p-4 rounded-xl border border-slate-300 dark:border-blue-900/60">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">{t.totalLiters}</span>
-            <span className="font-bold text-black text-lg">{totalLiters.toLocaleString()} L</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">{t.totalLiters}</span>
+            <span className="font-bold text-slate-900 dark:text-white text-lg">{totalLiters.toLocaleString()} L</span>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">{t.totalCost}</span>
-            <span className="font-bold text-black text-lg">{formatCurrency(totalCost)}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">{t.totalCost}</span>
+            <span className="font-bold text-slate-900 dark:text-amber-300 text-lg">{formatCurrency(totalCost)}</span>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">{t.entryCount}</span>
-            <span className="font-bold text-black text-lg">{totalEntriesCount} {t.countSuffix}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">{t.entryCount}</span>
+            <span className="font-bold text-slate-900 dark:text-white text-lg">{totalEntriesCount} {t.countSuffix}</span>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">Anomaly Flags</span>
-            <span className="font-bold text-red-700 text-lg">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">Anomaly Flags</span>
+            <span className="font-bold text-red-700 dark:text-red-400 text-lg">
               {scopedEntries.filter(e => e.is_anomaly).length} {scopedEntries.filter(e => e.is_anomaly).length === 1 ? 'time' : 'times'}
             </span>
           </div>
@@ -1503,78 +1501,78 @@ export const ReportsView: React.FC = () => {
         {/* =========================================================================
             3. OFFICIAL 3-PARTY AUDIT SIGNATURES (With Prepared By User Information)
             ========================================================================= */}
-        <div className="pt-10 mt-8 border-t-2 border-slate-900 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
+        <div className="pt-10 mt-8 border-t-2 border-slate-900 dark:border-amber-400/80 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
           {/* 1. Prepared By - Filled with the actual downloading user's details */}
-          <div className="p-3 bg-slate-50 border border-slate-300 rounded-xl flex flex-col justify-between">
+          <div className="p-3 bg-slate-50 dark:bg-[#121f3f] border border-slate-300 dark:border-blue-900/60 rounded-xl flex flex-col justify-between">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 pb-1 border-b border-dashed border-slate-400 dark:border-blue-900/80 mb-2">
                 {t.preparedByTitle}
               </div>
-              <div className="font-bold text-sm text-black">
+              <div className="font-bold text-sm text-slate-900 dark:text-amber-300">
                 {downloadingUser.name}
               </div>
-              <div className="text-xs text-slate-800 font-semibold mt-0.5">
+              <div className="text-xs text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
                 {downloadingUser.roleTitle}
               </div>
-              <div className="text-[11px] text-slate-600 mt-1 space-y-0.5">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 space-y-0.5">
                 <div><span className="font-bold">Email:</span> {downloadingUser.email || 'N/A'}</div>
                 {downloadingUser.phone && <div><span className="font-bold">Phone:</span> {downloadingUser.phone}</div>}
                 <div><span className="font-bold">User / ID:</span> {downloadingUser.username}</div>
               </div>
             </div>
 
-            <div className="pt-4 mt-3 border-t border-slate-300 text-[10px] text-slate-500">
+            <div className="pt-4 mt-3 border-t border-slate-300 dark:border-blue-900/60 text-[10px] text-slate-500 dark:text-slate-400">
               <div><span className="font-bold">Date & Time:</span> {new Date().toLocaleString()}</div>
-              <div className="italic text-emerald-800 font-semibold mt-0.5">✓ Electronically Authenticated</div>
+              <div className="italic text-emerald-800 dark:text-emerald-400 font-semibold mt-0.5">✓ Electronically Authenticated</div>
             </div>
           </div>
 
           {/* 2. Verified By - Fleet Accounts / Auditor */}
-          <div className="p-3 bg-slate-50 border border-slate-300 rounded-xl flex flex-col justify-between">
+          <div className="p-3 bg-slate-50 dark:bg-[#121f3f] border border-slate-300 dark:border-blue-900/60 rounded-xl flex flex-col justify-between">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 pb-1 border-b border-dashed border-slate-400 dark:border-blue-900/80 mb-2">
                 {t.verifiedByTitle}
               </div>
-              <div className="h-10 border-b border-dashed border-slate-400 mb-2"></div>
-              <div className="font-bold text-xs text-black">
+              <div className="h-10 border-b border-dashed border-slate-400 dark:border-blue-900/80 mb-2"></div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
                 Fleet Auditor / Senior Accountant
               </div>
-              <div className="text-[11px] text-slate-600">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400">
                 Accounts & Fuel Audit Verification
               </div>
             </div>
-            <div className="pt-2 text-[10px] text-slate-500">
+            <div className="pt-2 text-[10px] text-slate-500 dark:text-slate-400">
               Signature & Official Stamp
             </div>
           </div>
 
           {/* 3. Approved By - Executive Authority */}
-          <div className="p-3 bg-slate-50 border border-slate-300 rounded-xl flex flex-col justify-between">
+          <div className="p-3 bg-slate-50 dark:bg-[#121f3f] border border-slate-300 dark:border-blue-900/60 rounded-xl flex flex-col justify-between">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 pb-1 border-b border-dashed border-slate-400 dark:border-blue-900/80 mb-2">
                 {t.approvedByTitle}
               </div>
-              <div className="h-10 border-b border-dashed border-slate-400 mb-2"></div>
-              <div className="font-bold text-xs text-black">
+              <div className="h-10 border-b border-dashed border-slate-400 dark:border-blue-900/80 mb-2"></div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
                 Managing Director / Fleet Head
               </div>
-              <div className="text-[11px] text-slate-600">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400">
                 Executive Approval & Release
               </div>
             </div>
-            <div className="pt-2 text-[10px] text-slate-500">
+            <div className="pt-2 text-[10px] text-slate-500 dark:text-slate-400">
               Executive Seal & Date
             </div>
           </div>
         </div>
 
         {/* Formal A4 Document Footer */}
-        <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 gap-2">
+        <div className="pt-3 border-t border-slate-200 dark:border-blue-900/50 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 gap-2">
           <div>
             Official Audit Statement • {letterheadInfo.tenantName} • Layout: A4 Standard (210×297mm) • Font: Times New Roman
           </div>
           <div>
-            Prepared by: <span className="font-bold text-slate-800">{downloadingUser.name}</span> on {new Date().toLocaleDateString()}
+            Prepared by: <span className="font-bold text-slate-800 dark:text-slate-200">{downloadingUser.name}</span> on {new Date().toLocaleDateString()}
           </div>
         </div>
       </div>
