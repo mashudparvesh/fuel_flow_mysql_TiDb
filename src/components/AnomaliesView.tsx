@@ -254,7 +254,7 @@ export const AnomaliesView: React.FC = () => {
             <DollarSign className="w-4 h-4 text-red-600" />
           </div>
           <div className="text-2xl font-black text-red-600 font-mono">
-            ৳{summary.financialLoss.toLocaleString()}
+            BDT {summary.financialLoss.toLocaleString()}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">{t.financialLossDesc}</p>
         </div>
@@ -403,7 +403,7 @@ export const AnomaliesView: React.FC = () => {
                       {/* Lost Fuel */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono">
                         <span className="font-bold text-red-600">~{lostLiters} L</span>
-                        <span className="text-[10px] text-slate-400 block font-semibold">৳{lossBdt.toLocaleString()} {t.lossSuffix}</span>
+                        <span className="text-[10px] text-slate-400 block font-semibold">BDT {lossBdt.toLocaleString()} {t.lossSuffix}</span>
                       </td>
 
                       {/* Source */}
@@ -463,7 +463,7 @@ export const AnomaliesView: React.FC = () => {
               <div className="p-3 rounded-xl bg-red-50 border border-red-200 space-y-1">
                 <div><strong>{t.slipNoLabel}</strong> {selectedAnomaly.slip_no}</div>
                 <div><strong>{t.dateLabel}</strong> {selectedAnomaly.entry_date}</div>
-                <div><strong>{t.totalFuelLabel}</strong> {selectedAnomaly.fuel_liters} Liters (৳{selectedAnomaly.total_amount.toLocaleString()})</div>
+                <div><strong>{t.totalFuelLabel}</strong> {selectedAnomaly.fuel_liters} Liters (BDT {selectedAnomaly.total_amount.toLocaleString()})</div>
                 <div><strong>{t.distanceLabel}</strong> {selectedAnomaly.distance_traveled} KM / Hours</div>
                 <div><strong>{t.actualMileageLabel}</strong> {selectedAnomaly.calculated_mileage} ({t.standardPrefix} {selectedAnomaly.benchmark_mileage})</div>
                 <div><strong>{t.deviationRateLabel}</strong> {selectedAnomaly.anomaly_diff_percent}%</div>

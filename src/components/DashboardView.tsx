@@ -285,7 +285,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs font-semibold text-slate-500">{t.litersLabel}</span>
           </div>
           <div className="mt-2 text-xs font-semibold text-amber-600 flex items-center justify-between">
-            <span>{t.totalCostLabel}: ৳{kpis.todayFuelCost.toLocaleString()}</span>
+            <span>{t.totalCostLabel}: BDT {kpis.todayFuelCost.toLocaleString()}</span>
             <span className="text-[10px] text-slate-400 font-normal">{t.todayLabel}</span>
           </div>
         </div>
@@ -305,7 +305,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-red-600 font-mono">
-              ৳{kpis.totalPumpOutstanding.toLocaleString()}
+              BDT {kpis.totalPumpOutstanding.toLocaleString()}
             </span>
           </div>
           <div className="mt-2 text-xs font-semibold text-slate-600 flex items-center justify-between">
@@ -331,7 +331,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs font-semibold text-slate-500">{t.litersLabel}</span>
           </div>
           <div className="mt-2 text-xs font-semibold text-blue-700 flex items-center justify-between">
-            <span>{t.totalCostLabel}: ৳{kpis.monthFuelCost.toLocaleString()}</span>
+            <span>{t.totalCostLabel}: BDT {kpis.monthFuelCost.toLocaleString()}</span>
             <span className="text-[10px] text-slate-400 font-normal">{t.thisMonthLabel}</span>
           </div>
         </div>
@@ -412,7 +412,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="font-bold text-slate-800">{stat.name}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 font-mono">{stat.liters} L</span>
-                    <span className="font-bold font-mono text-slate-900">৳{stat.cost.toLocaleString()}</span>
+                    <span className="font-bold font-mono text-slate-900">BDT {stat.cost.toLocaleString()}</span>
                     <span className="text-slate-400 text-[10px] w-8 text-right font-semibold">{stat.percent}%</span>
                   </div>
                 </div>
@@ -663,7 +663,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                       {/* Amount */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-bold text-amber-700">
-                        ৳{entry.total_amount.toLocaleString()}
+                        BDT {entry.total_amount.toLocaleString()}
                       </td>
 
                       {/* Calculated Mileage vs Benchmark */}
@@ -757,7 +757,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="text-xs text-slate-600 space-y-1">
               <div><strong>{t.slipModalDate}:</strong> {selectedEntrySlip.entry_date}</div>
-              <div><strong>{t.slipModalLiters}:</strong> {selectedEntrySlip.fuel_liters} L • <strong>{t.slipModalTotal}:</strong> ৳{selectedEntrySlip.total_amount.toLocaleString()}</div>
+              <div><strong>{t.slipModalLiters}:</strong> {selectedEntrySlip.fuel_liters} L • <strong>{t.slipModalTotal}:</strong> BDT {selectedEntrySlip.total_amount.toLocaleString()}</div>
               {selectedEntrySlip.notes && <div><strong>{t.slipModalNotes}:</strong> {selectedEntrySlip.notes}</div>}
             </div>
 

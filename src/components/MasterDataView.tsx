@@ -672,11 +672,11 @@ export const MasterDataView: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">{t.creditLimitLabel}</span>
-                      <span className="font-mono font-bold text-slate-800">৳{p.credit_limit.toLocaleString()}</span>
+                      <span className="font-mono font-bold text-slate-800">BDT {p.credit_limit.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">{t.currentDueLabel}</span>
-                      <span className="font-mono font-black text-red-600">৳{p.current_balance.toLocaleString()}</span>
+                      <span className="font-mono font-black text-red-600">BDT {p.current_balance.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -740,7 +740,7 @@ export const MasterDataView: React.FC = () => {
                   </div>
                   <h4 className="font-extrabold text-slate-900 text-sm mb-1">{ft.name}</h4>
                   <div className="text-2xl font-black text-slate-900 font-mono">
-                    ৳{ft.current_price.toFixed(2)} <span className="text-xs font-normal text-slate-500">/ {ft.unit}</span>
+                    BDT {ft.current_price.toFixed(2)} <span className="text-xs font-normal text-slate-500">/ {ft.unit}</span>
                   </div>
 
                   {/* Price history badge */}
@@ -750,7 +750,7 @@ export const MasterDataView: React.FC = () => {
                       {ft.price_history.slice(-3).reverse().map((h, i) => (
                         <li key={i} className="text-[10px] text-slate-500 flex justify-between font-mono">
                           <span>{h.date}:</span>
-                          <span>৳{h.price.toFixed(2)}</span>
+                          <span>BDT {h.price.toFixed(2)}</span>
                         </li>
                       ))}
                     </ul>
@@ -844,7 +844,7 @@ export const MasterDataView: React.FC = () => {
               {t.priceModalTitle}: {selectedFuelType.name}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              {t.currentPriceLabel} ৳{selectedFuelType.current_price.toFixed(2)}
+              {t.currentPriceLabel} BDT {selectedFuelType.current_price.toFixed(2)}
             </p>
 
             <form onSubmit={handleUpdatePrice} className="space-y-4">
@@ -1306,7 +1306,7 @@ export const MasterDataView: React.FC = () => {
             {pumpToDelete.current_balance > 0 && (
               <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-center justify-between">
                 <span>{t.pumpDueWarning}</span>
-                <span className="font-mono font-bold text-red-600">৳{pumpToDelete.current_balance.toLocaleString()}</span>
+                <span className="font-mono font-bold text-red-600">BDT {pumpToDelete.current_balance.toLocaleString()}</span>
               </div>
             )}
 

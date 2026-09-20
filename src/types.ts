@@ -41,6 +41,7 @@ export interface Tenant {
   deleted_at?: string | null;
   created_at?: string;
   subscription?: TenantSubscription;
+  logo?: string;
 }
 
 export interface UserPermissions {

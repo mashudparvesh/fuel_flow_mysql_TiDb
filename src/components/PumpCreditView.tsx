@@ -184,8 +184,8 @@ export const PumpCreditView: React.FC = () => {
     driver: 'Driver',
     fuelType: 'Fuel Type',
     liters: 'Liters',
-    rate: 'Rate (৳)',
-    total: 'Total (৳)',
+    rate: 'Rate (BDT)',
+    total: 'Total (BDT)',
     refNo: 'Cheque / Ref No',
     method: 'Method',
     recordedBy: 'Recorded By',
@@ -856,10 +856,10 @@ export const PumpCreditView: React.FC = () => {
             {t.totalOutstanding}
           </span>
           <div className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 font-mono">
-            ৳{aggregateTotals.totalDue.toLocaleString()}
+            BDT {aggregateTotals.totalDue.toLocaleString()}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">
-            {language === 'bn' ? 'সকল পাম্পের মোট বর্তমান বকেয়া' : 'Total current due to pumps'}
+            {'Total current due to pumps'}
           </p>
         </div>
 
@@ -869,10 +869,10 @@ export const PumpCreditView: React.FC = () => {
             {t.totalAdvance}
           </span>
           <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-            ৳{aggregateTotals.totalAdvance.toLocaleString()}
+            BDT {aggregateTotals.totalAdvance.toLocaleString()}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">
-            {language === 'bn' ? 'পাম্পে অগ্রিম জমা থাকা টাকা' : 'Prepaid / Advance deposit'}
+            {'Prepaid / Advance deposit'}
           </p>
         </div>
 
@@ -882,10 +882,10 @@ export const PumpCreditView: React.FC = () => {
             {t.totalFuelTaken}
           </span>
           <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
-            ৳{aggregateTotals.totalFuelVal.toLocaleString()}
+            BDT {aggregateTotals.totalFuelVal.toLocaleString()}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">
-            {aggregateTotals.totalFuelLiters.toLocaleString()} {language === 'bn' ? 'লিটার মোট উত্তোলন' : 'Liters taken'}
+            {aggregateTotals.totalFuelLiters.toLocaleString()} {'Liters taken'}
           </p>
         </div>
 
@@ -895,10 +895,10 @@ export const PumpCreditView: React.FC = () => {
             {t.totalPaidAmount}
           </span>
           <div className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
-            ৳{aggregateTotals.totalPaidVal.toLocaleString()}
+            BDT {aggregateTotals.totalPaidVal.toLocaleString()}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">
-            {payments.length} {language === 'bn' ? 'টি পেমেন্ট ভাউচার' : 'Settlements'}
+            {payments.length} {'Settlements'}
           </p>
         </div>
 
@@ -908,10 +908,10 @@ export const PumpCreditView: React.FC = () => {
             {t.totalCreditLimit}
           </span>
           <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white font-mono">
-            ৳{aggregateTotals.totalCreditLimit.toLocaleString()}
+            BDT {aggregateTotals.totalCreditLimit.toLocaleString()}
           </div>
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-            {t.availableCredit}: ৳{aggregateTotals.totalAvailable.toLocaleString()}
+            {t.availableCredit}: BDT {aggregateTotals.totalAvailable.toLocaleString()}
           </p>
         </div>
       </div>
@@ -985,10 +985,10 @@ export const PumpCreditView: React.FC = () => {
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Building className="w-8 h-8 text-amber-500 opacity-60" />
                         <p className="font-bold text-sm">
-                          {language === 'bn' ? 'কোন ফুয়েল পাম্প স্টেশন পাওয়া যায়নি' : 'No fuel pump stations found'}
+                          {'No fuel pump stations found'}
                         </p>
                         <p className="text-xs text-slate-400">
-                          {language === 'bn' ? 'মাস্টার ডাটা থেকে নতুন পাম্প যুক্ত করুন।' : 'Add a new pump station from Master Data view.'}
+                          {'Add a new pump station from Master Data view.'}
                         </p>
                       </div>
                     </td>
@@ -1022,31 +1022,31 @@ export const PumpCreditView: React.FC = () => {
 
                       {/* Credit Limit */}
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                        ৳{creditLimit.toLocaleString()}
+                        BDT {creditLimit.toLocaleString()}
                       </td>
 
                       {/* Opening Due */}
                       <td className="py-3 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                        ৳{openingDue.toLocaleString()}
+                        BDT {openingDue.toLocaleString()}
                       </td>
 
                       {/* Total Fuel Consumed */}
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="font-mono font-black text-amber-700 dark:text-amber-300">
-                          ৳{totalFuelCost.toLocaleString()}
+                          BDT {totalFuelCost.toLocaleString()}
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-300 font-mono">
-                          {totalFuelLiters.toLocaleString()} L ({fuelEntriesCount} {language === 'bn' ? 'বার' : 'slips'})
+                          {totalFuelLiters.toLocaleString()} L ({fuelEntriesCount} {'slips'})
                         </div>
                       </td>
 
                       {/* Total Paid */}
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="font-mono font-black text-blue-700 dark:text-blue-300">
-                          ৳{totalPaid.toLocaleString()}
+                          BDT {totalPaid.toLocaleString()}
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-300 font-mono">
-                          {item.paymentsCount} {language === 'bn' ? 'টি পেমেন্ট' : 'payments'}
+                          {item.paymentsCount} {'payments'}
                         </div>
                       </td>
 
@@ -1055,7 +1055,7 @@ export const PumpCreditView: React.FC = () => {
                         {dueAmount > 0 ? (
                           <span className="inline-flex flex-col items-center px-2.5 py-1 rounded-lg bg-red-100 dark:bg-red-950/60 border border-red-200 dark:border-red-800/80 text-red-700 dark:text-red-300 font-bold">
                             <span className="font-mono font-black text-xs">
-                              ৳{dueAmount.toLocaleString()}
+                              BDT {dueAmount.toLocaleString()}
                             </span>
                             <span className="text-[9px] uppercase tracking-wider font-extrabold">
                               {t.dueStatus} ({usagePercent}%)
@@ -1064,7 +1064,7 @@ export const PumpCreditView: React.FC = () => {
                         ) : advanceAmount > 0 ? (
                           <span className="inline-flex flex-col items-center px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 font-bold">
                             <span className="font-mono font-black text-xs">
-                              ৳{advanceAmount.toLocaleString()}
+                              BDT {advanceAmount.toLocaleString()}
                             </span>
                             <span className="text-[9px] uppercase tracking-wider font-extrabold">
                               {t.advanceStatus}
@@ -1080,7 +1080,7 @@ export const PumpCreditView: React.FC = () => {
 
                       {/* Available Limit */}
                       <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                        ৳{availableCredit.toLocaleString()}
+                        BDT {availableCredit.toLocaleString()}
                       </td>
 
                       {/* Actions */}
@@ -1090,10 +1090,10 @@ export const PumpCreditView: React.FC = () => {
                           <button
                             onClick={() => handleOpenStatement(pump.id)}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#142247] hover:bg-slate-100 dark:hover:bg-[#1c3063] text-slate-800 dark:text-amber-300 border border-slate-300 dark:border-amber-400/40 text-[11px] font-bold shadow-2xs transition-all"
-                            title={language === 'bn' ? 'পেমেন্ট রিকনসিলিয়েশন স্টেটমেন্ট ভাউচার খুলুন' : 'Open Reconciliation Statement'}
+                            title={'Open Reconciliation Statement'}
                           >
                             <FileText className="w-3.5 h-3.5 text-amber-500" />
-                            <span>{language === 'bn' ? 'স্টেটমেন্ট' : 'Statement'}</span>
+                            <span>{'Statement'}</span>
                           </button>
 
                           {/* Quick Pay Button */}
@@ -1101,10 +1101,10 @@ export const PumpCreditView: React.FC = () => {
                             <button
                               onClick={() => handleOpenPayment(pump.id)}
                               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-all"
-                              title={language === 'bn' ? 'পাম্পের বকেয়া পরিশোধ রেকর্ড করুন' : 'Record Payment'}
+                              title={'Record Payment'}
                             >
                               <CreditCard className="w-3.5 h-3.5" />
-                              <span>{language === 'bn' ? 'পেমেন্ট দিন' : 'Pay'}</span>
+                              <span>{'Pay'}</span>
                             </button>
                           )}
                         </div>
@@ -1148,7 +1148,7 @@ export const PumpCreditView: React.FC = () => {
                           {t.creditLimitLabel}:
                         </span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          ৳{creditLimit.toLocaleString()}
+                          BDT {creditLimit.toLocaleString()}
                         </span>
                       </div>
 
@@ -1157,35 +1157,35 @@ export const PumpCreditView: React.FC = () => {
                           {t.openingDueLabel}:
                         </span>
                         <span className="font-mono text-slate-700 dark:text-slate-300">
-                          ৳{openingDue.toLocaleString()}
+                          BDT {openingDue.toLocaleString()}
                         </span>
                       </div>
 
                       <div className="flex justify-between">
                         <span className="text-slate-500 dark:text-slate-300 font-medium">
-                          {language === 'bn' ? 'ফুয়েল উত্তোলন (খরচ):' : 'Fuel Purchased:'}
+                          {'Fuel Purchased:'}
                         </span>
                         <span className="font-mono font-bold text-amber-700 dark:text-amber-400">
-                          ৳{totalFuelCost.toLocaleString()} ({totalFuelLiters} L)
+                          BDT {totalFuelCost.toLocaleString()} ({totalFuelLiters} L)
                         </span>
                       </div>
 
                       <div className="flex justify-between">
                         <span className="text-slate-500 dark:text-slate-300 font-medium">
-                          {language === 'bn' ? 'মোট পরিশোধিত:' : 'Total Paid:'}
+                          {'Total Paid:'}
                         </span>
                         <span className="font-mono font-bold text-blue-700 dark:text-blue-300">
-                          ৳{totalPaid.toLocaleString()}
+                          BDT {totalPaid.toLocaleString()}
                         </span>
                       </div>
 
                       <div className="flex justify-between pt-1.5 border-t border-slate-200 dark:border-blue-900/50">
                         <span className="font-bold text-slate-900 dark:text-white">
                           {dueAmount > 0
-                            ? (language === 'bn' ? 'বর্তমান বকেয়া (Due):' : 'Outstanding Due:')
+                            ? ('Outstanding Due:')
                             : advanceAmount > 0
-                            ? (language === 'bn' ? 'অগ্রিম জমা (Advance):' : 'Advance Paid:')
-                            : (language === 'bn' ? 'বর্তমান স্থিতি:' : 'Status:')}
+                            ? ('Advance Paid:')
+                            : ('Status:')}
                         </span>
                         <span
                           className={`font-mono font-black text-sm ${
@@ -1196,7 +1196,7 @@ export const PumpCreditView: React.FC = () => {
                               : 'text-blue-600 dark:text-blue-400'
                           }`}
                         >
-                          ৳{(dueAmount > 0 ? dueAmount : advanceAmount).toLocaleString()}
+                          BDT {(dueAmount > 0 ? dueAmount : advanceAmount).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -1218,7 +1218,7 @@ export const PumpCreditView: React.FC = () => {
                       className="py-2 px-3 rounded-xl bg-white dark:bg-[#142247] hover:bg-slate-100 dark:hover:bg-[#1c3063] text-slate-800 dark:text-amber-300 font-bold text-xs border border-slate-200 dark:border-blue-900/60 shadow-2xs flex items-center justify-center gap-1.5"
                     >
                       <FileText className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{language === 'bn' ? 'স্টেটমেন্ট' : 'Statement'}</span>
+                      <span>{'Statement'}</span>
                     </button>
                     {!isViewer && (
                       <button
@@ -1226,7 +1226,7 @@ export const PumpCreditView: React.FC = () => {
                         className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
-                        <span>{language === 'bn' ? 'পেমেন্ট দিন' : 'Pay Now'}</span>
+                        <span>{'Pay Now'}</span>
                       </button>
                     )}
                   </div>
@@ -1269,18 +1269,18 @@ export const PumpCreditView: React.FC = () => {
           <div className="flex items-center gap-3 text-xs">
             <div className="text-right">
               <span className="text-slate-400 dark:text-slate-300 block text-[10px] uppercase font-bold">
-                {language === 'bn' ? 'ফিল্টারকৃত ফুয়েল চার্জ' : 'Filtered Charges'}
+                {'Filtered Charges'}
               </span>
               <span className="font-mono font-extrabold text-amber-700 dark:text-amber-400">
-                +৳{totalFilteredCharges.toLocaleString()}
+                +BDT {totalFilteredCharges.toLocaleString()}
               </span>
             </div>
             <div className="text-right pl-3 border-l border-slate-200 dark:border-blue-900/60">
               <span className="text-slate-400 dark:text-slate-300 block text-[10px] uppercase font-bold">
-                {language === 'bn' ? 'ফিল্টারকৃত পরিশোধ' : 'Filtered Payments'}
+                {'Filtered Payments'}
               </span>
               <span className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
-                -৳{totalFilteredPayments.toLocaleString()}
+                -BDT {totalFilteredPayments.toLocaleString()}
               </span>
             </div>
           </div>
@@ -1383,7 +1383,7 @@ export const PumpCreditView: React.FC = () => {
                 <th className="py-2.5 px-3.5 text-right">{t.debitAmount}</th>
                 <th className="py-2.5 px-3.5 text-right">{t.creditAmount}</th>
                 <th className="py-2.5 px-3.5 text-right">{t.runningBalance}</th>
-                <th className="py-2.5 px-3.5 text-center">{language === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
+                <th className="py-2.5 px-3.5 text-center">{'Action'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
@@ -1428,13 +1428,13 @@ export const PumpCreditView: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-3.5 text-right font-mono font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                        {tx.type === 'charge' ? `৳${tx.amount.toLocaleString()}` : '—'}
+                        {tx.type === 'charge' ? `BDT ${tx.amount.toLocaleString()}` : '—'}
                       </td>
                       <td className="py-2.5 px-3.5 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                        {tx.type === 'payment' ? `৳${tx.amount.toLocaleString()}` : '—'}
+                        {tx.type === 'payment' ? `BDT ${tx.amount.toLocaleString()}` : '—'}
                       </td>
                       <td className="py-2.5 px-3.5 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap bg-slate-50/50 dark:bg-[#091226]/50">
-                        ৳{tx.runningBalance.toLocaleString()}
+                        BDT {tx.runningBalance.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
                         {tx.type === 'payment' ? (
@@ -1631,7 +1631,7 @@ export const PumpCreditView: React.FC = () => {
                 </div>
 
                 <div className="text-[11px] font-mono text-slate-500 dark:text-slate-300">
-                  {language === 'bn' ? 'তারিখ:' : 'Generated:'} {new Date().toLocaleDateString()}
+                  {'Generated:'} {new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -1678,7 +1678,7 @@ export const PumpCreditView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-0.5">
-                      {language === 'bn' ? 'গ্রাহক প্রতিষ্ঠান (Company):' : 'Client Organization:'}
+                      {'Client Organization:'}
                     </span>
                     <h4 className="font-bold text-black text-sm">
                       {currentTenant.name}
@@ -1689,7 +1689,7 @@ export const PumpCreditView: React.FC = () => {
 
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-0.5">
-                      {language === 'bn' ? 'ফুয়েল পাম্প স্টেশন (Fuel Station):' : 'Fuel Pump Station:'}
+                      {'Fuel Pump Station:'}
                     </span>
                     <h4 className="font-bold text-black text-sm">
                       {currentStatementData.pump.name}
@@ -1709,16 +1709,16 @@ export const PumpCreditView: React.FC = () => {
                       {t.openingDueLabel}
                     </span>
                     <div className="text-base font-black font-mono text-slate-800 dark:text-slate-200 mt-0.5">
-                      ৳{currentStatementData.openingBalance.toLocaleString()}
+                      BDT {currentStatementData.openingBalance.toLocaleString()}
                     </div>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#091226] border border-slate-200 dark:border-blue-950">
                     <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 block">
-                      (+) {language === 'bn' ? 'মোট ফুয়েল গ্রহণ' : 'Fuel Purchased'}
+                      (+) {'Fuel Purchased'}
                     </span>
                     <div className="text-base font-black font-mono text-amber-700 dark:text-amber-400 mt-0.5">
-                      ৳{currentStatementData.totalCharges.toLocaleString()}
+                      BDT {currentStatementData.totalCharges.toLocaleString()}
                     </div>
                     <span className="text-[10px] font-mono text-slate-500">
                       {currentStatementData.totalLiters} Liters
@@ -1727,10 +1727,10 @@ export const PumpCreditView: React.FC = () => {
 
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#091226] border border-slate-200 dark:border-blue-950">
                     <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 block">
-                      (-) {language === 'bn' ? 'মোট পরিশোধিত' : 'Total Paid'}
+                      (-) {'Total Paid'}
                     </span>
                     <div className="text-base font-black font-mono text-emerald-700 dark:text-emerald-400 mt-0.5">
-                      ৳{currentStatementData.totalPaid.toLocaleString()}
+                      BDT {currentStatementData.totalPaid.toLocaleString()}
                     </div>
                     <span className="text-[10px] font-mono text-slate-500">
                       {currentStatementData.filteredPayments.length} settlements
@@ -1751,7 +1751,7 @@ export const PumpCreditView: React.FC = () => {
                         ? t.netPayable
                         : currentStatementData.advanceAmount > 0
                         ? t.netAdvance
-                        : (language === 'bn' ? 'বর্তমান ব্যালেন্স:' : 'Balance:')}
+                        : ('Balance:')}
                     </span>
                     <div
                       className={`text-lg font-black font-mono mt-0.5 ${
@@ -1762,7 +1762,7 @@ export const PumpCreditView: React.FC = () => {
                           : 'text-blue-600 dark:text-blue-400'
                       }`}
                     >
-                      ৳{(currentStatementData.dueAmount > 0
+                      BDT {(currentStatementData.dueAmount > 0
                         ? currentStatementData.dueAmount
                         : currentStatementData.advanceAmount
                       ).toLocaleString()}
@@ -1774,10 +1774,10 @@ export const PumpCreditView: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-800 dark:text-amber-300">
-                    {t.fuelHistoryTitle} ({currentStatementData.filteredEntries.length} {language === 'bn' ? 'টি স্লিপ' : 'slips'})
+                    {t.fuelHistoryTitle} ({currentStatementData.filteredEntries.length} {'slips'})
                   </h4>
                   <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
-                    Total: ৳{currentStatementData.totalCharges.toLocaleString()}
+                    Total: BDT {currentStatementData.totalCharges.toLocaleString()}
                   </span>
                 </div>
 
@@ -1786,7 +1786,7 @@ export const PumpCreditView: React.FC = () => {
                     <thead className="bg-slate-100 dark:bg-[#132247] text-slate-700 dark:text-amber-300 font-bold uppercase text-[9px] tracking-wider">
                       <tr>
                         <th className="py-2 px-3">{t.date}</th>
-                        <th className="py-2 px-3">{language === 'bn' ? 'স্লিপ নং' : 'Slip No'}</th>
+                        <th className="py-2 px-3">{'Slip No'}</th>
                         <th className="py-2 px-3">{t.vehicleNo}</th>
                         <th className="py-2 px-3 text-right">{t.liters}</th>
                         <th className="py-2 px-3 text-right">{t.rate}</th>
@@ -1797,7 +1797,7 @@ export const PumpCreditView: React.FC = () => {
                       {currentStatementData.filteredEntries.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-4 text-center text-slate-400 font-medium">
-                            {language === 'bn' ? 'এই সময়সীমার মধ্যে কোনো ফুয়েল গ্রহণের রেকর্ড নেই।' : 'No fuel intake records found in this date range.'}
+                            {'No fuel intake records found in this date range.'}
                           </td>
                         </tr>
                       ) : (
@@ -1816,10 +1816,10 @@ export const PumpCreditView: React.FC = () => {
                               {entry.fuel_liters} L
                             </td>
                             <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                              ৳{entry.unit_price}
+                              BDT {entry.unit_price}
                             </td>
                             <td className="py-2 px-3 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
-                              ৳{entry.total_amount.toLocaleString()}
+                              BDT {entry.total_amount.toLocaleString()}
                             </td>
                           </tr>
                         ))
@@ -1833,10 +1833,10 @@ export const PumpCreditView: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-800 dark:text-emerald-300">
-                    {t.paymentHistoryTitle} ({currentStatementData.filteredPayments.length} {language === 'bn' ? 'টি পরিশোধ' : 'payments'})
+                    {t.paymentHistoryTitle} ({currentStatementData.filteredPayments.length} {'payments'})
                   </h4>
                   <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    Total: ৳{currentStatementData.totalPaid.toLocaleString()}
+                    Total: BDT {currentStatementData.totalPaid.toLocaleString()}
                   </span>
                 </div>
 
@@ -1848,14 +1848,14 @@ export const PumpCreditView: React.FC = () => {
                         <th className="py-2 px-3">{t.refNo}</th>
                         <th className="py-2 px-3">{t.method}</th>
                         <th className="py-2 px-3 text-right">{t.total}</th>
-                        <th className="py-2 px-3">{language === 'bn' ? 'বিবরণ / নোট' : 'Remarks'}</th>
+                        <th className="py-2 px-3">{'Remarks'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                       {currentStatementData.filteredPayments.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="py-4 text-center text-slate-400 font-medium">
-                            {language === 'bn' ? 'কোনো পেমেন্ট পরিশোধের রেকর্ড নেই।' : 'No payment settlement records found.'}
+                            {'No payment settlement records found.'}
                           </td>
                         </tr>
                       ) : (
@@ -1871,7 +1871,7 @@ export const PumpCreditView: React.FC = () => {
                               {pay.payment_method}
                             </td>
                             <td className="py-2 px-3 text-right font-mono font-black text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                              ৳{pay.amount.toLocaleString()}
+                              BDT {pay.amount.toLocaleString()}
                             </td>
                             <td className="py-2 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
                               {pay.notes || '—'}
@@ -1888,7 +1888,7 @@ export const PumpCreditView: React.FC = () => {
               <div className="pt-8 pb-2 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs border-t-2 border-slate-900 mt-6">
                 <div className="p-2.5 border border-slate-300 rounded-xl bg-slate-50 text-left">
                   <div className="text-[10px] uppercase font-bold text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-1.5">
-                    {t.preparedBy} (প্রস্তুতকারী)
+                    {t.preparedBy}
                   </div>
                   <div className="font-bold text-black text-xs">{downloadingUser.name}</div>
                   <div className="text-[11px] text-slate-800">{downloadingUser.roleTitle}</div>
@@ -1901,7 +1901,7 @@ export const PumpCreditView: React.FC = () => {
 
                 <div className="p-2.5 border border-slate-300 rounded-xl bg-slate-50 text-center flex flex-col justify-between">
                   <div className="text-[10px] uppercase font-bold text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-1.5">
-                    {t.verifiedBy} (যাচাইকারী)
+                    {t.verifiedBy}
                   </div>
                   <div className="h-8"></div>
                   <div className="text-[10px] text-slate-500 border-t border-slate-300 pt-1">Accounts & Audit Officer</div>
@@ -1909,7 +1909,7 @@ export const PumpCreditView: React.FC = () => {
 
                 <div className="p-2.5 border border-slate-300 rounded-xl bg-slate-50 text-center flex flex-col justify-between">
                   <div className="text-[10px] uppercase font-bold text-slate-600 pb-1 border-b border-dashed border-slate-400 mb-1.5">
-                    {t.pumpAuthority} (পাম্প প্রতিনিধি)
+                    {t.pumpAuthority}
                   </div>
                   <div className="h-8"></div>
                   <div className="text-[10px] text-slate-500 border-t border-slate-300 pt-1">Station Manager Seal & Signature</div>
@@ -1936,7 +1936,7 @@ export const PumpCreditView: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md flex items-center gap-1.5"
                 >
                   <CreditCard className="w-4 h-4" />
-                  <span>{language === 'bn' ? 'পাম্পে পেমেন্ট দিন' : 'Pay Pump Now'}</span>
+                  <span>{'Pay Pump Now'}</span>
                 </button>
               </div>
             </div>
@@ -1979,10 +1979,10 @@ export const PumpCreditView: React.FC = () => {
                     <option key={item.pump.id} value={item.pump.id}>
                       {item.pump.name} (
                       {item.dueAmount > 0
-                        ? `বকেয়া: ৳${item.dueAmount.toLocaleString()}`
+                        ? `Due: BDT ${item.dueAmount.toLocaleString()}`
                         : item.advanceAmount > 0
-                        ? `অগ্রিম: ৳${item.advanceAmount.toLocaleString()}`
-                        : 'পরিশোধিত'}
+                        ? `Advance: BDT ${item.advanceAmount.toLocaleString()}`
+                        : 'Settled'}
                       )
                     </option>
                   ))}
@@ -2058,7 +2058,7 @@ export const PumpCreditView: React.FC = () => {
                   type="text"
                   value={payNotes}
                   onChange={e => setPayNotes(e.target.value)}
-                  placeholder="e.g. রূপালী ব্যাংক চেকের মাধ্যমে সেপ্টেম্বর মাসের বিল পরিশোধ"
+                  placeholder="e.g. Bank Cheque / Wire transfer payment for monthly fuel settlement"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-blue-900 bg-white dark:bg-[#0f1a36] text-slate-900 dark:text-white"
                 />
               </div>

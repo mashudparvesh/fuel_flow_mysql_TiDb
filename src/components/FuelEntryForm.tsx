@@ -345,7 +345,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
             <div>
               <span className="text-slate-500 block text-[10px] uppercase font-semibold">{t.fuelTypeAndRate}</span>
               <span className="font-bold text-amber-900">
-                {selectedFuelType?.name} ({unitRate} ৳/{selectedFuelType?.unit})
+                {selectedFuelType?.name} ({unitRate} BDT /{selectedFuelType?.unit})
               </span>
             </div>
             <div>
@@ -407,7 +407,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
               >
                 {pumps.map(p => {
                   const bal = p.current_balance || 0;
-                  const balText = bal >= 0 ? `${t.dueLabel}: ${bal.toLocaleString()} ৳` : `অগ্রিম: ${Math.abs(bal).toLocaleString()} ৳`;
+                  const balText = bal >= 0 ? `${t.dueLabel}: ${bal.toLocaleString()} BDT ` : `Advance: BDT ${Math.abs(bal).toLocaleString()}`;
                   return (
                     <option key={p.id} value={p.id}>
                       {p.name} ({balText})
@@ -524,7 +524,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
                 <div className="p-2.5 rounded-lg bg-white border border-slate-200">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold block">{t.totalAmount}</span>
                   <span className="text-sm font-extrabold text-amber-600 font-mono">
-                    ৳{totalAmount.toLocaleString()}
+                    BDT {totalAmount.toLocaleString()}
                   </span>
                 </div>
 

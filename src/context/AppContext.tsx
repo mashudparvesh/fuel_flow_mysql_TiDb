@@ -112,6 +112,8 @@ interface AppContextType {
   setTenantStatus: (tenantId: string, status: SubscriptionStatus) => void;
   updateTenantSuperAdminCredentials: (tenantId: string, username: string, password: string) => void;
   deleteTenantSubscriber: (tenantId: string) => void;
+  updateTenantLogo: (tenantId: string, logo: string) => void;
+  updateTenant: (tenantId: string, updates: Partial<Tenant>) => void;
 
   // Tenant Internal User & Role/Category Management (for Company Super Admin)
   addCompanyUser: (userData: {
@@ -521,10 +523,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tenantSuspensionNotice, setTenantSuspensionNotice] = useState<string>('');
   const clearTenantSuspensionNotice = () => setTenantSuspensionNotice('');
 
-  // Cross-browser & server-side tenant fetch (ISSUE 1 Fix)
+  // Cross-browser & server-side tenant fetch (Safe merge with persistent storage and self-healing auto-push)
   const refreshTenantsFromServer = async () => {
     try {
-      const res = await fetch(`/api/tenants/all?t=${Date.now()}`, {
+      const res = await fetch(`/api/tenants?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -533,8 +535,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setTenants(json.data);
+        const serverTenants: Tenant[] = Array.isArray(json)
+          ? json
+          : (json.success && Array.isArray(json.data) ? json.data : []);
+
+        if (serverTenants.length > 0) {
+          setTenants(prev => {
+            const merged = [...serverTenants];
+            // Retain any locally registered subscribers that might not have reached server yet and auto-heal
+            prev.forEach(pt => {
+              if (!merged.some(st => st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase()))) {
+                merged.push(pt);
+                // Self-healing: automatically sync any subscriber present locally to the server backend
+                try {
+                  fetch('/api/tenants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pt)
+                  }).catch(() => {});
+                } catch (e) {}
+              }
+            });
+            return merged;
+          });
         }
       }
     } catch (e) {
@@ -542,7 +565,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Cross-browser & server-side users fetch
+  // Cross-browser & server-side users fetch (Safe merge and self-healing auto-push)
   const refreshUsersFromServer = async () => {
     try {
       const res = await fetch(`/api/users?t=${Date.now()}`, {
@@ -556,12 +579,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setUsers(prev => {
-            // Merge server users with local users, preserving newly created ones
+            // Merge server users with local users, preserving newly created ones and self-healing
             const serverUsers: User[] = json.data;
             const merged = [...serverUsers];
             prev.forEach(pu => {
               if (!merged.some(su => su.id === pu.id || (su.tenant_id === pu.tenant_id && su.username.toLowerCase() === pu.username.toLowerCase()))) {
                 merged.push(pu);
+                // Self-healing: automatically sync locally saved user credentials to the server backend
+                try {
+                  fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pu)
+                  }).catch(() => {});
+                } catch (e) {}
               }
             });
             return merged;
@@ -1740,6 +1771,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateTenantLogo = (tenantId: string, logo: string) => {
+    setTenants(prev => prev.map(t => {
+      if (t.id !== tenantId) return t;
+      return { ...t, logo };
+    }));
+    try {
+      fetch(`/api/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo })
+      }).catch(() => {});
+      const channel = new BroadcastChannel('fuelflow_tenants_sync');
+      channel.postMessage({ type: 'REFRESH_TENANTS' });
+      channel.close();
+    } catch (e) {}
+  };
+
+  const updateTenant = (tenantId: string, updates: Partial<Tenant>) => {
+    setTenants(prev => prev.map(t => {
+      if (t.id !== tenantId) return t;
+      return { ...t, ...updates };
+    }));
+    try {
+      fetch(`/api/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      }).catch(() => {});
+      const channel = new BroadcastChannel('fuelflow_tenants_sync');
+      channel.postMessage({ type: 'REFRESH_TENANTS' });
+      channel.close();
+    } catch (e) {}
+  };
+
   // Company Internal User & Category Permissions (Subscriber Super Admin Feature)
   const addCompanyUser = (userData: {
     tenant_id?: string;
@@ -1910,6 +1975,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTenantStatus,
         updateTenantSuperAdminCredentials,
         deleteTenantSubscriber,
+        updateTenantLogo,
+        updateTenant,
 
         // Company User Management & Category Access
         addCompanyUser,

@@ -51,9 +51,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-xl font-bold text-white">FuelNest ইন্টারফেস রিলোড প্রয়োজন</h1>
+              <h1 className="text-xl font-bold text-white">FuelNest Interface Reload Required</h1>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                ব্রাউজারের কোনো উপাদানে সাময়িক ত্রুটি ঘটেছে। আপনার সমস্ত সাবস্ক্রাইবার ও ডাটাবেস রেকর্ড নিরাপদে সংরক্ষিত রয়েছে।
+                An unexpected browser component error occurred. All your subscribers and database records remain safely preserved.
               </p>
               {this.state.error && (
                 <div className="mt-3 p-3 bg-black/40 border border-slate-800 rounded-xl text-left text-[11px] font-mono text-amber-300 overflow-x-auto max-h-32">
@@ -70,14 +70,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-lg shadow-amber-500/20 transition-all"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>পৃষ্ঠাটি রিলোড করুন (Reload)</span>
+                <span>Reload Application</span>
               </button>
               <button
                 onClick={this.handleClearCache}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-blue-900/60 hover:bg-blue-950/40 text-slate-300 font-bold text-xs transition-colors"
               >
                 <Database className="w-4 h-4 text-blue-400" />
-                <span>অ্যাপ রিস্টোর করুন</span>
+                <span>Restore App State</span>
               </button>
             </div>
           </div>

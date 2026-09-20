@@ -17,6 +17,7 @@ import { AuthSwitcherModal } from './components/AuthSwitcherModal';
 import { LoginPage } from './components/LoginPage';
 import { DatabaseStatusModal } from './components/DatabaseStatusModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Footer } from './components/Footer';
 import { Fuel, QrCode, PanelLeftOpen } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -131,56 +132,58 @@ const AppContent: React.FC = () => {
 
         {/* View Routing Area */}
         <main className="flex-1 min-w-0 pb-16 w-full">
-          {/* If SaaS control panel mode is toggled by SaaS Owner/Moderator, show SaasOwnerPanel */}
-          {isSaasControlOpen && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
-            <SaasOwnerPanel onSwitchToFleetView={() => setIsSaasControlOpen(false)} />
-          ) : (
-            <>
-              {currentView === 'dashboard' && (
-                <DashboardView
-                  onOpenFuelEntry={() => handleOpenFuelEntryWithVehicle()}
-                  onNavigateToAnomalies={() => setCurrentView('anomalies')}
-                  onNavigateToPumpCredit={() => setCurrentView('pumps')}
-                  onNavigateToTanker={() => setCurrentView('tankers')}
-                  onSelectVehicleForEntry={handleOpenFuelEntryWithVehicle}
-                />
-              )}
+          <div className="w-full transition-opacity duration-200 ease-out">
+            {/* If SaaS control panel mode is toggled by SaaS Owner/Moderator, show SaasOwnerPanel */}
+            {isSaasControlOpen && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
+              <SaasOwnerPanel onSwitchToFleetView={() => setIsSaasControlOpen(false)} />
+            ) : (
+              <>
+                {currentView === 'dashboard' && (
+                  <DashboardView
+                    onOpenFuelEntry={() => handleOpenFuelEntryWithVehicle()}
+                    onNavigateToAnomalies={() => setCurrentView('anomalies')}
+                    onNavigateToPumpCredit={() => setCurrentView('pumps')}
+                    onNavigateToTanker={() => setCurrentView('tankers')}
+                    onSelectVehicleForEntry={handleOpenFuelEntryWithVehicle}
+                  />
+                )}
 
-              {currentView === 'saas_owner_panel' && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') && (
-                <SaasOwnerPanel onSwitchToFleetView={() => setCurrentView('dashboard')} />
-              )}
+                {currentView === 'saas_owner_panel' && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') && (
+                  <SaasOwnerPanel onSwitchToFleetView={() => setCurrentView('dashboard')} />
+                )}
 
-              {currentView === 'company_users' && isSuperAdmin && (
-                <CompanyUserManagementView />
-              )}
+                {currentView === 'company_users' && isSuperAdmin && (
+                  <CompanyUserManagementView />
+                )}
 
-              {currentView === 'fuel_entry' && !isViewer && (
-                <FuelEntryForm
-                  initialVehicleId={selectedVehicleForEntry}
-                  onSuccess={() => {
-                    setCurrentView('dashboard');
-                  }}
-                  onCancel={() => setCurrentView('dashboard')}
-                />
-              )}
+                {currentView === 'fuel_entry' && !isViewer && (
+                  <FuelEntryForm
+                    initialVehicleId={selectedVehicleForEntry}
+                    onSuccess={() => {
+                      setCurrentView('dashboard');
+                    }}
+                    onCancel={() => setCurrentView('dashboard')}
+                  />
+                )}
 
-              {currentView === 'vehicles' && (
-                <VehiclesView
-                  onSelectVehicleForEntry={handleOpenFuelEntryWithVehicle}
-                />
-              )}
+                {currentView === 'vehicles' && (
+                  <VehiclesView
+                    onSelectVehicleForEntry={handleOpenFuelEntryWithVehicle}
+                  />
+                )}
 
-              {(currentView === 'pumps' || currentView === 'pump_credit') && <PumpCreditView />}
+                {(currentView === 'pumps' || currentView === 'pump_credit') && <PumpCreditView />}
 
-              {(currentView === 'tankers' || currentView === 'tanker_bowzer') && <TankerBowzerView />}
+                {(currentView === 'tankers' || currentView === 'tanker_bowzer') && <TankerBowzerView />}
 
-              {currentView === 'anomalies' && <AnomaliesView />}
+                {currentView === 'anomalies' && <AnomaliesView />}
 
-              {currentView === 'master_data' && <MasterDataView />}
+                {currentView === 'master_data' && <MasterDataView />}
 
-              {currentView === 'reports' && <ReportsView />}
-            </>
-          )}
+                {currentView === 'reports' && <ReportsView />}
+              </>
+            )}
+          </div>
         </main>
       </div>
 
@@ -203,6 +206,9 @@ const AppContent: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Global Application Footer */}
+      <Footer />
 
       {/* Quick QR Scanner Modal */}
       <QuickScannerModal

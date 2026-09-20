@@ -229,7 +229,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const handleCreateSubscriber = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubForm.name || !newSubForm.super_admin_username || !newSubForm.super_admin_password) {
-      alert(language === 'bn' ? 'দয়া করে কোম্পানির নাম, সুপার অ্যাডমিন ইউজার ও পাসওয়ার্ড পূরণ করুন।' : 'Please provide Company Name, Super Admin Username and Password.');
+      alert('Please provide Company Name, Super Admin Username and Password.');
       return;
     }
 
@@ -322,7 +322,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const handleCreateModerator = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newModForm.name || !newModForm.username || !newModForm.password) {
-      alert(language === 'bn' ? 'মডারেটরের নাম, ইউজারনেম এবং পাসওয়ার্ড পূরণ করুন।' : 'Please fill Moderator Name, Username and Password.');
+      alert('Please fill Moderator Name, Username and Password.');
       return;
     }
 
@@ -368,15 +368,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
               <Crown className="w-4 h-4 text-amber-400" />
-              <span>SaaS Master Control Panel (প্ল্যাটফর্ম ওনার)</span>
+              <span>SaaS Master Control Panel (Platform Owner)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              {language === 'bn' ? 'ফুয়েলনেস্ট (FuelNest) SaaS প্ল্যাটফর্ম কন্ট্রোল প্যানেল' : 'FuelNest SaaS Platform Master Control • fuelnest.xyz'}
+              {'FuelNest SaaS Platform Master Control • fuelnest.xyz'}
             </h1>
             <p className="text-slate-300 text-sm leading-relaxed">
-              {language === 'bn'
-                ? 'এখান থেকে আপনি কোম্পানির সাবস্ক্রিপশন বিক্রি, মেয়াদ (দিন/মাস) নিয়ন্ত্রণ, সুপার অ্যাডমিন লগইন-পাসওয়ার্ড ম্যানেজমেন্ট এবং মডারেটর নিয়োগ ও পরিচালনা করতে পারবেন।'
-                : 'Manage subscriber companies, control access validity (days/months), configure Super Admin credentials, and assign moderators on your behalf.'}
+              {'Manage subscriber companies, control access validity (days/months), configure Super Admin credentials, and assign moderators on your behalf.'}
             </p>
           </div>
 
@@ -387,7 +385,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
               <div>
                 <div className="text-amber-400/80 text-[10px] font-bold uppercase tracking-wider">
-                  {language === 'bn' ? 'সক্রিয় টেন্যান্ট পরিবর্তন' : 'Switch Active Tenant'}
+                  {'Switch Active Tenant'}
                 </div>
                 <select
                   id="saas-owner-tenant-select"
@@ -410,7 +408,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               </div>
               <div>
                 <div className="text-slate-400 text-[10px] font-bold uppercase">
-                  {language === 'bn' ? 'ওনার আইডি' : 'Owner ID'}
+                  {'Owner ID'}
                 </div>
                 <div className="text-amber-300 font-mono font-bold text-sm">
                   {saasOwner.username}
@@ -421,9 +419,9 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <button
               onClick={() => setIsSaasControlOpen(false)}
               className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
-              title={language === 'bn' ? 'ফ্লিট ওয়ার্কস্পেসে ফিরে যান' : 'Go to Fleet Workspace'}
+              title={'Go to Fleet Workspace'}
             >
-              <span>{language === 'bn' ? 'ফ্লিট ড্যাশবোর্ডে যান' : 'Launch Fleet App'}</span>
+              <span>{'Launch Fleet App'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -434,66 +432,66 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
-            <span>{language === 'bn' ? 'মোট সাবস্ক্রাইবার' : 'Total Subscribers'}</span>
+            <span>{'Total Subscribers'}</span>
             <Building2 className="w-4 h-4 text-blue-500" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white">
             {stats.total}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {language === 'bn' ? 'রেজিস্টার্ড কোম্পানি' : 'Registered Companies'}
+            {'Registered Companies'}
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-1">
-            <span>{language === 'bn' ? 'সক্রিয় এক্সেস' : 'Active Access'}</span>
+            <span>{'Active Access'}</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
             {stats.active}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {language === 'bn' ? 'মেয়াদ বৈধ রয়েছে' : 'Valid subscriptions'}
+            {'Valid subscriptions'}
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 text-xs font-semibold mb-1">
-            <span>{language === 'bn' ? 'দ্রুত শেষ হচ্ছে' : 'Expiring Soon'}</span>
+            <span>{'Expiring Soon'}</span>
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
             {stats.expiring}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {language === 'bn' ? '৭ দিনের কম বাকি' : 'Under 7 days remaining'}
+            {'Under 7 days remaining'}
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-red-600 dark:text-red-400 text-xs font-semibold mb-1">
-            <span>{language === 'bn' ? 'মেয়াদোত্তীর্ণ' : 'Expired'}</span>
+            <span>{'Expired'}</span>
             <AlertCircle className="w-4 h-4 text-red-500" />
           </div>
           <div className="text-2xl font-black text-red-600 dark:text-red-400">
             {stats.expired}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {language === 'bn' ? 'রিনিউ প্রয়োজন' : 'Action needed'}
+            {'Action needed'}
           </div>
         </div>
 
         <div className="col-span-2 lg:col-span-1 p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
-            <span>{language === 'bn' ? 'মোট সাবস্ক্রিপশন সেল' : 'Total Revenue'}</span>
+            <span>{'Total Revenue'}</span>
             <DollarSign className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white">
-            ৳ {stats.totalRevenue.toLocaleString()}
+            BDT {stats.totalRevenue.toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {language === 'bn' ? 'প্ল্যাটফর্ম রেভিনিউ' : 'Gross BDT Revenue'}
+            {'Gross BDT Revenue'}
           </div>
         </div>
       </div>
@@ -510,7 +508,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>{language === 'bn' ? 'কোম্পানি সাবস্ক্রাইবার তালিকা' : 'Subscribers & Plans'}</span>
+            <span>{'Subscribers & Plans'}</span>
             <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
               {allTenants.length}
             </span>
@@ -525,7 +523,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>{language === 'bn' ? 'মডারেটর ম্যানেজমেন্ট' : 'Moderators'}</span>
+            <span>{'Moderators'}</span>
             <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
               {moderators.length}
             </span>
@@ -540,7 +538,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             }`}
           >
             <Key className="w-4 h-4" />
-            <span>{language === 'bn' ? 'ওনার আইডি ও পাসওয়ার্ড' : 'Owner Security'}</span>
+            <span>{'Owner Security'}</span>
           </button>
         </div>
 
@@ -551,7 +549,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all hover:scale-105"
           >
             <Plus className="w-4 h-4" />
-            <span>{language === 'bn' ? 'নতুন সাবস্ক্রাইবার কোম্পানি যোগ করুন' : '+ Add New Subscriber'}</span>
+            <span>{'+ Add New Subscriber'}</span>
           </button>
         )}
 
@@ -561,7 +559,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all hover:scale-105"
           >
             <UserPlus className="w-4 h-4" />
-            <span>{language === 'bn' ? 'নতুন মডারেটর নিয়োগ করুন' : '+ Add Moderator'}</span>
+            <span>{'+ Add Moderator'}</span>
           </button>
         )}
       </div>
@@ -575,7 +573,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder={language === 'bn' ? 'কোম্পানি নাম, কোড, ইউজারনেম দিয়ে খুঁজুন...' : 'Search by company name, code, username...'}
+                placeholder={'Search by company name, code, username...'}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
@@ -588,10 +586,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 onChange={e => setStatusFilter(e.target.value as any)}
                 className="px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
               >
-                <option value="all">{language === 'bn' ? 'সকল স্ট্যাটাস' : 'All Status'}</option>
-                <option value="active">{language === 'bn' ? 'সক্রিয় (Active)' : 'Active'}</option>
-                <option value="expired">{language === 'bn' ? 'মেয়াদোত্তীর্ণ (Expired)' : 'Expired'}</option>
-                <option value="suspended">{language === 'bn' ? 'স্থগিত (Suspended)' : 'Suspended'}</option>
+                <option value="all">{'All Status'}</option>
+                <option value="active">{'Active'}</option>
+                <option value="expired">{'Expired'}</option>
+                <option value="suspended">{'Suspended'}</option>
               </select>
 
               <select
@@ -599,7 +597,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 onChange={e => setPlanFilter(e.target.value as any)}
                 className="px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
               >
-                <option value="all">{language === 'bn' ? 'সকল প্ল্যান' : 'All Plans'}</option>
+                <option value="all">{'All Plans'}</option>
                 <option value="starter">Starter</option>
                 <option value="professional">Professional</option>
                 <option value="enterprise">Enterprise</option>
@@ -667,12 +665,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           }`}
                         >
                           {isSuspended
-                            ? (language === 'bn' ? 'স্থগিত' : 'Suspended')
+                            ? ('Suspended')
                             : isExpired
-                            ? (language === 'bn' ? 'মেয়াদ শেষ' : 'Expired')
+                            ? ('Expired')
                             : isExpiringSoon
-                            ? (language === 'bn' ? `${daysRemaining} দিন বাকি` : `${daysRemaining}d Left`)
-                            : (language === 'bn' ? `${daysRemaining} দিন বাকি` : `${daysRemaining}d Active`)}
+                            ? (`${daysRemaining}d Left`)
+                            : (`${daysRemaining}d Active`)}
                         </span>
 
                         <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 capitalize">
@@ -686,7 +684,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{language === 'bn' ? 'মেয়াদ সমাপ্তি:' : 'Expires:'}</span>
+                          <span>{'Expires:'}</span>
                         </span>
                         <span className="font-bold font-mono text-slate-900 dark:text-white">
                           {sub?.end_date || 'N/A'}
@@ -696,11 +694,11 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500 flex items-center gap-1">
                           <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                          <span>{language === 'bn' ? 'প্যাকেজ মূল্য:' : 'Subscription Price:'}</span>
+                          <span>{'Subscription Price:'}</span>
                         </span>
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-900 dark:text-white">
-                            ৳ {(sub?.price_bdt || 0).toLocaleString()}
+                            BDT {(sub?.price_bdt || 0).toLocaleString()}
                           </span>
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
@@ -732,7 +730,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <div className="flex items-center justify-between text-[11px] font-bold text-amber-900 dark:text-amber-400">
                         <span className="flex items-center gap-1">
                           <Key className="w-3.5 h-3.5 text-amber-600" />
-                          <span>{language === 'bn' ? 'সুপার অ্যাডমিন লগইন তথ্য' : 'Super Admin Login'}</span>
+                          <span>{'Super Admin Login'}</span>
                         </span>
                         <button
                           onClick={() => {
@@ -744,7 +742,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           className="hover:underline flex items-center gap-0.5 text-amber-700 dark:text-amber-400 text-[10px]"
                         >
                           <Edit2 className="w-3 h-3" />
-                          <span>{language === 'bn' ? 'পরিবর্তন' : 'Edit'}</span>
+                          <span>{'Edit'}</span>
                         </button>
                       </div>
 
@@ -807,10 +805,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <button
                         onClick={() => impersonateTenant(tenant.id)}
                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all hover:scale-[1.01]"
-                        title={language === 'bn' ? 'এই কোম্পানির ড্যাশবোর্ডে প্রবেশ করুন' : 'Launch Tenant Fleet'}
+                        title={'Launch Tenant Fleet'}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>{language === 'bn' ? 'কোম্পানি ড্যাশবোর্ড খুলুন' : 'Enter Workspace'}</span>
+                        <span>{'Enter Workspace'}</span>
                       </button>
 
                       <button
@@ -819,10 +817,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           setIsExtendModalOpen(true);
                         }}
                         className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-bold text-xs border border-amber-300 dark:border-amber-800 transition-colors"
-                        title={language === 'bn' ? 'মেয়াদ বাড়ান' : 'Extend Duration'}
+                        title={'Extend Duration'}
                       >
                         <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{language === 'bn' ? '+মেয়াদ' : '+Days'}</span>
+                        <span>{'+Days'}</span>
                       </button>
                     </div>
 
@@ -834,12 +832,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           isSuspended ? 'text-emerald-600' : 'text-slate-500 hover:text-amber-600'
                         }`}
                       >
-                        {isSuspended ? '✅ আন-সাসপেন্ড করুন' : '⏸️ সাময়িক স্থগিত (Suspend)'}
+                        {isSuspended ? '✅ Unsuspend Access' : '⏸️ Suspend Access'}
                       </button>
 
                       <button
                         onClick={() => {
-                          if (confirm(language === 'bn' ? `আপনি কি সত্যিই "${tenant.name}" কোম্পানি মুছে ফেলতে চান?` : `Are you sure you want to delete ${tenant.name}?`)) {
+                          if (confirm(`Are you sure you want to delete ${tenant.name}?`)) {
                             deleteTenantSubscriber(tenant.id);
                           }
                         }}
@@ -847,7 +845,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         title="Delete Tenant"
                       >
                         <Trash2 className="w-3 h-3" />
-                        <span>{language === 'bn' ? 'ডিলিট' : 'Delete'}</span>
+                        <span>{'Delete'}</span>
                       </button>
                     </div>
                   </div>
@@ -860,10 +858,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="text-center py-12 bg-white dark:bg-[#0c162d] rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
               <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-                {language === 'bn' ? 'কোনো সাবস্ক্রাইবার পাওয়া যায়নি' : 'No Subscribers Found'}
+                {'No Subscribers Found'}
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                {language === 'bn' ? 'সার্চ ফিল্টার রিসেট করুন অথবা নতুন কোম্পানি অনবোর্ড করুন।' : 'Try resetting your search or add a new subscriber.'}
+                {'Try resetting your search or add a new subscriber.'}
               </p>
             </div>
           )}
@@ -877,11 +875,9 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
               <strong className="font-bold block text-sm mb-0.5">
-                {language === 'bn' ? 'মডারেটর ও ডেলিগেটেড এডমিন সুবিধা:' : 'Moderator Delegation Feature:'}
+                {'Moderator Delegation Feature:'}
               </strong>
-              {language === 'bn'
-                ? 'আপনি ওনার হিসেবে একাধিক মডারেটর যোগ করতে পারেন। তারা আপনার পক্ষ থেকে সাবস্ক্রিপশন সেল, মেয়াদ বাড়ানো, এবং কোম্পানির সুপার অ্যাডমিন পাসওয়ার্ড রিসেট করতে পারবে।'
-                : 'As platform owner, you can appoint moderators with dedicated credentials to manage subscriptions and reset client passwords on your behalf.'}
+              {'As platform owner, you can appoint moderators with dedicated credentials to manage subscriptions and reset client passwords on your behalf.'}
             </div>
           </div>
 
@@ -933,19 +929,19 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   {/* Permissions */}
                   <div className="space-y-1 text-xs">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">ক্ষমতা ও পারমিশন:</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Role & Permissions:</span>
                     <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1">
-                        {mod.permissions.can_manage_subscriptions ? '✅' : '❌'} সাবস্ক্রিপশন
+                        {mod.permissions.can_manage_subscriptions ? '✅' : '❌'} Subscriptions
                       </div>
                       <div className="flex items-center gap-1">
-                        {mod.permissions.can_reset_passwords ? '✅' : '❌'} পাসওয়ার্ড রিসেট
+                        {mod.permissions.can_reset_passwords ? '✅' : '❌'} Password Reset
                       </div>
                       <div className="flex items-center gap-1">
-                        {mod.permissions.can_add_subscribers ? '✅' : '❌'} নতুন অনবোর্ড
+                        {mod.permissions.can_add_subscribers ? '✅' : '❌'} New Onboarding
                       </div>
                       <div className="flex items-center gap-1">
-                        {mod.permissions.can_view_financials ? '✅' : '❌'} ফাইন্যান্স ভিউ
+                        {mod.permissions.can_view_financials ? '✅' : '❌'} Financial View
                       </div>
                     </div>
                   </div>
@@ -962,19 +958,19 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       mod.status === 'active' ? 'text-slate-500 hover:text-amber-600' : 'text-emerald-600'
                     }`}
                   >
-                    {mod.status === 'active' ? 'নিষ্ক্রিয় করুন' : 'সক্রিয় করুন'}
+                    {mod.status === 'active' ? 'Deactivate' : 'Activate'}
                   </button>
 
                   <button
                     onClick={() => {
-                      if (confirm(`আপনি কি সত্যিই মডারেটর "${mod.name}" মুছে ফেলতে চান?`)) {
+                      if (confirm(`Are you sure you want to remove moderator "${mod.name}"?`)) {
                         deleteModerator(mod.id);
                       }
                     }}
                     className="text-[11px] text-red-500 hover:underline flex items-center gap-1"
                   >
                     <Trash2 className="w-3 h-3" />
-                    <span>ডিলিট</span>
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>
@@ -992,12 +988,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </div>
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                {language === 'bn' ? 'SaaS ওনার প্রোফাইল ও লগইন পরিবর্তন' : 'SaaS Owner Profile & Security'}
+                {'SaaS Owner Profile & Security'}
               </h3>
               <p className="text-xs text-slate-500">
-                {language === 'bn'
-                  ? 'আপনার ওনার ইউজারনেম ও পাসওয়ার্ড এখান থেকে যে কোনো সময় পরিবর্তন করতে পারবেন।'
-                  : 'Update your SaaS Master credentials anytime from this secure screen.'}
+                {'Update your SaaS Master credentials anytime from this secure screen.'}
               </p>
             </div>
           </div>
@@ -1013,7 +1007,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {language === 'bn' ? 'ওনার ইউজারনেম (Username)' : 'Owner Username'} *
+                  {'Owner Username'} *
                 </label>
                 <input
                   type="text"
@@ -1023,14 +1017,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  {language === 'bn' ? 'ডিফল্ট: mashudalone' : 'Default: mashudalone'}
+                  {'Default: mashudalone'}
                 </span>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {language === 'bn' ? 'ওনার পাসওয়ার্ড (Password)' : 'Owner Password'} *
+                    {'Owner Password'} *
                   </label>
                   <button
                     type="button"
@@ -1050,7 +1044,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   />
                 </div>
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  {language === 'bn' ? 'ডিফল্ট: 00000' : 'Default: 00000'}
+                  {'Default: 00000'}
                 </span>
               </div>
             </div>
@@ -1058,7 +1052,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {language === 'bn' ? 'ওনারের নাম (Display Name)' : 'Display Name'}
+                  {'Display Name'}
                 </label>
                 <input
                   type="text"
@@ -1070,7 +1064,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {language === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email'}
+                  {'Email'}
                 </label>
                 <input
                   type="email"
@@ -1083,7 +1077,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'}
+                {'Phone Number'}
               </label>
               <input
                 type="text"
@@ -1098,7 +1092,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 type="submit"
                 className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all hover:scale-105"
               >
-                {language === 'bn' ? 'পরিবর্তন সংরক্ষণ করুন' : 'Save Changes'}
+                {'Save Changes'}
               </button>
             </div>
           </form>
@@ -1113,7 +1107,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-amber-500" />
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  {language === 'bn' ? 'নতুন সাবস্ক্রাইবার কোম্পানি অনবোর্ড করুন' : 'Onboard New Subscriber Company'}
+                  {'Onboard New Subscriber Company'}
                 </h3>
               </div>
               <button
@@ -1128,17 +1122,17 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               {/* Company Info */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider">
-                  ১. কোম্পানি ও প্রতিষ্ঠানের তথ্য
+                  1. Company & Organization Information
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      কোম্পানির নাম (Company Name) *
+                      Company Name *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="যেমন: মেঘনা লজিস্টিকস লিমিটেড"
+                      placeholder="e.g. Meghna Logistics Ltd"
                       value={newSubForm.name}
                       onChange={e => handleNameChange(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1147,7 +1141,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      ইউনিক টেন্যান্ট কোড (Tenant Code) *
+                      Unique Tenant Code *
                     </label>
                     <input
                       type="text"
@@ -1160,7 +1154,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      যোগাযোগকারীর নাম (Contact Person)
+                      Contact Person Name
                     </label>
                     <input
                       type="text"
@@ -1172,7 +1166,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      ফোন নম্বর (Phone) *
+                      Phone Number *
                     </label>
                     <input
                       type="text"
@@ -1189,12 +1183,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               {/* Subscription Plan & Duration */}
               <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-                  ২. সাবস্ক্রিপশন প্ল্যান ও মেয়াদের পরিমাপ
+                  2. Subscription Plan & Validity
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      প্ল্যান নির্বাচন
+                      Select Plan
                     </label>
                     <select
                       value={newSubForm.plan}
@@ -1208,16 +1202,16 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
                     >
-                      <option value="starter">Starter (৫০ গাড়ি)</option>
-                      <option value="professional">Professional (২০০ গাড়ি)</option>
-                      <option value="enterprise">Enterprise (আনলিমিটেড)</option>
+                      <option value="starter">Starter (Up to 50 Vehicles)</option>
+                      <option value="professional">Professional (Up to 200 Vehicles)</option>
+                      <option value="enterprise">Enterprise (Unlimited Vehicles)</option>
                       <option value="custom">Custom Enterprise</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      মেয়াদের ধরন (Duration)
+                      Duration Period
                     </label>
                     <div className="flex gap-1">
                       <select
@@ -1225,9 +1219,9 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         onChange={e => setNewSubForm(prev => ({ ...prev, duration_type: e.target.value as any }))}
                         className="w-1/2 px-2 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
                       >
-                        <option value="days">দিন (Days)</option>
-                        <option value="months">মাস (Months)</option>
-                        <option value="years">বছর (Years)</option>
+                        <option value="days">Days</option>
+                        <option value="months">Months</option>
+                        <option value="years">Years</option>
                       </select>
                       <input
                         type="number"
@@ -1241,7 +1235,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      মূল্য (BDT) ও পেমেন্ট
+                      Price (BDT) & Payment
                     </label>
                     <div className="flex gap-1">
                       <input
@@ -1268,7 +1262,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-                    ৩. সাবস্ক্রাইবার সুপার অ্যাডমিন একাউন্ট (লগইন ক্রেডেনশিয়াল)
+                    3. Super Admin Account (Login Credentials)
                   </h4>
                   <button
                     type="button"
@@ -1278,14 +1272,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     }}
                     className="text-[11px] text-amber-600 font-bold hover:underline"
                   >
-                    🎲 অটো পাসওয়ার্ড তৈরি করুন
+                    🎲 Generate Random Password
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      সুপার অ্যাডমিন ইউজারনেম (Login Username) *
+                      Super Admin Username *
                     </label>
                     <input
                       type="text"
@@ -1299,12 +1293,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      লগইন পাসওয়ার্ড (Password) *
+                      Login Password *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="পাসওয়ার্ড লিখুন"
+                      placeholder="Enter strong password"
                       value={newSubForm.super_admin_password}
                       onChange={e => setNewSubForm(prev => ({ ...prev, super_admin_password: e.target.value }))}
                       className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1319,13 +1313,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   onClick={() => setIsAddSubscriberModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100"
                 >
-                  বাতিল
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all hover:scale-105"
                 >
-                  সাবস্ক্রাইবার কোম্পানি যোগ করুন
+                  Onboard Subscriber Company
                 </button>
               </div>
             </form>
@@ -1339,7 +1333,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-black text-slate-900 dark:text-white">
-                {language === 'bn' ? 'সাবস্ক্রিপশন মেয়াদ বৃদ্ধি করুন' : 'Extend Subscription Duration'}
+                {'Extend Subscription Duration'}
               </h3>
               <button onClick={() => setIsExtendModalOpen(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
@@ -1351,13 +1345,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 {selectedTenantForExtend.name}
               </div>
               <div className="text-slate-500">
-                বর্তমান মেয়াদ শেষ: <span className="font-mono font-bold text-amber-600">{selectedTenantForExtend.subscription?.end_date}</span>
+                Current Expiry: <span className="font-mono font-bold text-amber-600">{selectedTenantForExtend.subscription?.end_date}</span>
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                কত দিন মেয়াদ বাড়াতে চান? (Additional Days)
+                How many days to extend? (Additional Days)
               </label>
               <div className="grid grid-cols-4 gap-2">
                 {[7, 15, 30, 90, 180, 365].map(days => (
@@ -1371,7 +1365,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    +{days >= 30 ? `${Math.round(days / 30)} মাস` : `${days} দিন`}
+                    +{days >= 30 ? `${Math.round(days / 30)} Months` : `${days} Days`}
                   </button>
                 ))}
               </div>
@@ -1383,7 +1377,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   value={extendDaysVal}
                   onChange={e => setExtendDaysVal(Number(e.target.value) || 1)}
                   className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
-                  placeholder="কাস্টম দিন সংখ্যা লিখুন"
+                  placeholder="Enter custom days count"
                 />
               </div>
             </div>
@@ -1393,13 +1387,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 onClick={() => setIsExtendModalOpen(false)}
                 className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600"
               >
-                বাতিল
+                Cancel
               </button>
               <button
                 onClick={handleConfirmExtend}
                 className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md"
               >
-                মেয়াদ নিশ্চিত করুন (+{extendDaysVal} দিন)
+                Confirm Extension (+{extendDaysVal} Days)
               </button>
             </div>
           </div>
@@ -1412,7 +1406,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-black text-slate-900 dark:text-white">
-                {language === 'bn' ? 'সুপার অ্যাডমিন লগইন ও পাসওয়ার্ড পরিবর্তন' : 'Edit Super Admin Credentials'}
+                {'Edit Super Admin Credentials'}
               </h3>
               <button onClick={() => setIsEditCredsModalOpen(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
@@ -1427,7 +1421,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  ইউজারনেম (Username) *
+                  Login Username *
                 </label>
                 <input
                   type="text"
@@ -1440,7 +1434,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  নতুন পাসওয়ার্ড (Password) *
+                  New Password *
                 </label>
                 <input
                   type="text"
@@ -1457,13 +1451,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 onClick={() => setIsEditCredsModalOpen(false)}
                 className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600"
               >
-                বাতিল
+                Cancel
               </button>
               <button
                 onClick={handleSaveCredentials}
                 className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md"
               >
-                লগইন তথ্য সংরক্ষণ করুন
+                Save Credentials
               </button>
             </div>
           </div>
@@ -1476,7 +1470,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-black text-slate-900 dark:text-white">
-                {language === 'bn' ? 'নতুন SaaS মডারেটর নিয়োগ করুন' : 'Appoint New SaaS Moderator'}
+                {'Appoint New SaaS Moderator'}
               </h3>
               <button onClick={() => setIsAddModeratorModalOpen(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
@@ -1486,12 +1480,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <form onSubmit={handleCreateModerator} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  মডারেটরের নাম (Full Name) *
+                  Moderator Full Name *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="যেমন: মোঃ কামরুল হাসান"
+                  placeholder="e.g. Kamrul Hasan"
                   value={newModForm.name}
                   onChange={e => setNewModForm(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1501,7 +1495,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    ইউজারনেম *
+                    Username *
                   </label>
                   <input
                     type="text"
@@ -1515,7 +1509,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    পাসওয়ার্ড *
+                    Password *
                   </label>
                   <input
                     type="text"
@@ -1531,7 +1525,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    ফোন নম্বর
+                    Phone Number
                   </label>
                   <input
                     type="text"
@@ -1544,7 +1538,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    ইমেইল
+                    Email Address
                   </label>
                   <input
                     type="email"
@@ -1559,7 +1553,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               {/* Permission Checkboxes */}
               <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                  মডারেটর পারমিশন সমূহ:
+                  Moderator Permissions:
                 </span>
                 <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input
@@ -1568,7 +1562,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     onChange={e => setNewModForm(prev => ({ ...prev, can_manage_subscriptions: e.target.checked }))}
                     className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
                   />
-                  <span>সাবস্ক্রিপশন মেয়াদ ও স্ট্যাটাস নিয়ন্ত্রণ</span>
+                  <span>Manage Subscription Duration & Status</span>
                 </label>
                 <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input
@@ -1577,7 +1571,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     onChange={e => setNewModForm(prev => ({ ...prev, can_reset_passwords: e.target.checked }))}
                     className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
                   />
-                  <span>ক্লায়েন্ট সুপার অ্যাডমিন পাসওয়ার্ড পরিবর্তন</span>
+                  <span>Reset Client Super Admin Password</span>
                 </label>
                 <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input
@@ -1586,7 +1580,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     onChange={e => setNewModForm(prev => ({ ...prev, can_add_subscribers: e.target.checked }))}
                     className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
                   />
-                  <span>নতুন সাবস্ক্রাইবার অনবোর্ড / সেলস</span>
+                  <span>Onboard New Subscribers / Sales</span>
                 </label>
               </div>
 
@@ -1596,13 +1590,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   onClick={() => setIsAddModeratorModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600"
                 >
-                  বাতিল
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md"
                 >
-                  মডারেটর নিশ্চিত করুন
+                  Confirm Appoint Moderator
                 </button>
               </div>
             </form>

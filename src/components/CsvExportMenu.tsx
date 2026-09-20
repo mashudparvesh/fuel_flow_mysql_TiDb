@@ -168,7 +168,7 @@ export const CsvExportMenu: React.FC<CsvExportMenuProps> = ({
         >
           {/* Header */}
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
-            <span>Export CSV / সিএসভি ডাউনলোড</span>
+            <span>Export CSV</span>
             {isFiltered && (
               <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 font-bold lowercase">
                 <Filter className="w-2.5 h-2.5" />
@@ -191,7 +191,7 @@ export const CsvExportMenu: React.FC<CsvExportMenuProps> = ({
                   </div>
                   <div>
                     <div className="font-extrabold text-xs text-slate-800 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 flex items-center gap-1.5">
-                      <span>Current View (বর্তমান পেজ)</span>
+                      <span>Current View (Current Page)</span>
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                       Rows {computedStart}–{computedEnd} (Page {currentPage} of {totalPages})
@@ -222,7 +222,7 @@ export const CsvExportMenu: React.FC<CsvExportMenuProps> = ({
                   </div>
                   <div>
                     <div className="font-extrabold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-300 flex items-center gap-1.5">
-                      <span>Whole List (সম্পূর্ণ তালিকা)</span>
+                      <span>Complete Dataset (All Records)</span>
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                       {isFiltered ? (

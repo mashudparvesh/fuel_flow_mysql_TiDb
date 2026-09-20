@@ -458,6 +458,28 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     });
   });
 
+  // 4b. PATCH /api/tenants/:id - Update Tenant info (logo, name, etc.)
+  app.patch('/api/tenants/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    activeTenants = loadTenants();
+    const tenant = activeTenants.find(t => t.id === id);
+
+    if (!tenant) {
+      res.status(404).json({ success: false, message: 'Tenant not found.' });
+      return;
+    }
+
+    Object.assign(tenant, req.body);
+    saveTenants(activeTenants);
+    await upsertTenantInDB(tenant).catch(e => console.warn('[MySQL] Tenant update error:', e));
+
+    res.json({
+      success: true,
+      message: `Tenant ${tenant.name} updated successfully.`,
+      tenant
+    });
+  });
+
   // 5. DELETE /api/tenants/:id - Soft-Delete Tenant (ISSUE 2 Fix)
   app.delete('/api/tenants/:id', async (req: Request, res: Response) => {
     const { id } = req.params;

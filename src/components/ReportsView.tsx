@@ -702,7 +702,7 @@ export const ReportsView: React.FC = () => {
     window.print();
   };
 
-  const formatCurrency = (val: number) => `৳${Math.round(val).toLocaleString()}`;
+  const formatCurrency = (val: number) => `BDT ${Math.round(val).toLocaleString()}`;
 
   return (
     <div className="space-y-6">
@@ -1399,19 +1399,19 @@ export const ReportsView: React.FC = () => {
                         {pump.location}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-slate-700">
-                        ৳{pump.creditLimit.toLocaleString()}
+                        BDT {pump.creditLimit.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
                         {pump.totalLitersTaken.toLocaleString()} L
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-800">
-                        +৳{pump.totalFuelCharged.toLocaleString()}
+                        +BDT {pump.totalFuelCharged.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-800">
-                        -৳{pump.totalPaid.toLocaleString()}
+                        -BDT {pump.totalPaid.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-black text-red-600 bg-red-50/50">
-                        ৳{pump.currentOutstanding.toLocaleString()}
+                        BDT {pump.currentOutstanding.toLocaleString()}
                       </td>
                     </tr>
                   ))

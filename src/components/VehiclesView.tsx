@@ -646,7 +646,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
                   >
                     {fuelTypes.map(f => (
-                      <option key={f.id} value={f.id}>{f.name} (৳{f.current_price})</option>
+                      <option key={f.id} value={f.id}>{f.name} (BDT {f.current_price})</option>
                     ))}
                   </select>
                 </div>
@@ -748,7 +748,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">{t.totalCostLabel}</span>
-                <span className="text-base font-black text-amber-600 font-mono">৳{totalCost.toLocaleString()}</span>
+                <span className="text-base font-black text-amber-600 font-mono">BDT {totalCost.toLocaleString()}</span>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">{t.targetBenchmark}</span>

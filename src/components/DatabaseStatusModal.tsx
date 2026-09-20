@@ -82,7 +82,7 @@ function sanitizeErrorString(err: any): string {
     str.includes('Internal Server Error') ||
     str.includes('Failed to fetch')
   ) {
-    return 'লোকাল স্টোরেজ মোড সক্রিয় রয়েছে। গিটহাবে নতুন ভার্সন পুশ করার পর Vercel স্বয়ংক্রিয়ভাবে সরাসরি TiDB ক্লাউডে কানেক্ট হবে।';
+    return 'Safe Local Storage mode active. Once deployed or configured, FuelNest will automatically sync with TiDB Cloud MySQL.';
   }
 
   return str;
@@ -120,7 +120,7 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
           configured: true,
           connected: false,
           provider: 'TiDB Cloud (Local Fallback Active)',
-          error: `অ্যাপ্লিকেশনটি সুরক্ষিত লোকাল স্টোরেজ মোডে সক্রিয় রয়েছে। আপনার সকল নতুন সাবস্ক্রাইবার ও ডাটা নিরাপদে সংরক্ষিত আছে।`,
+          error: 'Application is running safely in Local Storage mode. All newly created subscribers and records are preserved.',
           lastChecked: new Date().toISOString()
         }));
         return;
@@ -152,7 +152,7 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
         configured: true,
         connected: false,
         provider: 'TiDB Cloud (Local Fallback Active)',
-        error: 'লোকাল স্টোরেজ মোড সক্রিয় রয়েছে। আপনার নতুন সাবস্ক্রাইবার ও সকল ডাটা ডিভাইসে সংরক্ষিত আছে।',
+        error: 'Safe Local Storage mode active. All new subscribers and data are securely preserved on this device.',
         lastChecked: new Date().toISOString()
       }));
     } finally {
@@ -192,7 +192,7 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
       if (!contentType.includes('application/json')) {
         setSyncResult({
           success: true,
-          message: `লোকাল মোডে মোট ${allTenants.length} জন সাবস্ক্রাইবার, ${allUsers.length} জন ইউজার, এবং ${vehicles.length} টি গাড়ির তথ্য সংরক্ষিত আছে।`
+          message: `Local storage contains ${allTenants.length} subscribers, ${allUsers.length} users, and ${vehicles.length} vehicles safely preserved.`
         });
         return;
       }
@@ -202,11 +202,11 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
         const totalCount = Object.values(result.synced || {}).reduce((a: any, b: any) => a + Number(b || 0), 0);
         setSyncResult({
           success: true,
-          message: `সফলভাবে মোট ${totalCount} টি রেকর্ড TiDB Cloud MySQL ডাটাবেসে সিঙ্ক সম্পন্ন হয়েছে!`
+          message: `Successfully synchronized ${totalCount} records with TiDB Cloud MySQL Database!`
         });
         await fetchStatus(true);
       } else {
-        const syncErrMsg = sanitizeErrorString(result.error) || sanitizeErrorString(result.message) || 'সিঙ্ক ব্যর্থ হয়েছে। ডাটাবেস সংযোগ পরীক্ষা করুন।';
+        const syncErrMsg = sanitizeErrorString(result.error) || sanitizeErrorString(result.message) || 'Sync failed. Please check database connection.';
         setSyncResult({
           success: false,
           message: syncErrMsg
@@ -215,7 +215,7 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({ isOpen
     } catch (err: any) {
       setSyncResult({
         success: true,
-        message: `লোকাল মোডে মোট ${allTenants.length} জন সাবস্ক্রাইবার, ${allUsers.length} জন ইউজার, এবং ${vehicles.length} টি গাড়ির তথ্য সংরক্ষিত আছে।`
+        message: `Local storage contains ${allTenants.length} subscribers, ${allUsers.length} users, and ${vehicles.length} vehicles safely preserved.`
       });
     } finally {
       setIsSyncing(false);
@@ -397,7 +397,7 @@ MYSQL_SSL=true`;
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                       {status.connected
                         ? `Host: ${status.host} | Database: ${status.database} | Ping Latency: ${status.pingMs || 120}ms`
-                        : (sanitizeErrorString(status.error) || 'আপনার নতুন তৈরি করা সাবস্ক্রাইবার ও সকল ডাটা নিরাপদে লোকাল স্টোরেজে সংরক্ষিত রয়েছে।')}
+                        : (sanitizeErrorString(status.error) || 'Your newly created subscribers and fleet records are safely preserved in storage.')}
                     </p>
                   </div>
                 </div>
@@ -417,7 +417,7 @@ MYSQL_SSL=true`;
                 <div className="flex items-center justify-between border-b border-slate-200 dark:border-blue-900/30 pb-2">
                   <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Server className="w-4 h-4 text-amber-500" />
-                    <span>TiDB Cloud ডাটাবেস সংযোগ বিবরণী</span>
+                    <span>TiDB Cloud Database Connection Details</span>
                   </div>
                   <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                     Port: {status.port || 4000} | SSL: Active
@@ -440,7 +440,7 @@ MYSQL_SSL=true`;
                 </div>
 
                 <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
-                  💡 আপনার TiDB ক্লাস্টারের হোস্ট ও ইউজারনেম অ্যাপ্লিকেশনে কনফিগার করা রয়েছে। কোনো কারণে ক্লাউড সাময়িক অফলাইনে থাকলে বা Vercel স্ট্যাটিক মোডে চললে অ্যাপটি স্বয়ংক্রিয়ভাবে ব্রাউজারের লোকাল স্টোরেজ ব্যবহার করে যাতে কোনো ডাটা বা সাবস্ক্রাইবার না হারায়।
+                  💡 Your TiDB cluster host and username are configured in the application. If the cloud database is temporarily offline, the app automatically runs in local storage fallback mode so no subscriber data or fleet records are ever lost.
                 </p>
               </div>
 
@@ -546,11 +546,11 @@ MYSQL_SSL=true`;
               <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30">
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
                   <Zap className="w-4 h-4" />
-                  <span>ফ্রি লাইফটাইম MySQL ডাটাবেস ব্যবহারের সহজ নিয়ম (TiDB Cloud Serverless)</span>
+                  <span>Free Lifetime MySQL Database Setup Guide (TiDB Cloud Serverless)</span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  Google AI Studio বা ক্লাউডে লাইফটাইম ফ্রিতে MySQL ডাটাবেস চালানোর জন্য সবচেয়ে সেরা অপশন হলো <strong>TiDB Cloud Serverless</strong>।
-                  এতে কোনো ক্রেডিট কার্ড লাগে না, <strong>৫ জিবি ক্লাউড স্টোরেজ চিরদিনের জন্য সম্পূর্ণ ফ্রি</strong> এবং এটি ১০০% MySQL 8.0 কম্প্যাটিবল!
+                  The best option for running a lifetime free MySQL database is <strong>TiDB Cloud Serverless</strong>.
+                  No credit card required, <strong>5 GB Cloud Storage is 100% free forever</strong>, and it is fully MySQL 8.0 compatible!
                 </p>
               </div>
 
@@ -559,11 +559,11 @@ MYSQL_SSL=true`;
                 <div className="p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50/50 dark:bg-[#0a1226] flex items-start gap-3">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] shrink-0">1</span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">TiDB Cloud একাউন্ট তৈরি করুন:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">Create TiDB Cloud Account:</span>
                     <p className="text-slate-500 dark:text-slate-400 mt-0.5">
                       <a href="https://tidbcloud.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline inline-flex items-center gap-1 font-medium">
                         tidbcloud.com <ExternalLink className="w-3 h-3" />
-                      </a> এ যান এবং আপনার Google Email দিয়ে ফ্রিতে সাইনআপ করুন।
+                      </a> and sign up for free with your Google Email.
                     </p>
                   </div>
                 </div>
@@ -571,9 +571,9 @@ MYSQL_SSL=true`;
                 <div className="p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50/50 dark:bg-[#0a1226] flex items-start gap-3">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] shrink-0">2</span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">ফ্রি ক্লাস্টার তৈরি করুন:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">Create Free Cluster:</span>
                     <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                      <strong>Create Cluster</strong> বাটনে ক্লিক করে <strong>Serverless (Free Tier)</strong> সিলেক্ট করুন। রিজিয়ন হিসেবে কাছাকাছি (যেমন: Singapore বা Mumbai) সিলেক্ট করে মাত্র ৫ সেকেন্ডে ক্লাস্টার রেডি হয়ে যাবে।
+                      Click <strong>Create Cluster</strong> and choose <strong>Serverless (Free Tier)</strong>. Select a nearby region (e.g. Singapore or Mumbai) and your cluster is ready in 5 seconds.
                     </p>
                   </div>
                 </div>
@@ -581,9 +581,9 @@ MYSQL_SSL=true`;
                 <div className="p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50/50 dark:bg-[#0a1226] flex items-start gap-3">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] shrink-0">3</span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">ক্রেডেনশিয়াল সংগ্রহ করুন:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">Get Connection Credentials:</span>
                     <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                      <strong>Connect</strong> বাটনে চাপ দিন এবং Host, User, Password সংগ্রহ করুন।
+                      Click <strong>Connect</strong> to copy the Host, User, and Password.
                     </p>
                   </div>
                 </div>
@@ -591,9 +591,9 @@ MYSQL_SSL=true`;
                 <div className="p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50/50 dark:bg-[#0a1226] flex items-start gap-3">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] shrink-0">4</span>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">Environment Secrets এ যুক্ত করুন:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">Add to Environment Secrets:</span>
                     <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                      নিচের এনভায়রনমেন্ট ভেরিয়েবলগুলো আপনার AI Studio Secrets বা <code>.env</code> এ সেট করে দিন:
+                      Set these environment variables in your AI Studio Secrets or <code>.env</code>:
                     </p>
                   </div>
                 </div>
@@ -620,7 +620,7 @@ MYSQL_SSL=true`}
 
               {/* Other Options */}
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                <strong>অন্যান্য ফ্রি অপশন:</strong> আপনি চাইলে Aiven MySQL, Clever Cloud, FreeDB, অথবা আপনার নিজস্ব cPanel Web Hosting এর phpMyAdmin MySQL ডাটাবেসের হোস্ট ও ক্রেডেনশিয়াল ব্যবহার করেও লাইফটাইম চালাতে পারবেন।
+                <strong>Other Free Options:</strong> You can also use Aiven MySQL, Clever Cloud, FreeDB, or your cPanel Web Hosting phpMyAdmin MySQL database.
               </div>
             </div>
           )}
@@ -630,7 +630,7 @@ MYSQL_SSL=true`}
             <div className="space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-xs text-slate-600 dark:text-slate-400">
-                  নিচের সম্পূর্ণ SQL স্ক্রিপ্টটি TiDB SQL Editor বা phpMyAdmin এ রান করে টেবিল তৈরি করে নিতে পারেন।
+                  Run the complete SQL script below in TiDB SQL Editor or phpMyAdmin to initialize tables.
                 </p>
                 <div className="flex items-center gap-2">
                   <button

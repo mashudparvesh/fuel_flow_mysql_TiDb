@@ -445,3 +445,50 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* ============================================================
+   Smooth Micro-Interactions & Modern UI Animation
+   Provides silky tab transitions, hover feedback, and popup scale
+   ============================================================ */
+button, a, input, select, textarea, [role="tab"] {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:active, [role="button"]:active {
+  transform: scale(0.985);
+}
+
+/* Tab change smooth CSS transition (eye-friendly, no jarring translateY or flicker) */
+.view-transition {
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-nav-transition {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Modal and popover smooth entrance */
+.modal-backdrop-enter {
+  animation: modalBackdropFade 0.18s ease-out forwards;
+}
+
+.modal-panel-enter {
+  animation: modalPanelScale 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalPanelScale {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+
