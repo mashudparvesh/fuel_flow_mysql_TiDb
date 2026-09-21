@@ -15,6 +15,8 @@ import { SaasOwnerPanel } from './components/SaasOwnerPanel';
 import { CompanyUserManagementView } from './components/CompanyUserManagementView';
 import { AuthSwitcherModal } from './components/AuthSwitcherModal';
 import { LoginPage } from './components/LoginPage';
+import { LandingPage } from './components/LandingPage';
+import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { DatabaseStatusModal } from './components/DatabaseStatusModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Footer } from './components/Footer';
@@ -67,6 +69,13 @@ const AppContent: React.FC = () => {
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
   const [selectedVehicleForEntry, setSelectedVehicleForEntry] = useState<string | undefined>(undefined);
 
+  const [publicRoute, setPublicRoute] = useState<'landing' | 'login'>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
+      return 'login';
+    }
+    return 'landing';
+  });
+
   const handleOpenFuelEntryWithVehicle = (vehicleId?: string) => {
     if (isViewer) return;
     setSelectedVehicleForEntry(vehicleId);
@@ -79,9 +88,17 @@ const AppContent: React.FC = () => {
     setCurrentView('fuel_entry');
   };
 
-  // If user is not authenticated, show LoginPage
+  // If user is not authenticated, render Public Landing Page or LoginPage based on route
   if (!isAuthenticated) {
-    return <LoginPage />;
+    if (publicRoute === 'login') {
+      return <LoginPage onBackToLanding={() => setPublicRoute('landing')} />;
+    }
+    return (
+      <LandingPage
+        onNavigateToLogin={() => setPublicRoute('login')}
+        onNavigateToDashboard={() => setPublicRoute('login')}
+      />
+    );
   }
 
   return (
@@ -228,6 +245,9 @@ const AppContent: React.FC = () => {
         isOpen={isDbModalOpen}
         onClose={() => setIsDbModalOpen(false)}
       />
+
+      {/* Force Password Change Modal for Users with Temporary Passwords */}
+      <ForcePasswordChangeModal />
     </div>
   );
 };

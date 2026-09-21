@@ -2,42 +2,16 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
     <script>
       (function () {
-        try {
-          var _origFetch = window.fetch;
-          var currentFetch = typeof _origFetch === 'function' ? _origFetch.bind(window) : _origFetch;
-          try {
-            Object.defineProperty(window, 'fetch', {
-              get: function () {
-                return currentFetch;
-              },
-              set: function (newFetch) {
-                currentFetch = newFetch;
-              },
-              configurable: true,
-              enumerable: true,
-            });
-          } catch (e1) {
-            try {
-              Object.defineProperty(Window.prototype, 'fetch', {
-                get: function () {
-                  return currentFetch;
-                },
-                set: function (newFetch) {
-                  currentFetch = newFetch;
-                },
-                configurable: true,
-                enumerable: true,
-              });
-            } catch (e2) {}
-          }
-        } catch (e) {}
-
+        // Safe global error & rejection suppression for harmless dev-server HMR websocket closed notices
         window.addEventListener('error', function (event) {
           var msg = event && (event.message || (event.error && event.error.message) || '');
           if (msg && (
-            (msg.indexOf('fetch') !== -1 && msg.indexOf('getter') !== -1) ||
             msg.indexOf('WebSocket') !== -1 ||
             msg.indexOf('websocket') !== -1 ||
             msg.indexOf('[vite]') !== -1
@@ -62,6 +36,7 @@
           }
         }, true);
 
+        // Filter benign Vite websocket disconnection logs from developer console
         try {
           var origError = console.error;
           var origWarn = console.warn;
@@ -109,9 +84,9 @@
           };
         } catch (eConsole) {}
 
+        // Immediate theme initialization to prevent flash
         try {
           var savedTheme = localStorage.getItem('fuelflow_v1_theme');
-          // Default is 'dark', only switch to light if explicitly saved as 'light'
           var isLight = savedTheme === 'light';
           if (isLight) {
             document.documentElement.classList.remove('dark');
@@ -121,8 +96,9 @@
         } catch (e) {}
       })();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FuelNest - Fleet Fuel Intelligence</title>
+    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/png" href="/favicon.ico" />
     <meta name="description" content="Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system for fuelnest.xyz." />
     <meta property="og:title" content="FuelNest - Fleet Fuel Intelligence" />
     <meta property="og:description" content="Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system for fuelnest.xyz." />

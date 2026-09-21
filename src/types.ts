@@ -66,10 +66,30 @@ export interface User {
   company_id?: string; // If client_viewer, restricted to this company
   avatar?: string;
   status?: 'active' | 'suspended';
+  must_change_password?: boolean;
   allowed_category_ids?: string[]; // If empty or contains 'all', has access to all vehicle categories
   allowed_pump_ids?: string[]; // If empty or contains 'all', has access to all fuel pumps
   permissions?: UserPermissions;
   created_at?: string;
+}
+
+export type OwnerRole = 'OWNER_ADMIN' | 'CO_OWNER_ADMIN' | 'ADMIN' | 'MODERATOR';
+export type PendingActionType = 'DELETE_SUBSCRIBER' | 'EXTEND_SUBSCRIPTION' | 'SUSPEND_TENANT' | 'UNSUSPEND_TENANT';
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface PendingApprovalAction {
+  id: string;
+  action_type: PendingActionType;
+  target_tenant_id: string;
+  target_tenant_name: string;
+  requested_by_id: string;
+  requested_by_name: string;
+  requested_by_role: OwnerRole;
+  details: Record<string, any>;
+  status: ApprovalStatus;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  created_at: string;
 }
 
 export interface SaasOwnerProfile {
@@ -80,6 +100,7 @@ export interface SaasOwnerProfile {
   email: string;
   phone: string;
   role: 'platform_owner';
+  owner_role?: OwnerRole;
   updated_at: string;
 }
 
@@ -102,6 +123,7 @@ export interface SaasModerator {
   email: string;
   phone: string;
   role: 'saas_moderator';
+  owner_role?: OwnerRole;
   status: 'active' | 'suspended';
   permissions: ModeratorPermissions;
   created_at: string;
@@ -158,8 +180,8 @@ export interface FuelType {
   tenant_id: string;
   user_id: string;
   name: string;
-  code: 'diesel' | 'petrol' | 'octane' | 'cng' | 'lpg';
-  unit: 'Liter' | 'm3' | 'Kg';
+  code: string; // 'diesel' | 'petrol' | 'octane' | 'cng' | 'lpg' | custom code
+  unit: string; // 'Liter' | 'm3' | 'Kg' | 'Gallon' | custom unit
   current_price: number;
   price_history: FuelPriceRecord[];
   updated_at: string;

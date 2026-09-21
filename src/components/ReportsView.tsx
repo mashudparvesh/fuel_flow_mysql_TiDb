@@ -1120,9 +1120,9 @@ export const ReportsView: React.FC = () => {
 
         {/* REPORT 1: Vehicle-wise Performance Report */}
         {reportType === 'vehicle_performance' && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-300 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-800 dark:text-slate-100 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
                 <tr>
                   <th className="py-2.5 px-3">{t.thVehicleNumber}</th>
                   <th className="py-2.5 px-3">{t.thDriver}</th>
@@ -1136,10 +1136,10 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-center">{t.thAnomalies}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {vehicleReportData.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-400">
+                    <td colSpan={10} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
@@ -1150,45 +1150,45 @@ export const ReportsView: React.FC = () => {
                       : veh.actualAvgMileage >= veh.benchmark;
 
                     return (
-                      <tr key={veh.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 font-extrabold text-slate-900 whitespace-nowrap">
+                      <tr key={veh.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                        <td className="py-2.5 px-3 font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
                           {veh.vehicleNumber}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-slate-700 dark:text-slate-200 whitespace-nowrap">
                           {veh.driver}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                        <td className="py-2.5 px-3 font-bold text-slate-950 dark:text-amber-300 whitespace-nowrap">
                           {veh.company}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-500">
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
                           {veh.category}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-600 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                           {veh.benchmark} {veh.metric}
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded-md ${
-                            isGood ? 'bg-emerald-100 text-emerald-900' : 'bg-red-100 text-red-900'
+                            isGood ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-900 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-950/80 text-red-900 dark:text-red-300'
                           }`}>
                             {veh.actualAvgMileage} {veh.metric}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-800 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200 whitespace-nowrap">
                           {veh.totalDistance.toLocaleString()} {veh.isLph ? 'Hrs' : 'KM'}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           {veh.totalLiters.toLocaleString()} L
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800 dark:text-amber-300 whitespace-nowrap">
                           {formatCurrency(veh.totalCost)}
                         </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           {veh.anomalies > 0 ? (
-                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-bold text-[10px]">
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 font-bold text-[10px]">
                               {veh.anomalies} {t.anomalyCountSuffix}
                             </span>
                           ) : (
-                            <span className="text-emerald-600 font-bold text-[11px]">Normal</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">Normal</span>
                           )}
                         </td>
                       </tr>
@@ -1197,7 +1197,7 @@ export const ReportsView: React.FC = () => {
                 )}
               </tbody>
               {vehicleReportData.length > 0 && (
-                <tfoot className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                <tfoot className="bg-slate-100 dark:bg-[#182952] font-bold text-slate-900 dark:text-white border-t-2 border-slate-300 dark:border-blue-900/60">
                   <tr>
                     <td colSpan={7} className="py-2.5 px-3 text-right uppercase text-[11px]">
                       {t.grandTotal}
@@ -1205,7 +1205,7 @@ export const ReportsView: React.FC = () => {
                     <td className="py-2.5 px-3 text-right font-mono font-black">
                       {totalLiters.toLocaleString()} L
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900">
+                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900 dark:text-amber-300">
                       {formatCurrency(totalCost)}
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
@@ -1220,9 +1220,9 @@ export const ReportsView: React.FC = () => {
 
         {/* REPORT 2: Company-wise Consumption Statement */}
         {reportType === 'company_monthly' && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-300 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-800 dark:text-slate-100 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
                 <tr>
                   <th className="py-2.5 px-3">{t.thCompany}</th>
                   <th className="py-2.5 px-3">{t.thCode}</th>
@@ -1232,32 +1232,32 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">{t.thTotalCost}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {companyReportData.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
                 ) : (
                   companyReportData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-extrabold text-slate-900 whitespace-nowrap">
+                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <td className="py-2.5 px-3 font-black text-slate-950 dark:text-amber-300 whitespace-nowrap">
                         {row.company}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
                         {row.code}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                         {row.vehiclesCount.size}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                         {row.entries}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {row.liters.toLocaleString()} L
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800">
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800 dark:text-amber-300">
                         {formatCurrency(row.cost)}
                       </td>
                     </tr>
@@ -1265,7 +1265,7 @@ export const ReportsView: React.FC = () => {
                 )}
               </tbody>
               {companyReportData.length > 0 && (
-                <tfoot className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                <tfoot className="bg-slate-100 dark:bg-[#182952] font-bold text-slate-900 dark:text-white border-t-2 border-slate-300 dark:border-blue-900/60">
                   <tr>
                     <td colSpan={4} className="py-2.5 px-3 text-right uppercase text-[11px]">
                       {t.grandTotal}
@@ -1273,7 +1273,7 @@ export const ReportsView: React.FC = () => {
                     <td className="py-2.5 px-3 text-right font-mono font-black">
                       {totalLiters.toLocaleString()} L
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900">
+                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900 dark:text-amber-300">
                       {formatCurrency(totalCost)}
                     </td>
                   </tr>
@@ -1285,9 +1285,9 @@ export const ReportsView: React.FC = () => {
 
         {/* REPORT 3: Days-wise / Daily Fuel Usage Report */}
         {reportType === 'days_wise' && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-300 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-800 dark:text-slate-100 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
                 <tr>
                   <th className="py-2.5 px-3">{t.thDate}</th>
                   <th className="py-2.5 px-3 text-right">{t.thVehiclesCount}</th>
@@ -1299,44 +1299,44 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-center">{t.thAnomalies}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {daysWiseReportData.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                    <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
                 ) : (
                   daysWiseReportData.map(day => (
-                    <tr key={day.date} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                    <tr key={day.date} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                         {day.date}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                         {day.vehiclesSet.size}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                         {day.entriesCount}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-blue-700 font-medium">
+                      <td className="py-2.5 px-3 text-right font-mono text-blue-700 dark:text-blue-300 font-bold">
                         {day.pumpLiters.toLocaleString()} L
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-purple-700 font-medium">
+                      <td className="py-2.5 px-3 text-right font-mono text-purple-700 dark:text-purple-300 font-bold">
                         {day.bowzerLiters.toLocaleString()} L
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-950 dark:text-white">
                         {day.totalLiters.toLocaleString()} L
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800">
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800 dark:text-amber-300">
                         {formatCurrency(day.totalCost)}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         {day.anomalies > 0 ? (
-                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-bold text-[10px]">
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 font-bold text-[10px]">
                             {day.anomalies} {t.anomalyCountSuffix}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400 dark:text-slate-500">—</span>
                         )}
                       </td>
                     </tr>
@@ -1344,7 +1344,7 @@ export const ReportsView: React.FC = () => {
                 )}
               </tbody>
               {daysWiseReportData.length > 0 && (
-                <tfoot className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                <tfoot className="bg-slate-100 dark:bg-[#182952] font-bold text-slate-900 dark:text-white border-t-2 border-slate-300 dark:border-blue-900/60">
                   <tr>
                     <td colSpan={5} className="py-2.5 px-3 text-right uppercase text-[11px]">
                       {t.grandTotal}
@@ -1352,7 +1352,7 @@ export const ReportsView: React.FC = () => {
                     <td className="py-2.5 px-3 text-right font-mono font-black">
                       {totalLiters.toLocaleString()} L
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900">
+                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-900 dark:text-amber-300">
                       {formatCurrency(totalCost)}
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
@@ -1367,9 +1367,9 @@ export const ReportsView: React.FC = () => {
 
         {/* REPORT 4: Pump Reconciliation Report */}
         {reportType === 'pump_reconciliation' && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-300 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-800 dark:text-slate-100 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
                 <tr>
                   <th className="py-2.5 px-3">{t.thPumpStation}</th>
                   <th className="py-2.5 px-3">{t.thLocation}</th>
@@ -1380,35 +1380,35 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">{t.thOutstandingBalance}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {pumpReconciliationData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400">
+                    <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
                 ) : (
                   pumpReconciliationData.map(pump => (
-                    <tr key={pump.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-extrabold text-slate-900 whitespace-nowrap">
+                    <tr key={pump.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <td className="py-2.5 px-3 font-black text-slate-950 dark:text-amber-300 whitespace-nowrap">
                         {pump.pumpName}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500">
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
                         {pump.location}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-700">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                         BDT {pump.creditLimit.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-950 dark:text-white">
                         {pump.totalLitersTaken.toLocaleString()} L
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-800">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-800 dark:text-amber-300">
                         +BDT {pump.totalFuelCharged.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-800">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-800 dark:text-emerald-300">
                         -BDT {pump.totalPaid.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-red-600 bg-red-50/50">
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/30">
                         BDT {pump.currentOutstanding.toLocaleString()}
                       </td>
                     </tr>
@@ -1421,9 +1421,9 @@ export const ReportsView: React.FC = () => {
 
         {/* REPORT 5: Detailed Raw Transaction Slips */}
         {reportType === 'raw_ledger' && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-300 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-800 dark:text-slate-100 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
                 <tr>
                   <th className="py-2.5 px-3">{t.thDateSlip}</th>
                   <th className="py-2.5 px-3">{t.thVehicle}</th>
@@ -1436,10 +1436,10 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-center">{t.thAnomalies}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {scopedEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                    <td colSpan={9} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
@@ -1449,44 +1449,44 @@ export const ReportsView: React.FC = () => {
                     const comp = companies.find(c => c.id === e.company_id);
 
                     return (
-                      <tr key={e.id} className="hover:bg-slate-50">
+                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="font-mono font-bold text-slate-900">{e.entry_date}</div>
-                          <div className="text-[10px] font-mono text-slate-400">{e.slip_no}</div>
+                          <div className="font-mono font-bold text-slate-950 dark:text-white">{e.entry_date}</div>
+                          <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{e.slip_no}</div>
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900 whitespace-nowrap">
+                        <td className="py-2.5 px-3 font-semibold text-slate-950 dark:text-white whitespace-nowrap">
                           {veh?.vehicle_number}
-                          <span className="block text-[10px] text-slate-400 font-normal">{veh?.driver_name}</span>
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-normal">{veh?.driver_name}</span>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                        <td className="py-2.5 px-3 font-bold text-slate-950 dark:text-amber-300 whitespace-nowrap">
                           {comp?.name}
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            e.source_type === 'pump' ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-900'
+                            e.source_type === 'pump' ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60' : 'bg-blue-100 dark:bg-blue-950/80 text-blue-900 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60'
                           }`}>
                             {e.source_type === 'pump' ? t.pumpSource : t.bowzerSource}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-800 dark:text-slate-200">
                           {e.distance_traveled.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-950 dark:text-white">
                           {e.fuel_liters.toLocaleString()} L
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800">
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-800 dark:text-amber-300">
                           {formatCurrency(e.total_amount)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
                           {e.calculated_mileage}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           {e.is_anomaly ? (
-                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-bold text-[10px]">
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 font-bold text-[10px]">
                               Anomaly
                             </span>
                           ) : (
-                            <span className="text-emerald-600 font-bold text-[10px]">Normal</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">Normal</span>
                           )}
                         </td>
                       </tr>

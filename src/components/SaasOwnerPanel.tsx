@@ -71,7 +71,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   } = useApp();
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'owner_profile' | 'packages'>('subscribers');
+  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'owner_profile' | 'packages' | 'gateway'>('subscribers');
+
+  // Gateway webhook test states
+  const [webhookTestLoading, setWebhookTestLoading] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   // Search and Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -333,6 +338,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       email: newModForm.email,
       phone: newModForm.phone,
       status: 'active',
+      owner_role: 'MODERATOR',
       permissions: {
         can_manage_subscribers: Boolean(newModForm.can_add_subscribers || newModForm.can_manage_subscriptions),
         can_extend_subscriptions: Boolean(newModForm.can_manage_subscriptions),
@@ -539,6 +545,18 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           >
             <Key className="w-4 h-4" />
             <span>{'Owner Security'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gateway')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'gateway'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>{'Baniq Pay Gateway'}</span>
           </button>
         </div>
 
@@ -1096,6 +1114,207 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ================= TAB 4: BANIQ PAY GATEWAY & WEBHOOK ================= */}
+      {activeTab === 'gateway' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Overview Card */}
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      Baniq Pay Payment Automation
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      Active Integration
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Automated bKash, Nagad, Rocket & Bank payment verification with instant tenant provisioning
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  Currency: BDT (৳)
+                </span>
+              </div>
+            </div>
+
+            {/* Webhook Configuration Box */}
+            <div className="mt-6 p-5 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-slate-950 uppercase">
+                    Your Webhook URL
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">
+                    (Paste this in your Baniq Pay merchant dashboard)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/baniq-pay/webhook`;
+                    navigator.clipboard?.writeText(url);
+                    setCopiedWebhook(true);
+                    setTimeout(() => setCopiedWebhook(false), 2500);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition-all"
+                >
+                  {copiedWebhook ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Webhook URL</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs text-amber-600 dark:text-amber-400 break-all select-all">
+                {`${typeof window !== 'undefined' ? window.location.origin : ''}/api/baniq-pay/webhook`}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-1">
+                <span><strong>HTTP Method:</strong> POST</span>
+                <span>•</span>
+                <span><strong>Payload Type:</strong> JSON</span>
+                <span>•</span>
+                <span><strong>Authentication:</strong> X-API-KEY / X-API-SECRET Header</span>
+              </div>
+            </div>
+
+            {/* Credentials Status Grid */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  API Base URL
+                </div>
+                <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  https://api.baniqpay.com
+                </div>
+                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Default Production Host
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Baniq API Key
+                </div>
+                <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  BANIQ_PAY_API_KEY
+                </div>
+                <div className="text-[10px] text-slate-500 mt-2">
+                  Configured in environment (.env)
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Baniq API Secret
+                </div>
+                <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  BANIQ_PAY_API_SECRET
+                </div>
+                <div className="text-[10px] text-slate-500 mt-2">
+                  Secures incoming webhook verification
+                </div>
+              </div>
+            </div>
+
+            {/* Step-by-Step Instructions */}
+            <div className="mt-6 p-5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>How Baniq Pay Works with FuelNest (সহজ ব্যবহারের নির্দেশিকা)</span>
+              </h4>
+              <ol className="list-decimal list-inside space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                <li>
+                  <strong>Baniq Pay মার্চেন্ট প্যানেলে লগইন করুন:</strong> Baniq Pay একাউন্টে ঢুকে Developer / API Settings সেকশনে যান।
+                </li>
+                <li>
+                  <strong>Webhook URL সেট করুন:</strong> উপরের বক্সে থাকা <code>/api/baniq-pay/webhook</code> URL টি কপি করে Baniq Pay-এর Webhook ফিল্ডে পেস্ট করুন।
+                </li>
+                <li>
+                  <strong>API Key ও API Secret সংগ্রহ করুন:</strong> Baniq Pay ড্যাশবোর্ড থেকে API Key ও API Secret নিয়ে আপনার সার্ভারের <code>.env</code> ফাইলে (<code>BANIQ_PAY_API_KEY</code> ও <code>BANIQ_PAY_API_SECRET</code>) সেট করুন।
+                </li>
+                <li>
+                  <strong>স্বয়ংক্রিয় প্রোভিশনিং:</strong> যেকোনো গ্রাহক বিকাশ, নগদ, রকেট বা ব্যাংকে পেমেন্ট সফল করার সাথে সাথে Baniq Pay এর Webhook স্বয়ংক্রিয়ভাবে নতুন টেন্যান্ট ডেটাবেস, সুপার অ্যাডমিন ইউজারনেম (<code>FirstWord_admin</code>) ও পাসওয়ার্ড (<code>FirstWord@12345</code>) তৈরি করে কনফার্মেশন ইমেইল পাঠিয়ে দেবে!
+                </li>
+              </ol>
+            </div>
+
+            {/* Webhook Tester Simulator */}
+            <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    Simulate Baniq Pay Webhook Event
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Test the automated subscriber creation workflow without making a real money transaction.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={webhookTestLoading}
+                  onClick={async () => {
+                    setWebhookTestLoading(true);
+                    setWebhookTestResult(null);
+                    try {
+                      const res = await fetch('/api/baniq-pay/simulate-success', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          company_name: `Baniq Fleet ${Math.floor(Math.random() * 900 + 100)} Ltd`,
+                          admin_name: 'Baniq Test Admin',
+                          email: 'subscriber@example.com',
+                          phone: '+880 1712-345678',
+                          plan_id: 'starter',
+                          max_vehicles: 5,
+                          custom_price: 1500
+                        })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setWebhookTestResult(`Success! Created Tenant "${data.tenant?.name}" with username "${data.super_admin_username}" & temporary password "${data.temporary_password}".`);
+                      } else {
+                        setWebhookTestResult(`Failed: ${data.message || 'Error occurred'}`);
+                      }
+                    } catch (err: any) {
+                      setWebhookTestResult(`Error: ${err?.message || 'Connection failed'}`);
+                    } finally {
+                      setWebhookTestLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${webhookTestLoading ? 'animate-spin' : ''}`} />
+                  <span>{webhookTestLoading ? 'Simulating...' : 'Send Test Webhook'}</span>
+                </button>
+              </div>
+
+              {webhookTestResult && (
+                <div className="mt-3 p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-400">
+                  {webhookTestResult}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

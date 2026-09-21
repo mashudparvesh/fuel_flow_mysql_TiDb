@@ -18,7 +18,11 @@ import {
   TenantSubscription,
   SaasOwnerProfile,
   SaasModerator,
-  UserPermissions
+  UserPermissions,
+  OwnerRole,
+  PendingApprovalAction,
+  PendingActionType,
+  ApprovalStatus
 } from '../types';
 import {
   INITIAL_TENANTS,
@@ -171,6 +175,22 @@ interface AppContextType {
   deletePump: (id: string) => void;
 
   updateFuelPrice: (fuelTypeId: string, newPrice: number) => void;
+  addFuelType: (fuelData: { name: string; code?: string; unit?: string; current_price: number }) => Promise<{ success: boolean; message: string; fuelType?: FuelType }>;
+  updateFuelType: (id: string, updates: Partial<FuelType>) => Promise<{ success: boolean; message: string }>;
+  deleteFuelType: (id: string) => Promise<{ success: boolean; message: string; has_dependencies?: boolean }>;
+
+  // Cascade Delete (Update 7)
+  cascadeDeleteTenant: (tenantId: string) => Promise<{ success: boolean; message: string }>;
+
+  // Mandatory Password Change (Update 10)
+  changeUserPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+
+  // SaaS Multi-Level Action Approvals (Update 9)
+  approvals: PendingApprovalAction[];
+  fetchApprovals: () => Promise<void>;
+  requestApprovalAction: (req: Omit<PendingApprovalAction, 'id' | 'status' | 'created_at'>) => Promise<{ success: boolean; message: string; action?: PendingApprovalAction }>;
+  approveAction: (actionId: string, reviewerName: string) => Promise<{ success: boolean; message: string }>;
+  rejectAction: (actionId: string, reviewerName: string, note?: string) => Promise<{ success: boolean; message: string }>;
 
   addCategory: (cat: Omit<VehicleCategory, 'id' | 'tenant_id' | 'user_id'>) => void;
   updateCategory: (id: string, cat: Partial<VehicleCategory>) => void;
@@ -2142,22 +2162,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTenantSubscriber = (tenantId: string) => {
-    const now = new Date().toISOString();
-    // Soft-delete: marked with deleted_at and status inactive (ISSUE 2 Fix)
-    setTenants(prev => prev.map(t => {
-      if (t.id === tenantId) {
-        return {
-          ...t,
-          status: 'inactive',
-          deleted_at: now,
-          subscription: t.subscription ? { ...t.subscription, status: 'suspended' } : undefined
-        };
-      }
-      return t;
-    }));
+    // 1. Immediately remove from local state so UI updates instantaneously
+    setTenants(prev => prev.filter(t => t.id !== tenantId));
+    setUsers(prev => prev.filter(u => u.tenant_id !== tenantId));
+    setVehicles(prev => prev.filter(v => v.tenant_id !== tenantId));
+    setFuelEntries(prev => prev.filter(e => e.tenant_id !== tenantId));
+    setPumps(prev => prev.filter(p => p.tenant_id !== tenantId));
+    setPayments(prev => prev.filter(pm => pm.tenant_id !== tenantId));
+    setCategories(prev => prev.filter(c => c.tenant_id !== tenantId));
+    setCompanies(prev => prev.filter(c => c.tenant_id !== tenantId));
+    setVendors(prev => prev.filter(v => v.tenant_id !== tenantId));
+    setFuelTypes(prev => prev.filter(f => f.tenant_id !== tenantId));
+    setTankers(prev => prev.filter(tk => tk.tenant_id !== tenantId));
+    setTankerLogs(prev => prev.filter(tl => tl.tenant_id !== tenantId));
 
     try {
-      fetch(`/api/tenants/${tenantId}`, {
+      fetch(`/api/tenants/${tenantId}/cascade`, {
         method: 'DELETE'
       }).catch(err => console.warn('Failed to delete tenant on server:', err));
 
@@ -2167,7 +2187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
 
     if (currentTenantId === tenantId) {
-      const remaining = tenants.filter(t => t.id !== tenantId && !t.deleted_at && t.status === 'active');
+      const remaining = tenants.filter(t => t.id !== tenantId);
       if (remaining.length > 0) {
         setCurrentTenantIdState(remaining[0].id);
       }
@@ -2345,6 +2365,208 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.clear();
   };
 
+  // -----------------------------------------------------------
+  // SaaS Multi-Level Action Approvals (Update 9)
+  // -----------------------------------------------------------
+  const [approvals, setApprovals] = useState<PendingApprovalAction[]>([]);
+
+  const fetchApprovals = async () => {
+    try {
+      const res = await fetch(`/api/saas/approvals?t=${Date.now()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setApprovals(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch approvals:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchApprovals();
+  }, []);
+
+  const requestApprovalAction = async (req: Omit<PendingApprovalAction, 'id' | 'status' | 'created_at'>) => {
+    try {
+      const res = await fetch('/api/saas/approvals/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req)
+      });
+      const data = await res.json();
+      if (data.success && data.action) {
+        setApprovals(prev => [data.action, ...prev]);
+        return { success: true, message: data.message, action: data.action };
+      }
+      return { success: false, message: data.message || 'Failed to submit request' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  const approveAction = async (actionId: string, reviewerName: string) => {
+    try {
+      const res = await fetch(`/api/saas/approvals/${actionId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewed_by_name: reviewerName })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApprovals(prev => prev.map(a => a.id === actionId ? { ...a, status: 'APPROVED' as ApprovalStatus, reviewed_by: reviewerName, reviewed_at: new Date().toISOString() } : a));
+        await refreshTenantsFromServer();
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Approval failed' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  const rejectAction = async (actionId: string, reviewerName: string, note?: string) => {
+    try {
+      const res = await fetch(`/api/saas/approvals/${actionId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewed_by_name: reviewerName, note })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApprovals(prev => prev.map(a => a.id === actionId ? { ...a, status: 'REJECTED' as ApprovalStatus, reviewed_by: reviewerName, reviewed_at: new Date().toISOString() } : a));
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Rejection failed' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  // -----------------------------------------------------------
+  // Permanent Cascade Delete (Update 7)
+  // -----------------------------------------------------------
+  const cascadeDeleteTenant = async (tenantId: string) => {
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}/cascade`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenants(prev => prev.filter(t => t.id !== tenantId));
+        setUsers(prev => prev.filter(u => u.tenant_id !== tenantId));
+        setVehicles(prev => prev.filter(v => v.tenant_id !== tenantId));
+        setFuelEntries(prev => prev.filter(e => e.tenant_id !== tenantId));
+        setPumps(prev => prev.filter(p => p.tenant_id !== tenantId));
+        setPayments(prev => prev.filter(pm => pm.tenant_id !== tenantId));
+        setCategories(prev => prev.filter(c => c.tenant_id !== tenantId));
+        setCompanies(prev => prev.filter(c => c.tenant_id !== tenantId));
+        setVendors(prev => prev.filter(v => v.tenant_id !== tenantId));
+        setFuelTypes(prev => prev.filter(f => f.tenant_id !== tenantId));
+        setTankers(prev => prev.filter(tk => tk.tenant_id !== tenantId));
+        setTankerLogs(prev => prev.filter(tl => tl.tenant_id !== tenantId));
+
+        if (currentTenantId === tenantId) {
+          const remaining = tenants.filter(t => t.id !== tenantId && !t.deleted_at && t.status === 'active');
+          if (remaining.length > 0) {
+            setCurrentTenantIdState(remaining[0].id);
+          }
+        }
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Cascade delete failed' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  // -----------------------------------------------------------
+  // Mandatory First-Time Password Change (Update 10)
+  // -----------------------------------------------------------
+  const changeUserPassword = async (userId: string, newPassword: string) => {
+    try {
+      const res = await fetch('/api/auth/force-change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, new_password: newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword, must_change_password: false } : u));
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Failed to update password' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  // -----------------------------------------------------------
+  // Dynamic Fuel Types & Pricing (Update 8)
+  // -----------------------------------------------------------
+  const addFuelType = async (fuelData: { name: string; code?: string; unit?: string; current_price: number }) => {
+    try {
+      const res = await fetch('/api/master/fuel-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: currentTenantId,
+          user_id: currentUser.id,
+          name: fuelData.name,
+          code: fuelData.code,
+          unit: fuelData.unit || 'Liter',
+          current_price: fuelData.current_price
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.fuelType) {
+        setFuelTypes(prev => [data.fuelType, ...prev]);
+        return { success: true, message: data.message, fuelType: data.fuelType };
+      }
+      return { success: false, message: data.message || 'Failed to add fuel type' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  const updateFuelType = async (id: string, updates: Partial<FuelType>) => {
+    try {
+      const res = await fetch(`/api/master/fuel-types/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      const data = await res.json();
+      if (data.success && data.fuelType) {
+        setFuelTypes(prev => prev.map(f => f.id === id ? data.fuelType : f));
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || 'Failed to update fuel type' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  const deleteFuelType = async (id: string) => {
+    try {
+      const res = await fetch(`/api/master/fuel-types/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFuelTypes(prev => prev.filter(f => f.id !== id));
+        return { success: true, message: data.message };
+      }
+      return {
+        success: false,
+        message: data.message || 'Failed to delete fuel type',
+        has_dependencies: !!data.has_dependencies
+      };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -2391,8 +2613,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTenantStatus,
         updateTenantSuperAdminCredentials,
         deleteTenantSubscriber,
+        cascadeDeleteTenant,
         updateTenantLogo,
         updateTenant,
+
+        // Approvals & Governance (Update 9)
+        approvals,
+        fetchApprovals,
+        requestApprovalAction,
+        approveAction,
+        rejectAction,
+
+        // Mandatory Password Change (Update 10)
+        changeUserPassword,
 
         // Company User Management & Category Access
         addCompanyUser,
@@ -2425,6 +2658,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deletePump,
 
         updateFuelPrice,
+        addFuelType,
+        updateFuelType,
+        deleteFuelType,
 
         addCategory,
         updateCategory,

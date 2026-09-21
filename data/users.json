@@ -1,0 +1,138 @@
+[
+  {
+    "id": "usr_tenant_karnafuli_admin",
+    "tenant_id": "tenant_karnafuli",
+    "name": "Karnafuli Admin",
+    "email": "contact@karnafuli.com",
+    "username": "karnafuli_admin",
+    "password": "Karnafuli@12345",
+    "phone": "+880 1819-112233",
+    "role": "super_admin",
+    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-09-21"
+  },
+  {
+    "id": "usr_super_admin",
+    "tenant_id": "tenant_1",
+    "name": "M. A. Rahman (Super Admin)",
+    "email": "admin@padma-fleet.com",
+    "username": "padma_admin",
+    "password": "padma#pass123",
+    "phone": "+880 1711-001122",
+    "role": "super_admin",
+    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "status": "active",
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-08-01"
+  },
+  {
+    "id": "usr_supervisor",
+    "tenant_id": "tenant_1",
+    "name": "Kamal Hossain (Fuel In-charge)",
+    "email": "kamal.entry@padma-fleet.com",
+    "username": "kamal_entry",
+    "password": "user1234",
+    "phone": "+880 1712-334455",
+    "role": "data_entry",
+    "role_title_bn": "ডাটা এন্ট্রি অপারেটর (Fuel Operator)",
+    "status": "active",
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": false,
+      "can_manage_pumps": false,
+      "can_view_reports": true,
+      "can_manage_users": false,
+      "can_edit_settings": false
+    },
+    "created_at": "2026-08-05"
+  },
+  {
+    "id": "usr_bengal_admin",
+    "tenant_id": "tenant_2",
+    "name": "Shafiqul Alam (Admin)",
+    "email": "shafiq@bengalinfra.com",
+    "username": "bengal_admin",
+    "password": "bengal#2026",
+    "phone": "+880 1819-445566",
+    "role": "super_admin",
+    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "status": "active",
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-08-15"
+  },
+  {
+    "id": "usr_jamuna_admin",
+    "tenant_id": "tenant_3",
+    "name": "Kabir Chowdhury (Admin)",
+    "email": "kabir@jamunapower.com",
+    "username": "jamuna_admin",
+    "password": "jamuna#pass2026",
+    "phone": "+880 1912-887766",
+    "role": "super_admin",
+    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "status": "active",
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-09-01"
+  }
+]

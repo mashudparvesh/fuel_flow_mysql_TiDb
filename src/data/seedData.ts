@@ -23,18 +23,40 @@ export const DEFAULT_SAAS_OWNER: SaasOwnerProfile = {
   email: 'mashudrus@gmail.com',
   phone: '+880 1700-000000',
   role: 'platform_owner',
+  owner_role: 'OWNER_ADMIN',
   updated_at: '2026-09-12'
 };
 
 export const INITIAL_MODERATORS: SaasModerator[] = [
   {
     id: 'mod_1',
-    name: 'Tanvir Ahmed (SaaS Ops)',
+    name: 'Tanvir Ahmed (Moderator)',
     username: 'tanvir_ops',
     password: 'mod12345',
     email: 'ops@fuelnest.xyz',
     phone: '+880 1911-223344',
     role: 'saas_moderator',
+    owner_role: 'MODERATOR',
+    status: 'active',
+    permissions: {
+      can_manage_subscribers: true,
+      can_extend_subscriptions: false,
+      can_manage_pricing: false,
+      can_view_financials: true,
+      can_impersonate: false,
+      can_reset_passwords: true
+    },
+    created_at: '2026-08-01'
+  },
+  {
+    id: 'mod_admin_1',
+    name: 'Shafiqul Islam (Control Admin)',
+    username: 'admin_shafiq',
+    password: 'admin12345',
+    email: 'shafiq@fuelnest.xyz',
+    phone: '+880 1711-223344',
+    role: 'saas_moderator',
+    owner_role: 'ADMIN',
     status: 'active',
     permissions: {
       can_manage_subscribers: true,
@@ -44,7 +66,7 @@ export const INITIAL_MODERATORS: SaasModerator[] = [
       can_impersonate: true,
       can_reset_passwords: true
     },
-    created_at: '2026-08-01'
+    created_at: '2026-08-10'
   }
 ];
 

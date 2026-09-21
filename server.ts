@@ -369,14 +369,299 @@ function saveFleetData(data: Partial<FleetStore>) {
   }
 }
 
+// -------------------------------------------------------------
+// SaaS Multi-Level Approvals Engine
+// -------------------------------------------------------------
+const APPROVALS_FILE = path.join(DATA_DIR, 'approvals.json');
+
+function loadApprovals(): any[] {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(APPROVALS_FILE)) {
+      const raw = fs.readFileSync(APPROVALS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.error('Error reading approvals file:', err);
+  }
+  return [];
+}
+
+function saveApprovals(approvals: any[]) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(APPROVALS_FILE, JSON.stringify(approvals, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving approvals file:', err);
+  }
+}
+
+// -------------------------------------------------------------
+// Automated Email Dispatch (Resend / Nodemailer fallback)
+// -------------------------------------------------------------
+async function sendWelcomeEmail(data: {
+  email: string;
+  companyName: string;
+  username: string;
+  tempPassword: string;
+  loginUrl: string;
+}) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    console.log(`[Email Mock] Welcome email for ${data.companyName} to ${data.email}:`);
+    console.log(`[Email Mock] Portal URL: ${data.loginUrl} | Username: ${data.username} | Temporary Password: ${data.tempPassword}`);
+    return { dispatched: false, reason: 'api_key_not_configured' };
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'FuelNest Onboarding <onboarding@resend.dev>',
+        to: [data.email],
+        subject: `Welcome to FuelNest - Your Fleet Workspace is Ready! (${data.companyName})`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <div style="margin-bottom: 20px; border-bottom: 2px solid #f59e0b; padding-bottom: 16px;">
+              <h1 style="color: #0f172a; margin: 0 0 6px 0; font-size: 24px; font-weight: 800;">FuelNest Fleet & Fuel Intelligence</h1>
+              <p style="margin: 0; color: #64748b; font-size: 14px;">Automated SaaS Commercial Provisioning</p>
+            </div>
+            
+            <p style="font-size: 15px; line-height: 1.6;">Hello,</p>
+            <p style="font-size: 15px; line-height: 1.6;">
+              Congratulations! Your dedicated enterprise workspace for <strong>${data.companyName}</strong> has been automatically provisioned and configured on FuelNest.
+            </p>
+
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin: 20px 0;">
+              <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 16px;">Your Super Admin Sign-in Credentials:</h3>
+              <p style="margin: 6px 0; font-size: 14px;"><strong>Portal Access URL:</strong> <a href="${data.loginUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">${data.loginUrl}</a></p>
+              <p style="margin: 6px 0; font-size: 14px;"><strong>Super Admin Username:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.username}</code></p>
+              <p style="margin: 6px 0; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.tempPassword}</code></p>
+            </div>
+
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px; margin: 20px 0; color: #92400e; font-size: 13px; line-height: 1.5;">
+              <strong>Security Notice:</strong> For security compliance, you will be required to update your temporary password upon your first sign-in before accessing fleet dashboards.
+            </div>
+
+            <div style="text-align: center; margin: 30px 0 20px;">
+              <a href="${data.loginUrl}" style="background: #f59e0b; color: #000000; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block; font-size: 15px;">Login to Your Fleet Dashboard &rarr;</a>
+            </div>
+
+            <p style="color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
+              FuelNest SaaS Multi-Tenant Platform &bull; If you have any inquiries, contact support@fuelnest.xyz
+            </p>
+          </div>
+        `
+      })
+    });
+    return { dispatched: res.ok, status: res.status };
+  } catch (err: any) {
+    console.warn('[Resend Email Error]:', err?.message || err);
+    return { dispatched: false, error: err?.message };
+  }
+}
+
+// -------------------------------------------------------------
+// Automated Tenant Provisioning & Default Credential Engine
+// -------------------------------------------------------------
+async function provisionNewTenant(payload: {
+  company_name: string;
+  admin_name?: string;
+  email: string;
+  phone?: string;
+  plan_id: string; // 'starter' | 'pro' | 'enterprise' | 'custom'
+  max_vehicles?: number;
+  custom_price?: number;
+  address?: string;
+  origin?: string;
+}) {
+  const companyName = String(payload.company_name || 'Fleet Company').trim();
+  const words = companyName.split(/\s+/).filter(Boolean);
+  const firstWord = (words[0] || 'Fleet').replace(/[^a-zA-Z0-9]/g, '');
+  const cleanCode = (words.length > 1
+    ? words.map(w => w[0]).join('')
+    : firstWord
+  ).toUpperCase().substring(0, 8);
+
+  const existingTenants = loadTenants();
+  let candidateId = `tenant_${firstWord.toLowerCase()}`;
+  let counter = 1;
+  while (existingTenants.some(t => t.id === candidateId)) {
+    candidateId = `tenant_${firstWord.toLowerCase()}_${counter++}`;
+  }
+
+  const tenantId = candidateId;
+  const tenantCode = cleanCode.length < 3 ? `${cleanCode}FLT` : cleanCode;
+
+  // 2. Super Admin Username: FirstWord_admin
+  const superAdminUsername = `${firstWord.toLowerCase()}_admin`;
+
+  // 3. Temporary Password: FirstWord@12345
+  const capitalizedWord = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+  const temporaryPassword = `${capitalizedWord}@12345`;
+
+  const today = new Date();
+  const startDate = today.toISOString().split('T')[0];
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const endDate = nextMonth.toISOString().split('T')[0];
+
+  const planId = (payload.plan_id || 'starter').toLowerCase();
+  const isStarter = planId === 'starter';
+  const isPro = planId === 'pro';
+  const priceBdt = payload.custom_price || (isStarter ? 1500 : isPro ? 3500 : 5000);
+  const maxVehicles = payload.max_vehicles || (isStarter ? 5 : isPro ? 20 : 100);
+
+  const newTenant: any = {
+    id: tenantId,
+    name: companyName,
+    code: tenantCode,
+    currency: 'BDT',
+    phone: payload.phone || '+880 1700-000000',
+    address: payload.address || 'Dhaka, Bangladesh',
+    contact_person: payload.admin_name || `${companyName} Admin`,
+    email: payload.email,
+    status: 'active',
+    deleted_at: null,
+    created_at: startDate,
+    subscription: {
+      plan: isStarter ? 'starter' : isPro ? 'professional' : 'enterprise',
+      plan_name_bn: isStarter ? 'Starter Plan (1,500 BDT)' : isPro ? 'Pro Plan (3,500 BDT)' : 'Enterprise Custom Plan',
+      status: 'active',
+      start_date: startDate,
+      end_date: endDate,
+      duration_type: 'months',
+      duration_val: 1,
+      price_bdt: priceBdt,
+      payment_status: 'paid',
+      max_vehicles: maxVehicles,
+      max_users: isStarter ? 3 : 10,
+      max_pumps: isStarter ? 3 : 10,
+      super_admin_username: superAdminUsername,
+      super_admin_password: temporaryPassword,
+      features: {
+        tanker_bowzer: !isStarter,
+        anomaly_ai: true,
+        reports_export: true,
+        qr_scanner: true,
+        custom_categories: true
+      },
+      notes: `Automated Baniq Pay Provisioning - Plan: ${planId.toUpperCase()}`
+    }
+  };
+
+  const newSuperAdminUser: any = {
+    id: `usr_${tenantId}_admin`,
+    tenant_id: tenantId,
+    name: payload.admin_name || `${companyName} Administrator`,
+    email: payload.email,
+    username: superAdminUsername,
+    password: temporaryPassword,
+    phone: payload.phone || '',
+    role: 'super_admin',
+    role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
+    status: 'active',
+    must_change_password: true,
+    allowed_category_ids: ['all'],
+    allowed_pump_ids: ['all'],
+    permissions: {
+      can_add_fuel: true,
+      can_manage_vehicles: true,
+      can_manage_pumps: true,
+      can_view_reports: true,
+      can_manage_users: true,
+      can_edit_settings: true
+    },
+    created_at: startDate
+  };
+
+  // Seed default master data in FleetStore for this tenant
+  const fleet = loadFleetData();
+  const defaultFuelTypes = [
+    { id: `fuel_diesel_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Diesel', code: 'diesel', unit: 'Liter', current_price: 108.50, price_history: [{ date: startDate, price: 108.50, changed_by: newSuperAdminUser.name }], updated_at: startDate },
+    { id: `fuel_octane_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Octane', code: 'octane', unit: 'Liter', current_price: 131.00, price_history: [{ date: startDate, price: 131.00, changed_by: newSuperAdminUser.name }], updated_at: startDate },
+    { id: `fuel_petrol_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Petrol', code: 'petrol', unit: 'Liter', current_price: 126.00, price_history: [{ date: startDate, price: 126.00, changed_by: newSuperAdminUser.name }], updated_at: startDate },
+    { id: `fuel_cng_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'CNG', code: 'cng', unit: 'm3', current_price: 43.00, price_history: [{ date: startDate, price: 43.00, changed_by: newSuperAdminUser.name }], updated_at: startDate },
+    { id: `fuel_lpg_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'LPG', code: 'lpg', unit: 'Kg', current_price: 115.00, price_history: [{ date: startDate, price: 115.00, changed_by: newSuperAdminUser.name }], updated_at: startDate }
+  ];
+
+  const defaultCategories = [
+    { id: `cat_dump_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Dump Truck', metric_type: 'kmpl', default_benchmark: 3.2, icon_name: 'Truck', description: 'Heavy material & sand hauling' },
+    { id: `cat_excavator_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Hydraulic Excavator', metric_type: 'lph', default_benchmark: 14.0, icon_name: 'Excavator', description: 'Earthmoving & construction' },
+    { id: `cat_crane_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Crane & Rig', metric_type: 'lph', default_benchmark: 18.0, icon_name: 'Truck', description: 'Heavy lifting & piling rig' },
+    { id: `cat_generator_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: 'Site Diesel Generator', metric_type: 'lph', default_benchmark: 22.0, icon_name: 'Fuel', description: 'Power generation' },
+    { id: `cat_bus_${tenantId}`, tenant_id: tenantId, user_id: newSuperAdminUser.id, name: '40-Seat Staff Bus', metric_type: 'kmpl', default_benchmark: 4.5, icon_name: 'Car', description: 'Personnel logistics' }
+  ];
+
+  fleet.fuelTypes = [...(fleet.fuelTypes || []), ...defaultFuelTypes];
+  fleet.categories = [...(fleet.categories || []), ...defaultCategories];
+  saveFleetData(fleet);
+
+  // Add tenant and user
+  const tenantsList = loadTenants();
+  tenantsList.unshift(newTenant);
+  saveTenants(tenantsList);
+  activeTenants = tenantsList;
+
+  const usersList = loadUsers();
+  usersList.unshift(newSuperAdminUser);
+  saveUsers(usersList);
+  activeUsers = usersList;
+
+  // Persist to DB if connected
+  await upsertTenantInDB(newTenant).catch(e => console.warn('[DB] Provision tenant sync warning:', e));
+  await upsertUserInDB(newSuperAdminUser).catch(e => console.warn('[DB] Provision user sync warning:', e));
+
+  // Dispatch Welcome Email
+  const loginUrl = `${payload.origin || ''}/login`;
+  await sendWelcomeEmail({
+    email: payload.email,
+    companyName,
+    username: superAdminUsername,
+    tempPassword: temporaryPassword,
+    loginUrl
+  });
+
+  return {
+    success: true,
+    tenant: newTenant,
+    user: newSuperAdminUser,
+    super_admin_username: superAdminUsername,
+    temporary_password: temporaryPassword,
+    login_url: loginUrl
+  };
+}
+
 // Global in-memory + file-backed tenant and user registry
 let activeTenants = loadTenants();
 let activeUsers = loadUsers();
 
 export const app = express();
 
+// Enable Trust Proxy for Cloud Run, Nginx, and Mobile Cellular/CGNAT proxies
+app.set("trust proxy", true);
+
 // Security Hardening: Disable technology stack fingerprinting
 app.disable("x-powered-by");
+
+// Permissive CORS & Preflight Handling for All Browsers (iOS Safari, Chrome, Edge, Firefox)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, x-tenant-id, x-tenant-code, x-api-key, x-api-secret, x-webhook-secret, x-baniq-signature"
+  );
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // Security Hardening: Apply OWASP-recommended HTTP security headers
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -403,14 +688,27 @@ function sanitizeIncomingPayload(obj: any, depth = 0): any {
   return clean;
 }
 
-// In-memory brute-force rate limiter for authentication endpoints
+// In-memory brute-force rate limiter for authentication endpoints (Mobile Carrier & iPhone friendly)
 const authRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 function rateLimitAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Only monitor POST login submissions; never throttle OPTIONS preflight or GET requests
+  if (req.method !== "POST") {
+    return next();
+  }
+
+  // Extract client IP safely respecting Cloud Run reverse proxy
   const forwarded = req.headers["x-forwarded-for"];
-  const ip = (typeof forwarded === "string" ? forwarded.split(",")[0] : req.socket.remoteAddress || "127.0.0.1").trim();
+  const rawIp = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : (req.ip || req.socket.remoteAddress || "127.0.0.1").trim();
+  const ip = rawIp.replace(/^::ffff:/, ''); // Normalize IPv4-mapped IPv6
+
+  // Bypass rate limiting for loopback and internal container healthchecks
+  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost" || ip.startsWith("169.254.") || ip.startsWith("10.")) {
+    return next();
+  }
+
   const now = Date.now();
-  const windowMs = 5 * 60 * 1000; // 5 minute window
-  const maxAttempts = 30; // Max 30 attempts per 5 minutes
+  const windowMs = 15 * 60 * 1000; // 15 minute sliding window
+  const maxAttempts = 150; // Accommodates corporate NATs and cellular CGNAT networks on mobile phones
 
   const record = authRateLimitMap.get(ip);
   if (!record || now > record.resetAt) {
@@ -419,9 +717,10 @@ function rateLimitAuthMiddleware(req: Request, res: Response, next: NextFunction
   }
 
   if (record.count >= maxAttempts) {
+    console.warn(`[Auth Rate Limit Triggered] IP: ${ip}, attempts: ${record.count}`);
     return res.status(429).json({
       success: false,
-      message: "Too many login attempts. For security reasons, please wait 5 minutes before trying again."
+      message: "Security Notice: Too many authentication attempts from this network. Please wait a few minutes before trying again."
     });
   }
 
@@ -619,31 +918,580 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     });
   });
 
-  // 5. DELETE /api/tenants/:id - Soft-Delete Tenant (ISSUE 2 Fix)
+  // 5. DELETE /api/tenants/:id - Permanent Cascade Delete Tenant
   app.delete('/api/tenants/:id', async (req: Request, res: Response) => {
-    const { id } = req.params;
-    activeTenants = loadTenants();
-    const tenant = activeTenants.find(t => t.id === id);
+    try {
+      const { id } = req.params;
+      activeTenants = loadTenants();
+      const targetTenant = activeTenants.find(t => t.id === id);
 
-    if (!tenant) {
-      res.status(404).json({ success: false, message: 'Tenant not found.' });
-      return;
+      if (!targetTenant) {
+        res.status(404).json({ success: false, message: 'Subscriber workspace not found.' });
+        return;
+      }
+
+      // Permanently remove from activeTenants list
+      activeTenants = activeTenants.filter(t => t.id !== id);
+      saveTenants(activeTenants);
+
+      // Remove all users belonging to this tenant
+      activeUsers = loadUsers().filter(u => u.tenant_id !== id);
+      saveUsers(activeUsers);
+
+      // Remove all fleet data belonging to this tenant
+      const fleet = loadFleetData();
+      fleet.vehicles = (fleet.vehicles || []).filter(v => v.tenant_id !== id);
+      fleet.fuelEntries = (fleet.fuelEntries || []).filter(e => e.tenant_id !== id);
+      fleet.pumps = (fleet.pumps || []).filter(p => p.tenant_id !== id);
+      fleet.payments = (fleet.payments || []).filter(pm => pm.tenant_id !== id);
+      fleet.categories = (fleet.categories || []).filter(c => c.tenant_id !== id);
+      fleet.companies = (fleet.companies || []).filter(c => c.tenant_id !== id);
+      fleet.vendors = (fleet.vendors || []).filter(v => v.tenant_id !== id);
+      fleet.fuelTypes = (fleet.fuelTypes || []).filter(f => f.tenant_id !== id);
+      fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== id);
+      fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
+      saveFleetData(fleet);
+
+      await softDeleteTenantInDB(id).catch(e => console.warn('[MySQL] Soft delete error:', e));
+
+      res.json({
+        success: true,
+        message: `Subscriber workspace "${targetTenant.name}" permanently deleted.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error deleting tenant' });
     }
+  });
 
-    // Soft delete with timestamp
-    tenant.deleted_at = new Date().toISOString();
-    tenant.status = 'inactive';
-    if (tenant.subscription) {
-      tenant.subscription.status = 'suspended';
+  // 5.b DELETE /api/tenants/:id/cascade - Permanent Cascade Delete (Update 7)
+  app.delete('/api/tenants/:id/cascade', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      activeTenants = loadTenants();
+      const targetTenant = activeTenants.find(t => t.id === id);
+      if (!targetTenant) {
+        res.status(404).json({ success: false, message: 'Subscriber not found.' });
+        return;
+      }
+
+      // Remove tenant from activeTenants
+      activeTenants = activeTenants.filter(t => t.id !== id);
+      saveTenants(activeTenants);
+
+      // Remove all users of this tenant
+      activeUsers = loadUsers().filter(u => u.tenant_id !== id);
+      saveUsers(activeUsers);
+
+      // Remove all fleet data belonging to this tenant
+      const fleet = loadFleetData();
+      fleet.vehicles = (fleet.vehicles || []).filter(v => v.tenant_id !== id);
+      fleet.fuelEntries = (fleet.fuelEntries || []).filter(e => e.tenant_id !== id);
+      fleet.pumps = (fleet.pumps || []).filter(p => p.tenant_id !== id);
+      fleet.payments = (fleet.payments || []).filter(pm => pm.tenant_id !== id);
+      fleet.categories = (fleet.categories || []).filter(c => c.tenant_id !== id);
+      fleet.companies = (fleet.companies || []).filter(c => c.tenant_id !== id);
+      fleet.vendors = (fleet.vendors || []).filter(v => v.tenant_id !== id);
+      fleet.fuelTypes = (fleet.fuelTypes || []).filter(f => f.tenant_id !== id);
+      fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== id);
+      fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
+      saveFleetData(fleet);
+
+      await softDeleteTenantInDB(id).catch(() => {});
+
+      res.json({
+        success: true,
+        message: `Subscriber workspace "${targetTenant.name}" and all associated fleet data permanently deleted.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error deleting subscriber' });
     }
+  });
 
-    saveTenants(activeTenants);
-    await softDeleteTenantInDB(id).catch(e => console.warn('[MySQL] Soft delete error:', e));
+  // -------------------------------------------------------------
+  // Dynamic Fuel Types & Pricing CRUD (Update 8)
+  // -------------------------------------------------------------
+  app.get('/api/master/fuel-types', (req: Request, res: Response) => {
+    const { tenant_id } = req.query;
+    const fleet = loadFleetData();
+    const list = tenant_id 
+      ? (fleet.fuelTypes || []).filter(f => f.tenant_id === tenant_id)
+      : (fleet.fuelTypes || []);
+    res.json({ success: true, data: list });
+  });
 
+  app.post('/api/master/fuel-types', async (req: Request, res: Response) => {
+    try {
+      const { tenant_id, name, code, unit, current_price, user_id } = req.body;
+      if (!name || !current_price) {
+        res.status(400).json({ success: false, message: 'Fuel name and price are required.' });
+        return;
+      }
+      const fleet = loadFleetData();
+      const today = new Date().toISOString().split('T')[0];
+      const newFuelType = {
+        id: `fuel_${(code || name).toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`,
+        tenant_id: tenant_id || 'tenant_1',
+        user_id: user_id || 'system',
+        name: String(name).trim(),
+        code: String(code || name).toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        unit: String(unit || 'Liter').trim(),
+        current_price: Number(current_price),
+        price_history: [{ date: today, price: Number(current_price), changed_by: 'Administrator' }],
+        updated_at: today
+      };
+
+      fleet.fuelTypes = [newFuelType, ...(fleet.fuelTypes || [])];
+      saveFleetData(fleet);
+      res.status(201).json({ success: true, fuelType: newFuelType, message: 'Fuel type created successfully.' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error creating fuel type' });
+    }
+  });
+
+  app.patch('/api/master/fuel-types/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const fleet = loadFleetData();
+      const idx = (fleet.fuelTypes || []).findIndex(f => f.id === id);
+      if (idx < 0) {
+        res.status(404).json({ success: false, message: 'Fuel type not found.' });
+        return;
+      }
+      const existing = fleet.fuelTypes[idx];
+      const today = new Date().toISOString().split('T')[0];
+      let history = [...(existing.price_history || [])];
+
+      if (updates.current_price !== undefined && updates.current_price !== existing.current_price) {
+        history.push({
+          date: today,
+          price: Number(updates.current_price),
+          changed_by: updates.changed_by || 'Admin'
+        });
+      }
+
+      fleet.fuelTypes[idx] = {
+        ...existing,
+        ...updates,
+        price_history: history,
+        updated_at: today
+      };
+      saveFleetData(fleet);
+      res.json({ success: true, fuelType: fleet.fuelTypes[idx], message: 'Fuel type updated.' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error updating fuel type' });
+    }
+  });
+
+  app.delete('/api/master/fuel-types/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const fleet = loadFleetData();
+      const target = (fleet.fuelTypes || []).find(f => f.id === id);
+      if (!target) {
+        res.status(404).json({ success: false, message: 'Fuel type not found.' });
+        return;
+      }
+
+      // Check dependent transactions in fuelEntries
+      const dependentEntries = (fleet.fuelEntries || []).filter(e =>
+        e.fuel_type_id === id ||
+        (e.fuel_type && target.code && e.fuel_type.toLowerCase() === target.code.toLowerCase()) ||
+        (e.fuel_type && target.name && e.fuel_type.toLowerCase() === target.name.toLowerCase())
+      );
+
+      // Check dependent vehicles using this fuel type
+      const dependentVehicles = (fleet.vehicles || []).filter(v =>
+        v.fuel_type && target.code && v.fuel_type.toLowerCase() === target.code.toLowerCase()
+      );
+
+      if (dependentEntries.length > 0 || dependentVehicles.length > 0) {
+        res.status(400).json({
+          success: false,
+          has_dependencies: true,
+          dependent_entries_count: dependentEntries.length,
+          dependent_vehicles_count: dependentVehicles.length,
+          message: `Cannot delete "${target.name}": It is currently referenced in ${dependentEntries.length} fuel logs and ${dependentVehicles.length} vehicles. Please reassign those records first.`
+        });
+        return;
+      }
+
+      fleet.fuelTypes = (fleet.fuelTypes || []).filter(f => f.id !== id);
+      saveFleetData(fleet);
+      res.json({ success: true, message: `Fuel type "${target.name}" deleted successfully.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error deleting fuel type' });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Baniq Pay Gateway Integration & Webhook (API Key, API Secret & Webhook)
+  // Supports automated verification for bKash, Nagad, Rocket & Bank
+  // -------------------------------------------------------------
+  const handleBaniqPayCheckout = async (req: Request, res: Response) => {
+    try {
+      const { full_name, email, phone, amount, metadata } = req.body;
+      const apiKey = process.env.BANIQ_PAY_API_KEY;
+      const apiSecret = process.env.BANIQ_PAY_API_SECRET;
+      const rawBaseUrl = process.env.BANIQ_PAY_BASE_URL || 'https://api.baniqpay.com';
+      const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+      const origin = req.protocol + '://' + req.get('host');
+
+      // If Baniq Pay API credentials provided, call live/sandbox gateway API
+      if (apiKey && apiKey.trim() !== '' && apiSecret && apiSecret.trim() !== '') {
+        const checkoutPayload = {
+          customer_name: full_name || 'Subscriber Customer',
+          customer_email: email || 'subscriber@example.com',
+          customer_phone: phone || '01700000000',
+          amount: Number(amount || '1500'),
+          currency: 'BDT',
+          metadata: metadata || {},
+          redirect_url: `${origin}/payment/success`,
+          cancel_url: `${origin}/`,
+          webhook_url: `${origin}/api/baniq-pay/webhook`
+        };
+
+        try {
+          const response = await fetch(`${baseUrl}/api/v1/payment/create`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': apiKey,
+              'X-API-SECRET': apiSecret,
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(checkoutPayload)
+          });
+
+          const data: any = await response.json().catch(() => ({}));
+          const targetUrl = data.payment_url || data.checkout_url || data.url || (data.data && (data.data.payment_url || data.data.url));
+          if (response.ok && targetUrl) {
+            res.json({
+              success: true,
+              payment_url: targetUrl,
+              invoice_id: data.invoice_id || data.trx_id || (data.data && data.data.invoice_id)
+            });
+            return;
+          }
+        } catch (fetchErr) {
+          console.warn('[Baniq Pay] API connection attempt warning:', fetchErr);
+        }
+      }
+
+      // Fallback: Instant Sandbox Provisioning Session (bKash/Nagad/Rocket simulation)
+      const sessionId = 'bnq_' + Date.now();
+      res.json({
+        success: true,
+        is_sandbox: true,
+        session_id: sessionId,
+        amount: amount || 1500,
+        company_name: metadata?.company_name || full_name,
+        payment_url: `/payment/sandbox?session=${sessionId}&amount=${amount || 1500}&company=${encodeURIComponent(metadata?.company_name || '')}`,
+        message: 'Baniq Pay sandbox gateway session generated.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Payment checkout error' });
+    }
+  };
+
+  app.post('/api/baniq-pay/checkout', handleBaniqPayCheckout);
+  app.post('/api/payment/checkout', handleBaniqPayCheckout);
+
+  // Webhook listener for Baniq Pay instant IPN/Webhook
+  const handleBaniqPayWebhook = async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.BANIQ_PAY_API_KEY;
+      const apiSecret = process.env.BANIQ_PAY_API_SECRET;
+      const webhookSecret = process.env.BANIQ_PAY_WEBHOOK_SECRET;
+
+      const incomingApiKey = req.header('x-api-key') || req.header('X-API-KEY') || req.header('x-baniq-api-key');
+      const incomingApiSecret = req.header('x-api-secret') || req.header('X-API-SECRET') || req.header('x-webhook-secret') || req.header('x-baniq-signature');
+
+      // Security check on webhook key & secret if configured
+      if (apiKey && incomingApiKey && apiKey !== incomingApiKey) {
+        res.status(401).json({ status: 'unauthorized', message: 'Invalid Baniq Pay API key.' });
+        return;
+      }
+      if ((apiSecret || webhookSecret) && incomingApiSecret) {
+        const expectedSecret = webhookSecret || apiSecret;
+        if (expectedSecret && incomingApiSecret !== expectedSecret) {
+          res.status(401).json({ status: 'unauthorized', message: 'Invalid Baniq Pay API secret or webhook signature.' });
+          return;
+        }
+      }
+
+      const body = req.body || {};
+      const status = String(body.status || body.payment_status || body.transaction_status || '').toUpperCase();
+
+      if (status === 'COMPLETED' || status === 'SUCCESS' || status === 'PAID' || status === 'SUCCESSFUL') {
+        const meta = body.metadata || {};
+        const origin = req.protocol + '://' + req.get('host');
+
+        const provisionResult = await provisionNewTenant({
+          company_name: meta.company_name || body.customer_name || body.full_name || 'Commercial Fleet',
+          admin_name: meta.admin_name || body.customer_name || body.full_name,
+          email: body.email || body.customer_email || meta.email,
+          phone: meta.phone || body.customer_phone || body.phone,
+          plan_id: meta.plan_id || 'starter',
+          max_vehicles: Number(meta.max_vehicles) || 5,
+          custom_price: Number(body.amount) || Number(meta.custom_price) || undefined,
+          origin
+        });
+
+        res.status(200).json({ status: 'success', message: 'Tenant workspace provisioned via Baniq Pay.', tenant_id: provisionResult.tenant.id });
+        return;
+      }
+
+      res.status(200).json({ status: 'ignored', message: `Status is ${status}` });
+    } catch (err: any) {
+      console.error('[Baniq Pay Webhook Error]:', err);
+      res.status(500).json({ status: 'error', message: err?.message });
+    }
+  };
+
+  app.post('/api/baniq-pay/webhook', handleBaniqPayWebhook);
+  app.post('/api/payment/webhook', handleBaniqPayWebhook);
+
+  // Baniq Pay Configuration & Webhook URL Status endpoint
+  app.get('/api/baniq-pay/config', (req: Request, res: Response) => {
+    const origin = req.protocol + '://' + req.get('host');
     res.json({
       success: true,
-      message: `Tenant ${tenant.name} soft-deleted successfully.`
+      gateway: 'Baniq Pay',
+      configured: Boolean(process.env.BANIQ_PAY_API_KEY && process.env.BANIQ_PAY_API_SECRET),
+      has_api_key: Boolean(process.env.BANIQ_PAY_API_KEY),
+      has_api_secret: Boolean(process.env.BANIQ_PAY_API_SECRET),
+      has_webhook_secret: Boolean(process.env.BANIQ_PAY_WEBHOOK_SECRET),
+      webhook_url: `${origin}/api/baniq-pay/webhook`,
+      supported_methods: ['bKash', 'Nagad', 'Rocket', 'Bank Transfer', 'Upay']
     });
+  });
+
+  // Instant one-click simulation endpoint for Sandbox preview
+  app.post('/api/payment/simulate-success', async (req: Request, res: Response) => {
+    try {
+      const { company_name, admin_name, email, phone, plan_id, max_vehicles, custom_price } = req.body;
+      const origin = req.protocol + '://' + req.get('host');
+
+      const result = await provisionNewTenant({
+        company_name,
+        admin_name,
+        email,
+        phone,
+        plan_id: plan_id || 'starter',
+        max_vehicles: Number(max_vehicles) || (plan_id === 'pro' ? 20 : 5),
+        custom_price: Number(custom_price),
+        origin
+      });
+
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Provisioning error' });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Multi-Level Action Approvals (Update 9)
+  // -------------------------------------------------------------
+  app.get('/api/saas/approvals', (req: Request, res: Response) => {
+    const list = loadApprovals();
+    res.json({ success: true, data: list });
+  });
+
+  app.post('/api/saas/approvals/request', (req: Request, res: Response) => {
+    try {
+      const { action_type, requested_by_id, requested_by_name, requested_by_role, target_tenant_id, target_tenant_name, details } = req.body;
+      if (!action_type || !target_tenant_id) {
+        res.status(400).json({ success: false, message: 'action_type and target_tenant_id are required.' });
+        return;
+      }
+
+      const approvals = loadApprovals();
+      const newAction = {
+        id: `act_${Date.now()}`,
+        action_type,
+        requested_by_id: requested_by_id || 'usr_staff',
+        requested_by_name: requested_by_name || 'Staff Member',
+        requested_by_role: requested_by_role || 'ADMIN',
+        target_tenant_id,
+        target_tenant_name: target_tenant_name || target_tenant_id,
+        details: details || {},
+        status: 'PENDING',
+        created_at: new Date().toISOString()
+      };
+
+      approvals.unshift(newAction);
+      saveApprovals(approvals);
+
+      res.status(201).json({
+        success: true,
+        action: newAction,
+        message: 'Action request submitted for Owner/Co-Owner Approval.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error creating approval request' });
+    }
+  });
+
+  app.post('/api/saas/approvals/:id/approve', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reviewed_by_name } = req.body;
+      const approvals = loadApprovals();
+      const idx = approvals.findIndex(a => a.id === id);
+      if (idx < 0) {
+        res.status(404).json({ success: false, message: 'Approval action not found.' });
+        return;
+      }
+
+      const action = approvals[idx];
+      if (action.status !== 'PENDING') {
+        res.status(400).json({ success: false, message: `Action is already ${action.status}.` });
+        return;
+      }
+
+      activeTenants = loadTenants();
+      const tenant = activeTenants.find(t => t.id === action.target_tenant_id);
+
+      // Execute requested action
+      if (tenant) {
+        if (action.action_type === 'DELETE_SUBSCRIBER') {
+          activeTenants = activeTenants.filter(t => t.id !== action.target_tenant_id);
+          saveTenants(activeTenants);
+          activeUsers = loadUsers().filter(u => u.tenant_id !== action.target_tenant_id);
+          saveUsers(activeUsers);
+          const fleet = loadFleetData();
+          fleet.vehicles = (fleet.vehicles || []).filter(v => v.tenant_id !== action.target_tenant_id);
+          fleet.fuelEntries = (fleet.fuelEntries || []).filter(e => e.tenant_id !== action.target_tenant_id);
+          fleet.pumps = (fleet.pumps || []).filter(p => p.tenant_id !== action.target_tenant_id);
+          fleet.payments = (fleet.payments || []).filter(pm => pm.tenant_id !== action.target_tenant_id);
+          fleet.categories = (fleet.categories || []).filter(c => c.tenant_id !== action.target_tenant_id);
+          fleet.companies = (fleet.companies || []).filter(c => c.tenant_id !== action.target_tenant_id);
+          fleet.vendors = (fleet.vendors || []).filter(v => v.tenant_id !== action.target_tenant_id);
+          fleet.fuelTypes = (fleet.fuelTypes || []).filter(f => f.tenant_id !== action.target_tenant_id);
+          fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== action.target_tenant_id);
+          fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== action.target_tenant_id);
+          saveFleetData(fleet);
+          await softDeleteTenantInDB(action.target_tenant_id).catch(() => {});
+        } else if (action.action_type === 'EXTEND_SUBSCRIPTION') {
+          const days = Number(action.details?.extension_days || 30);
+          if (tenant.subscription) {
+            const currentEnd = new Date(tenant.subscription.end_date);
+            const now = new Date();
+            const baseDate = currentEnd > now ? currentEnd : now;
+            baseDate.setDate(baseDate.getDate() + days);
+            tenant.subscription.end_date = baseDate.toISOString().split('T')[0];
+            tenant.subscription.status = 'active';
+            tenant.status = 'active';
+            saveTenants(activeTenants);
+            await upsertTenantInDB(tenant).catch(() => {});
+          }
+        } else if (action.action_type === 'SUSPEND_TENANT') {
+          tenant.status = 'suspended';
+          if (tenant.subscription) tenant.subscription.status = 'suspended';
+          saveTenants(activeTenants);
+          await updateTenantStatusInDB(tenant.id, 'suspended').catch(() => {});
+        } else if (action.action_type === 'UNSUSPEND_TENANT') {
+          tenant.status = 'active';
+          if (tenant.subscription) tenant.subscription.status = 'active';
+          saveTenants(activeTenants);
+          await updateTenantStatusInDB(tenant.id, 'active').catch(() => {});
+        }
+      }
+
+      action.status = 'APPROVED';
+      action.reviewed_by_name = reviewed_by_name || 'Owner Administrator';
+      action.reviewed_at = new Date().toISOString();
+      saveApprovals(approvals);
+
+      res.json({
+        success: true,
+        action,
+        message: `Action ${action.action_type} approved and executed successfully.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error approving action' });
+    }
+  });
+
+  app.post('/api/saas/approvals/:id/reject', (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reviewed_by_name, note } = req.body;
+      const approvals = loadApprovals();
+      const idx = approvals.findIndex(a => a.id === id);
+      if (idx < 0) {
+        res.status(404).json({ success: false, message: 'Approval action not found.' });
+        return;
+      }
+
+      const action = approvals[idx];
+      action.status = 'REJECTED';
+      action.reviewed_by_name = reviewed_by_name || 'Owner Administrator';
+      action.reviewed_at = new Date().toISOString();
+      if (note) {
+        action.details = { ...action.details, reject_note: note };
+      }
+      saveApprovals(approvals);
+
+      res.json({
+        success: true,
+        action,
+        message: `Action ${action.action_type} has been rejected.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error rejecting action' });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Mandatory Password Change Endpoint (Update 10)
+  // -------------------------------------------------------------
+  app.post('/api/auth/force-change-password', async (req: Request, res: Response) => {
+    try {
+      const { user_id, new_password } = req.body;
+      if (!user_id || !new_password) {
+        res.status(400).json({ success: false, message: 'user_id and new_password are required.' });
+        return;
+      }
+      const cleanPass = String(new_password).trim();
+      if (cleanPass.length < 6) {
+        res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+        return;
+      }
+
+      activeUsers = loadUsers();
+      const user = activeUsers.find(u => u.id === user_id);
+      if (!user) {
+        res.status(404).json({ success: false, message: 'User account not found.' });
+        return;
+      }
+
+      user.password = cleanPass;
+      user.must_change_password = false;
+      saveUsers(activeUsers);
+
+      // If user is super admin, update subscription credentials
+      if (user.role === 'super_admin' && user.tenant_id) {
+        activeTenants = loadTenants();
+        const t = activeTenants.find(ten => ten.id === user.tenant_id);
+        if (t && t.subscription) {
+          t.subscription.super_admin_password = cleanPass;
+          saveTenants(activeTenants);
+          await upsertTenantInDB(t).catch(() => {});
+        }
+      }
+
+      await upsertUserInDB(user).catch(() => {});
+
+      res.json({
+        success: true,
+        message: 'Password changed successfully. You may now access your dashboard.',
+        user
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Password change error' });
+    }
   });
 
   // 5.1 GET /api/users - Cross-session user synchronization

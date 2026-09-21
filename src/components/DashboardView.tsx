@@ -271,11 +271,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* KPI 1: Today's Fuel Consumed & Cost */}
         <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
               {t.kpiTodayLiters}
             </span>
-            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border border-amber-500/20 dark:border-amber-400/30 shadow-2xs">
-              <Fuel className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-amber-500 dark:bg-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-500/20 ring-4 ring-amber-500/10 dark:ring-amber-400/20">
+              <Fuel className="w-5 h-5 text-white dark:text-slate-950" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -284,7 +284,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.litersLabel}</span>
           </div>
-          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center justify-between">
+          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-blue-950 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center justify-between">
             <span>{t.totalCostLabel}: <strong className="font-mono text-slate-800 dark:text-amber-300">BDT {kpis.todayFuelCost.toLocaleString()}</strong></span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{t.todayLabel}</span>
           </div>
@@ -296,11 +296,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
               {t.kpiPumpDue}
             </span>
-            <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/20 dark:border-rose-400/30 shadow-2xs group-hover:scale-110 transition-transform">
-              <CreditCard className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-600/20 ring-4 ring-rose-500/10 dark:ring-rose-400/20 group-hover:scale-105 transition-transform">
+              <CreditCard className="w-5 h-5 text-white" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -317,11 +317,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* KPI 3: This Month Fuel Usage */}
         <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
               {t.kpiMonthFuel}
             </span>
-            <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:bg-sky-400/20 dark:text-sky-300 border border-sky-500/20 dark:border-sky-400/30 shadow-2xs">
-              <Calendar className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-sky-600 dark:bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-600/20 ring-4 ring-sky-500/10 dark:ring-sky-400/20">
+              <Calendar className="w-5 h-5 text-white" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -342,11 +342,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
               {t.kpiActiveFleet}
             </span>
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-400/30 shadow-2xs group-hover:scale-110 transition-transform">
-              <Truck className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 ring-4 ring-emerald-500/10 dark:ring-emerald-400/20 group-hover:scale-105 transition-transform">
+              <Truck className="w-5 h-5 text-white" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -538,15 +538,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-[#121f3f] border border-slate-200 dark:border-blue-900/60 text-xs">
           <div>
-            <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+            <label className="block text-[10px] uppercase font-bold text-slate-600 dark:text-slate-300 mb-1">
               {t.companyFilter}
             </label>
             <select
               value={filterCompany}
               onChange={e => setFilterCompany(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-blue-900/80 bg-white dark:bg-[#182952] text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/20"
             >
               <option value="all">{t.allCompanies}</option>
               {companies.map(c => (
@@ -556,13 +556,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+            <label className="block text-[10px] uppercase font-bold text-slate-600 dark:text-slate-300 mb-1">
               {t.categoryFilter}
             </label>
             <select
               value={filterCategory}
               onChange={e => setFilterCategory(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-blue-900/80 bg-white dark:bg-[#182952] text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/20"
             >
               <option value="all">{t.allCategories}</option>
               {categories.map(c => (
@@ -572,13 +572,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+            <label className="block text-[10px] uppercase font-bold text-slate-600 dark:text-slate-300 mb-1">
               {t.sourceFilter}
             </label>
             <select
               value={filterPump}
               onChange={e => setFilterPump(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-blue-900/80 bg-white dark:bg-[#182952] text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/20"
             >
               <option value="all">{t.allPumps}</option>
               <option value="tanker">{t.internalBowzerOption}</option>
@@ -590,9 +590,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Entries Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-blue-900/60">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <thead className="bg-slate-100 dark:bg-[#182952] text-slate-700 dark:text-slate-200 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-blue-900/60">
               <tr>
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3">{t.date} & {t.slip}</th>
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3">{t.vehicle}</th>
@@ -606,10 +606,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3 text-center">{t.receipt}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
               {paginatedEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 dark:text-slate-500">
                     {t.noEntriesFound}
                   </td>
                 </tr>
@@ -623,62 +623,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   return (
                     <tr
                       key={entry.id}
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        entry.is_anomaly ? 'bg-red-50/40' : ''
+                      className={`hover:bg-slate-50/80 dark:hover:bg-blue-950/40 transition-colors ${
+                        entry.is_anomaly ? 'bg-red-50/40 dark:bg-red-950/20' : ''
                       }`}
                     >
                       {/* Date & Slip */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800">{entry.entry_date}</div>
-                        <div className="text-[10px] font-mono text-slate-400">{entry.slip_no}</div>
+                        <div className="font-bold text-slate-900 dark:text-white">{entry.entry_date}</div>
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{entry.slip_no}</div>
                       </td>
 
                       {/* Vehicle */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3">
-                        <div className="font-bold text-slate-900 whitespace-nowrap">{vehicle?.vehicle_number}</div>
-                        <div className="text-[11px] text-slate-500 whitespace-nowrap">{vehicle?.driver_name}</div>
+                        <div className="font-bold text-slate-900 dark:text-white whitespace-nowrap">{vehicle?.vehicle_number}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">{vehicle?.driver_name}</div>
                       </td>
 
                       {/* Company */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
-                        <span className="font-medium text-slate-700">{company?.code || company?.name}</span>
+                        <span className="font-bold text-slate-900 dark:text-amber-300">{company?.code || company?.name}</span>
                       </td>
 
                       {/* Source */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
                         {entry.source_type === 'tanker' ? (
-                          <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-semibold text-[10px] border border-blue-200">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-800">
                             {t.dieselBowzer}
                           </span>
                         ) : (
-                          <span className="text-slate-600 truncate max-w-[120px] block" title={pump?.name}>
+                          <span className="text-slate-700 dark:text-slate-300 truncate max-w-[120px] block" title={pump?.name}>
                             {pump?.name || 'Pump'}
                           </span>
                         )}
                       </td>
 
                       {/* Distance */}
-                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-semibold text-slate-700">
+                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-semibold text-slate-800 dark:text-slate-200">
                         {entry.distance_traveled.toLocaleString()} {isLph ? 'Hrs' : 'KM'}
                       </td>
 
                       {/* Liters */}
-                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-bold text-slate-800">
+                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-bold text-slate-900 dark:text-white">
                         {entry.fuel_liters} L
                       </td>
 
                       {/* Amount */}
-                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-bold text-amber-700">
+                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono font-bold text-amber-800 dark:text-amber-300">
                         BDT {entry.total_amount.toLocaleString()}
                       </td>
 
                       {/* Calculated Mileage vs Benchmark */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-mono">
                         <div className="font-extrabold">
-                          <span className={entry.is_anomaly ? 'text-red-600' : 'text-emerald-700'}>
+                          <span className={entry.is_anomaly ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}>
                             {entry.calculated_mileage}
                           </span>{' '}
-                          <span className="text-[10px] font-normal text-slate-400">
+                          <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
                             / {entry.benchmark_mileage} {isLph ? 'L/Hr' : 'KM/L'}
                           </span>
                         </div>
@@ -687,12 +687,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {/* Status / Anomaly */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
                         {entry.is_anomaly ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold text-[10px] border border-red-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 font-bold text-[10px] border border-red-200 dark:border-red-800">
                             <AlertTriangle className="w-3 h-3" />
                             <span>{t.anomalyBadge} ({entry.anomaly_diff_percent}%)</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium text-[10px]">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-medium text-[10px]">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>{t.normalBadge}</span>
                           </span>
@@ -704,13 +704,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {entry.receipt_image_url ? (
                           <button
                             onClick={() => setSelectedEntrySlip(entry)}
-                            className="p-1 rounded-md text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                            className="p-1 rounded-md text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-blue-900/40"
                             title={t.viewSlipTitle}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                         ) : (
-                          <span className="text-slate-300 text-xs">—</span>
+                          <span className="text-slate-300 dark:text-slate-600 text-[10px]">—</span>
                         )}
                       </td>
                     </tr>

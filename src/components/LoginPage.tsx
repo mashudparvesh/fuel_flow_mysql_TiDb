@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Fuel,
   ArrowRight,
+  ArrowLeft,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -26,9 +27,10 @@ import {
 
 interface LoginPageProps {
   initialTab?: 'subscriber' | 'control';
+  onBackToLanding?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber', onBackToLanding }) => {
   const {
     language,
     setLanguage,
@@ -210,6 +212,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber' 
 
         {/* Top Right Utilities */}
         <div className="flex items-center gap-2">
+          {onBackToLanding && (
+            <button
+              onClick={onBackToLanding}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </button>
+          )}
+
           {/* Theme Switcher */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

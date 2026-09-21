@@ -447,9 +447,9 @@ export const MasterDataView: React.FC = () => {
 
       {/* TAB 1: Companies */}
       {activeTab === 'companies' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
               {t.companiesSub}
             </h3>
             {!isViewer && (
@@ -463,9 +463,9 @@ export const MasterDataView: React.FC = () => {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-700 dark:text-slate-200 font-bold uppercase text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">{t.code}</th>
                   <th className="py-2.5 px-3">{t.name}</th>
@@ -476,29 +476,29 @@ export const MasterDataView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">{t.action}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {paginatedCompanies.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                    <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-slate-400 font-medium">
                       {t.noCompaniesMsg}
                     </td>
                   </tr>
                 ) : (
                   paginatedCompanies.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono font-bold text-amber-700">{c.code}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">{c.name}</td>
-                      <td className="py-2.5 px-3 text-slate-700">{c.contact_person || '—'}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">{c.phone || '—'}</td>
-                      <td className="py-2.5 px-3 text-slate-500">{c.email || '—'}</td>
-                      <td className="py-2.5 px-3 text-slate-500">{c.address || '—'}</td>
+                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <td className="py-2.5 px-3 font-mono font-black text-amber-700 dark:text-amber-300">{c.code}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{c.name}</td>
+                      <td className="py-2.5 px-3 text-slate-700 dark:text-slate-200">{c.contact_person || '—'}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-slate-200">{c.phone || '—'}</td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{c.email || '—'}</td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{c.address || '—'}</td>
                       <td className="py-2.5 px-3 text-right">
                         {!isViewer ? (
                           <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => openEditCompanyModal(c)}
-                              className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                              className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
                               title={t.editTooltip}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -506,7 +506,7 @@ export const MasterDataView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setCompanyToDelete(c)}
-                              className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              className="p-1.5 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                               title={t.deleteTooltip}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -523,7 +523,7 @@ export const MasterDataView: React.FC = () => {
             </table>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-blue-900/40">
             <TablePagination
               currentPage={companyPage}
               totalItems={companies.length}
@@ -539,9 +539,9 @@ export const MasterDataView: React.FC = () => {
 
       {/* TAB 2: Vendors */}
       {activeTab === 'vendors' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
               {t.vendorsSub}
             </h3>
             {!isViewer && (
@@ -555,9 +555,9 @@ export const MasterDataView: React.FC = () => {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-blue-900/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+              <thead className="bg-slate-100 dark:bg-[#182952] text-slate-700 dark:text-slate-200 font-bold uppercase text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">{t.name}</th>
                   <th className="py-2.5 px-3">{t.contact}</th>
@@ -566,25 +566,25 @@ export const MasterDataView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">{t.action}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {paginatedVendors.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
+                    <td colSpan={5} className="py-8 text-center text-slate-500 dark:text-slate-400 font-medium">
                       No vendors registered yet.
                     </td>
                   </tr>
                 ) : (
                   paginatedVendors.map(v => (
-                    <tr key={v.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-bold text-slate-900">{v.name}</td>
-                      <td className="py-2.5 px-3 text-slate-700">{v.contact_person}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">{v.phone}</td>
-                      <td className="py-2.5 px-3 text-slate-500">{v.address}</td>
+                    <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{v.name}</td>
+                      <td className="py-2.5 px-3 text-slate-700 dark:text-slate-200">{v.contact_person}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-slate-200">{v.phone}</td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{v.address}</td>
                       <td className="py-2.5 px-3 text-right">
                         {!isViewer ? (
                           <button
                             onClick={() => deleteVendor(v.id)}
-                            className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                             title={t.deleteTooltip}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -600,7 +600,7 @@ export const MasterDataView: React.FC = () => {
             </table>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-blue-900/40">
             <TablePagination
               currentPage={vendorPage}
               totalItems={vendors.length}
@@ -616,9 +616,9 @@ export const MasterDataView: React.FC = () => {
 
       {/* TAB 3: Fuel Pumps */}
       {activeTab === 'pumps' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
               {t.pumpsSub}
             </h3>
             {!isViewer && (
@@ -633,7 +633,7 @@ export const MasterDataView: React.FC = () => {
           </div>
 
           {paginatedPumps.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500 font-medium bg-slate-50 rounded-xl border border-slate-200">
+            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-blue-900/40">
               {t.noPumpsMsg}
             </div>
           ) : (
@@ -641,25 +641,25 @@ export const MasterDataView: React.FC = () => {
               {paginatedPumps.map(p => (
                 <div
                   key={p.id}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-blue-900/60 bg-white dark:bg-[#101b38] space-y-3 relative group hover:border-amber-400 dark:hover:border-amber-500/60 transition-all shadow-xs"
+                  className="p-4 rounded-xl border border-slate-200 dark:border-blue-800/70 bg-slate-50/70 dark:bg-[#14234b] space-y-3 relative group hover:border-amber-400 dark:hover:border-amber-400/80 transition-all shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 dark:bg-amber-400/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                          <Fuel className="w-3.5 h-3.5" />
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/20 dark:border-amber-400/30">
+                          <Fuel className="w-4 h-4" />
                         </div>
-                        <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate">{p.name}</h4>
+                        <h4 className="font-black text-slate-950 dark:text-amber-300 text-sm truncate">{p.name}</h4>
                       </div>
                       <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate flex items-center gap-1 pl-0.5">
-                        <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-400 shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 shrink-0" />
                         <span>{p.location || 'Location not specified'}</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                         p.status === 'active'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
                       }`}>
                         {p.status.toUpperCase()}
@@ -678,39 +678,39 @@ export const MasterDataView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 text-xs border-t border-slate-200 dark:border-blue-900/50 pt-2.5">
+                  <div className="space-y-1.5 text-xs border-t border-slate-200 dark:border-blue-800/60 pt-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">{t.contactLabel}</span>
-                      <span className="font-semibold text-slate-900 dark:text-slate-100">{p.contact_person || '—'}</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{t.contactLabel}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{p.contact_person || '—'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">{t.phoneLabel}</span>
-                      <span className="font-mono font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{t.phoneLabel}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
                         <Phone className="w-3 h-3 text-slate-400 dark:text-slate-400" />
                         {p.phone || '—'}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">{t.creditLimitLabel}</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-amber-300">BDT {p.credit_limit.toLocaleString()}</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{t.creditLimitLabel}</span>
+                      <span className="font-mono font-black text-slate-950 dark:text-amber-300">BDT {p.credit_limit.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">{t.currentDueLabel}</span>
-                      <span className="font-mono font-black text-red-600 dark:text-red-400">BDT {p.current_balance.toLocaleString()}</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{t.currentDueLabel}</span>
+                      <span className="font-mono font-black text-rose-600 dark:text-rose-400">BDT {p.current_balance.toLocaleString()}</span>
                     </div>
                   </div>
 
                   {/* Credit usage bar */}
                   <div className="pt-1.5">
-                    <div className="flex justify-between text-[11px] text-slate-600 dark:text-slate-300 font-medium mb-1">
+                    <div className="flex justify-between text-[11px] text-slate-700 dark:text-slate-300 font-semibold mb-1">
                       <span>{t.creditUsageLabel}</span>
-                      <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                      <span className="font-black font-mono text-slate-950 dark:text-white">
                         {Math.round((p.current_balance / (p.credit_limit || 1)) * 100)}%
                       </span>
                     </div>
                     <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-red-500 dark:bg-red-400 rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full transition-all"
                         style={{ width: `${Math.min(100, Math.round((p.current_balance / (p.credit_limit || 1)) * 100))}%` }}
                       />
                     </div>
@@ -720,7 +720,7 @@ export const MasterDataView: React.FC = () => {
             </div>
           )}
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-blue-900/40">
             <TablePagination
               currentPage={pumpPage}
               totalItems={pumps.length}
@@ -736,13 +736,13 @@ export const MasterDataView: React.FC = () => {
 
       {/* TAB 4: Fuel Types & Pricing */}
       {activeTab === 'fuel_types' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
                 {t.fuelTypesSub}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t.fuelTypesDesc}
               </p>
             </div>
@@ -799,9 +799,9 @@ export const MasterDataView: React.FC = () => {
 
       {/* TAB 5: Vehicle Categories */}
       {activeTab === 'categories' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
               {t.categoriesSub}
             </h3>
             {!isViewer && (
@@ -834,7 +834,7 @@ export const MasterDataView: React.FC = () => {
                 {!isViewer && (
                   <button
                     onClick={() => deleteCategory(cat.id)}
-                    className="p-1 text-slate-400 hover:text-red-600"
+                    className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                     title={t.deleteTooltip}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -844,7 +844,7 @@ export const MasterDataView: React.FC = () => {
             ))}
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-blue-900/40">
             <TablePagination
               currentPage={categoryPage}
               totalItems={categories.length}
