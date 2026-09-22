@@ -1,10 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   SubscriptionPlan,
   SubscriptionStatus,
   Tenant,
-  SaasModerator
+  SaasModerator,
+  OwnerRole,
+  PendingApprovalAction,
+  PendingActionType,
+  ApprovalStatus
 } from '../types';
 import {
   Crown,
@@ -32,6 +36,7 @@ import {
   Sparkles,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Layers,
   Settings,
@@ -41,6 +46,9 @@ import {
   Shield,
   Phone,
   Mail,
+  Download,
+  FileText,
+  Send,
   X
 } from 'lucide-react';
 
@@ -67,11 +75,52 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     updateTenantSuperAdminCredentials,
     deleteTenantSubscriber,
     impersonateTenant,
-    setIsSaasControlOpen
+    setIsSaasControlOpen,
+    approvals,
+    requestApprovalAction,
+    approveAction,
+    rejectAction
   } = useApp();
 
+  // Role Calculation & Permissions
+  const effectiveRole: OwnerRole = useMemo(() => {
+    if (activeAuthRole === 'saas_owner') {
+      return saasOwner.owner_role || 'OWNER_ADMIN';
+    }
+    if (activeAuthRole === 'saas_moderator' && activeModerator) {
+      return activeModerator.owner_role || 'MODERATOR';
+    }
+    return 'OWNER_ADMIN';
+  }, [activeAuthRole, saasOwner.owner_role, activeModerator]);
+
+  const currentUserName = useMemo(() => {
+    if (activeAuthRole === 'saas_owner') return saasOwner.name || 'Md. Mashud';
+    if (activeModerator) return activeModerator.name;
+    return 'Master User';
+  }, [activeAuthRole, saasOwner.name, activeModerator]);
+
+  // Permissions Matrix
+  const isOwnerOrCoOwner = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN';
+  const canAccessOwnerSecurity = isOwnerOrCoOwner;
+  const canManageControlUsers = isOwnerOrCoOwner;
+  const canDirectlyManageSubscribers = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN' || effectiveRole === 'ADMIN';
+  const isModerator = effectiveRole === 'MODERATOR';
+  const canApproveRequests = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN' || effectiveRole === 'ADMIN';
+
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'owner_profile' | 'packages' | 'gateway'>('subscribers');
+  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway'>('subscribers');
+
+  // Enforce access control if tab is restricted
+  useEffect(() => {
+    if (activeTab === 'owner_profile' && !canAccessOwnerSecurity) {
+      setActiveTab('subscribers');
+    }
+  }, [activeTab, canAccessOwnerSecurity]);
+
+  // Pending count for badge
+  const pendingApprovalsCount = useMemo(() => {
+    return approvals.filter(a => a.status === 'PENDING').length;
+  }, [approvals]);
 
   // Gateway webhook test states
   const [webhookTestLoading, setWebhookTestLoading] = useState(false);
@@ -83,11 +132,34 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const [statusFilter, setStatusFilter] = useState<'all' | SubscriptionStatus>('all');
   const [planFilter, setPlanFilter] = useState<'all' | SubscriptionPlan>('all');
 
-  // Modals
+  // Modals & In-App Confirmations (No native window.confirm)
   const [isAddSubscriberModalOpen, setIsAddSubscriberModalOpen] = useState(false);
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [selectedTenantForExtend, setSelectedTenantForExtend] = useState<Tenant | null>(null);
   const [extendDaysVal, setExtendDaysVal] = useState(30);
+
+  // In-app Subscriber Delete Confirmation Modal
+  const [deleteConfirmTenant, setDeleteConfirmTenant] = useState<Tenant | null>(null);
+  const [isDeletingTenant, setIsDeletingTenant] = useState(false);
+
+  // In-app Moderator Approval Request Modal
+  const [modRequestModal, setModRequestModal] = useState<{
+    type: PendingActionType;
+    tenant: Tenant;
+  } | null>(null);
+  const [modRequestReason, setModRequestReason] = useState('');
+  const [modRequestDays, setModRequestDays] = useState(30);
+  const [isSubmittingApprovalRequest, setIsSubmittingApprovalRequest] = useState(false);
+  const [approvalFeedback, setApprovalFeedback] = useState<string | null>(null);
+
+  // Approvals view filters & modals
+  const [approvalFilter, setApprovalFilter] = useState<'all' | ApprovalStatus>('all');
+  const [reviewRejectModal, setReviewRejectModal] = useState<PendingApprovalAction | null>(null);
+  const [rejectionNote, setRejectionNote] = useState('');
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+
+  // In-app Moderator Delete Confirmation Modal
+  const [deleteConfirmMod, setDeleteConfirmMod] = useState<SaasModerator | null>(null);
 
   const [isEditCredsModalOpen, setIsEditCredsModalOpen] = useState(false);
   const [selectedTenantForCreds, setSelectedTenantForCreds] = useState<Tenant | null>(null);
@@ -141,6 +213,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     password: '',
     email: '',
     phone: '',
+    owner_role: 'MODERATOR' as OwnerRole,
     can_manage_subscriptions: true,
     can_reset_passwords: true,
     can_add_subscribers: true,
@@ -183,6 +256,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       return matchSearch && matchStatus && matchPlan;
     });
   }, [allTenants, searchQuery, statusFilter, planFilter]);
+
+  // Filtered Approvals
+  const filteredApprovals = useMemo(() => {
+    return approvals.filter(a => {
+      if (approvalFilter === 'all') return true;
+      return a.status === approvalFilter;
+    });
+  }, [approvals, approvalFilter]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -323,11 +404,159 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     }
   };
 
+  // Download Subscribers List as CSV
+  const handleDownloadSubscribersCsv = () => {
+    const headers = [
+      'Subscriber ID',
+      'Company Name',
+      'Tenant Code',
+      'Contact Person',
+      'Phone',
+      'Email',
+      'Address',
+      'Plan',
+      'Subscription Status',
+      'Price (BDT)',
+      'Payment Status',
+      'Max Vehicles',
+      'Max Users',
+      'Max Pumps',
+      'Start Date',
+      'End Date',
+      'Days Remaining',
+      'Super Admin Username',
+      'Registered Date'
+    ];
+
+    const rows = allTenants.map(t => {
+      const sub = t.subscription;
+      const daysLeft = sub?.end_date ? getDaysRemaining(sub.end_date) : 0;
+      return [
+        t.id,
+        `"${(t.name || '').replace(/"/g, '""')}"`,
+        t.code,
+        `"${(t.contact_person || '').replace(/"/g, '""')}"`,
+        `"${(t.phone || '').replace(/"/g, '""')}"`,
+        t.email || '',
+        `"${(t.address || '').replace(/"/g, '""')}"`,
+        sub?.plan || 'trial',
+        sub?.status || 'active',
+        sub?.price_bdt || 0,
+        sub?.payment_status || 'paid',
+        sub?.max_vehicles || 0,
+        sub?.max_users || 0,
+        sub?.max_pumps || 0,
+        sub?.start_date || '',
+        sub?.end_date || '',
+        daysLeft,
+        sub?.super_admin_username || '',
+        t.created_at || ''
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `fuelnest_subscribers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Direct In-App Delete Tenant (For Owner Admin, Co-Owner Admin, Admin)
+  const handleExecuteDeleteTenant = () => {
+    if (!deleteConfirmTenant) return;
+    setIsDeletingTenant(true);
+    try {
+      deleteTenantSubscriber(deleteConfirmTenant.id);
+      setDeleteConfirmTenant(null);
+      setApprovalFeedback('Subscriber deleted successfully.');
+      setTimeout(() => setApprovalFeedback(null), 4000);
+    } finally {
+      setIsDeletingTenant(false);
+    }
+  };
+
+  // Moderator submits action request for approval
+  const handleSubmitModeratorRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modRequestModal) return;
+    if (!modRequestReason.trim()) {
+      alert('Please provide a reason or justification for this action.');
+      return;
+    }
+
+    setIsSubmittingApprovalRequest(true);
+    try {
+      const res = await requestApprovalAction({
+        action_type: modRequestModal.type,
+        target_tenant_id: modRequestModal.tenant.id,
+        target_tenant_name: modRequestModal.tenant.name,
+        requested_by_id: activeModerator?.id || 'mod_user',
+        requested_by_name: activeModerator?.name || currentUserName,
+        requested_by_role: effectiveRole,
+        details: {
+          reason: modRequestReason.trim(),
+          extension_days: modRequestModal.type === 'EXTEND_SUBSCRIPTION' ? Number(modRequestDays) || 30 : undefined
+        }
+      });
+
+      if (res.success) {
+        setApprovalFeedback('Action request submitted! Awaiting review from Admin, Co-Owner Admin, or Owner Admin.');
+        setModRequestModal(null);
+        setModRequestReason('');
+        setModRequestDays(30);
+        setTimeout(() => setApprovalFeedback(null), 5000);
+      } else {
+        alert(res.message || 'Failed to submit approval request');
+      }
+    } finally {
+      setIsSubmittingApprovalRequest(false);
+    }
+  };
+
+  // Admin / Co-Owner / Owner Approve action
+  const handleApproveAction = async (actionId: string) => {
+    setIsProcessingApproval(true);
+    try {
+      const res = await approveAction(actionId, currentUserName);
+      if (res.success) {
+        setApprovalFeedback('Action approved and executed successfully.');
+        setTimeout(() => setApprovalFeedback(null), 4000);
+      } else {
+        alert(res.message || 'Approval failed');
+      }
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  // Admin / Co-Owner / Owner Reject action
+  const handleConfirmReject = async () => {
+    if (!reviewRejectModal) return;
+    setIsProcessingApproval(true);
+    try {
+      const res = await rejectAction(reviewRejectModal.id, currentUserName, rejectionNote.trim() || undefined);
+      if (res.success) {
+        setApprovalFeedback('Action request rejected.');
+        setReviewRejectModal(null);
+        setRejectionNote('');
+        setTimeout(() => setApprovalFeedback(null), 4000);
+      } else {
+        alert(res.message || 'Rejection failed');
+      }
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
   // Submit Moderator Form
   const handleCreateModerator = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newModForm.name || !newModForm.username || !newModForm.password) {
-      alert('Please fill Moderator Name, Username and Password.');
+      alert('Please fill Name, Username and Password.');
       return;
     }
 
@@ -338,13 +567,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       email: newModForm.email,
       phone: newModForm.phone,
       status: 'active',
-      owner_role: 'MODERATOR',
+      owner_role: newModForm.owner_role || 'MODERATOR',
       permissions: {
         can_manage_subscribers: Boolean(newModForm.can_add_subscribers || newModForm.can_manage_subscriptions),
         can_extend_subscriptions: Boolean(newModForm.can_manage_subscriptions),
-        can_manage_pricing: false,
+        can_manage_pricing: newModForm.owner_role === 'CO_OWNER_ADMIN' || newModForm.owner_role === 'ADMIN',
         can_view_financials: Boolean(newModForm.can_view_financials),
-        can_impersonate: false,
+        can_impersonate: newModForm.owner_role === 'CO_OWNER_ADMIN' || newModForm.owner_role === 'ADMIN',
         can_reset_passwords: Boolean(newModForm.can_reset_passwords),
         can_manage_subscriptions: Boolean(newModForm.can_manage_subscriptions),
         can_add_subscribers: Boolean(newModForm.can_add_subscribers)
@@ -358,6 +587,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       password: '',
       email: '',
       phone: '',
+      owner_role: 'MODERATOR',
       can_manage_subscriptions: true,
       can_reset_passwords: true,
       can_add_subscribers: true,
@@ -409,15 +639,21 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </div>
 
             <div className="px-4 py-3 rounded-xl bg-slate-800/90 border border-slate-700/80 backdrop-blur-xs flex items-center gap-3 text-xs">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 font-bold">
-                👑
+              <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 font-bold text-base">
+                {effectiveRole === 'OWNER_ADMIN' ? '👑' : effectiveRole === 'CO_OWNER_ADMIN' ? '🤝' : effectiveRole === 'ADMIN' ? '🛡️' : '👮'}
               </div>
               <div>
                 <div className="text-slate-400 text-[10px] font-bold uppercase">
-                  {'Owner ID'}
+                  {effectiveRole === 'OWNER_ADMIN'
+                    ? 'Owner Admin'
+                    : effectiveRole === 'CO_OWNER_ADMIN'
+                    ? 'Co-Owner Admin'
+                    : effectiveRole === 'ADMIN'
+                    ? 'Control Admin'
+                    : 'Moderator'}
                 </div>
                 <div className="text-amber-300 font-mono font-bold text-sm">
-                  {saasOwner.username}
+                  {activeAuthRole === 'saas_owner' ? saasOwner.username : activeModerator?.username || 'moderator'}
                 </div>
               </div>
             </div>
@@ -433,6 +669,19 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           </div>
         </div>
       </div>
+
+      {/* Global Feedback Banner */}
+      {approvalFeedback && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between gap-2 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{approvalFeedback}</span>
+          </div>
+          <button onClick={() => setApprovalFeedback(null)} className="text-emerald-400/60 hover:text-emerald-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -505,6 +754,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       {/* Navigation Tabs Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center gap-2 overflow-x-auto">
+          {/* Tab 1: Subscribers */}
           <button
             onClick={() => setActiveTab('subscribers')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -520,6 +770,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </span>
           </button>
 
+          {/* Tab 2: Control Roles & Team */}
           <button
             onClick={() => setActiveTab('moderators')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -528,25 +779,51 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>{'Moderators'}</span>
+            <Users className="w-4 h-4" />
+            <span>{'Roles & Team'}</span>
             <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
-              {moderators.length}
+              {moderators.length + 1}
             </span>
           </button>
 
+          {/* Tab 3: Approvals & Governance Queue */}
           <button
-            onClick={() => setActiveTab('owner_profile')}
+            onClick={() => setActiveTab('approvals')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
-              activeTab === 'owner_profile'
+              activeTab === 'approvals'
                 ? 'bg-amber-500 text-slate-950 shadow-md font-black'
                 : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
             }`}
           >
-            <Key className="w-4 h-4" />
-            <span>{'Owner Security'}</span>
+            <ShieldCheck className="w-4 h-4" />
+            <span>{'Approvals & Governance'}</span>
+            {pendingApprovalsCount > 0 ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+                {pendingApprovalsCount}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
+                {approvals.length}
+              </span>
+            )}
           </button>
 
+          {/* Tab 4: Owner Security - Only visible to Owner Admin & Co-Owner Admin */}
+          {canAccessOwnerSecurity && (
+            <button
+              onClick={() => setActiveTab('owner_profile')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                activeTab === 'owner_profile'
+                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                  : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              <span>{'Owner Security'}</span>
+            </button>
+          )}
+
+          {/* Tab 5: Payment Gateway */}
           <button
             onClick={() => setActiveTab('gateway')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -560,26 +837,40 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           </button>
         </div>
 
-        {/* Action button based on tab */}
-        {activeTab === 'subscribers' && (
-          <button
-            onClick={() => setIsAddSubscriberModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all hover:scale-105"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{'+ Add New Subscriber'}</span>
-          </button>
-        )}
+        {/* Action buttons based on active tab */}
+        <div className="flex items-center gap-2">
+          {activeTab === 'subscribers' && (
+            <>
+              {/* Requirement 4: Download / Export Subscriber List */}
+              <button
+                onClick={handleDownloadSubscribersCsv}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0c162d] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer"
+                title="Download complete subscriber list as CSV"
+              >
+                <Download className="w-4 h-4 text-emerald-500" />
+                <span>{'Export CSV List'}</span>
+              </button>
 
-        {activeTab === 'moderators' && (
-          <button
-            onClick={() => setIsAddModeratorModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all hover:scale-105"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>{'+ Add Moderator'}</span>
-          </button>
-        )}
+              <button
+                onClick={() => setIsAddSubscriberModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all hover:scale-105"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{'+ Add Subscriber'}</span>
+              </button>
+            </>
+          )}
+
+          {activeTab === 'moderators' && canManageControlUsers && (
+            <button
+              onClick={() => setIsAddModeratorModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all hover:scale-105"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>{'+ Add Control User'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ================= TAB 1: SUBSCRIBERS ================= */}
@@ -831,39 +1122,63 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                       <button
                         onClick={() => {
-                          setSelectedTenantForExtend(tenant);
-                          setIsExtendModalOpen(true);
+                          if (isModerator) {
+                            setModRequestModal({ type: 'EXTEND_SUBSCRIPTION', tenant });
+                            setModRequestDays(30);
+                            setModRequestReason('');
+                          } else {
+                            setSelectedTenantForExtend(tenant);
+                            setIsExtendModalOpen(true);
+                          }
                         }}
-                        className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-bold text-xs border border-amber-300 dark:border-amber-800 transition-colors"
-                        title={'Extend Duration'}
+                        className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-bold text-xs border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
+                        title={isModerator ? 'Request Extend Duration (Requires Approval)' : 'Extend Duration'}
                       >
                         <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{'+Days'}</span>
+                        <span>{isModerator ? 'Req +Days' : '+Days'}</span>
                       </button>
                     </div>
 
                     {/* Secondary Row: Quick Actions */}
                     <div className="flex items-center justify-between text-xs pt-1">
                       <button
-                        onClick={() => setTenantStatus(tenant.id, isSuspended ? 'active' : 'suspended')}
-                        className={`text-[11px] font-semibold hover:underline ${
+                        onClick={() => {
+                          if (isModerator) {
+                            setModRequestModal({
+                              type: isSuspended ? 'UNSUSPEND_TENANT' : 'SUSPEND_TENANT',
+                              tenant
+                            });
+                            setModRequestReason('');
+                          } else {
+                            setTenantStatus(tenant.id, isSuspended ? 'active' : 'suspended');
+                          }
+                        }}
+                        className={`text-[11px] font-semibold hover:underline cursor-pointer ${
                           isSuspended ? 'text-emerald-600' : 'text-slate-500 hover:text-amber-600'
                         }`}
                       >
-                        {isSuspended ? '✅ Unsuspend Access' : '⏸️ Suspend Access'}
+                        {isSuspended
+                          ? (isModerator ? 'Req Unsuspend' : '✅ Unsuspend Access')
+                          : (isModerator ? 'Req Suspend' : '⏸️ Suspend Access')}
                       </button>
 
                       <button
                         onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${tenant.name}?`)) {
-                            deleteTenantSubscriber(tenant.id);
+                          if (isModerator) {
+                            setModRequestModal({
+                              type: 'DELETE_SUBSCRIBER',
+                              tenant
+                            });
+                            setModRequestReason('');
+                          } else {
+                            setDeleteConfirmTenant(tenant);
                           }
                         }}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1"
-                        title="Delete Tenant"
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1 cursor-pointer"
+                        title={isModerator ? 'Request Deletion Approval' : 'Delete Subscriber'}
                       >
                         <Trash2 className="w-3 h-3" />
-                        <span>{'Delete'}</span>
+                        <span>{isModerator ? 'Req Delete' : 'Delete'}</span>
                       </button>
                     </div>
                   </div>
@@ -886,118 +1201,385 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         </div>
       )}
 
-      {/* ================= TAB 2: MODERATORS ================= */}
+      {/* ================= TAB 2: ROLES & TEAM ================= */}
       {activeTab === 'moderators' && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
-              <strong className="font-bold block text-sm mb-0.5">
-                {'Moderator Delegation Feature:'}
+              <strong className="font-bold block text-sm mb-1">
+                {'3-Tier Control Panel Role Architecture & Governance:'}
               </strong>
-              {'As platform owner, you can appoint moderators with dedicated credentials to manage subscriptions and reset client passwords on your behalf.'}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                    <span>👑 Owner Admin & 🤝 Co-Owner Admin</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                    {'Full master access, direct execution, user creation & management, and Owner Security access.'}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <div className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                    <span>🛡️ Control Admin</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                    {'Full subscriber management & approval authority over moderator requests (no Owner Security access).'}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <div className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                    <span>👮 SaaS Moderator</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                    {'Can view and request subscriber deletion, duration extension, and suspension (requires Admin/Owner approval).'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {moderators.map(mod => (
-              <div
-                key={mod.id}
-                className="p-5 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs space-y-4 flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-black text-slate-900 dark:text-white text-base">
-                        {mod.name}
-                      </h4>
-                      <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold mt-0.5">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span>SaaS Moderator</span>
-                      </div>
+            {/* Primary Platform Owner Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-950 border-2 border-amber-500/40 shadow-md space-y-4 flex flex-col justify-between text-white">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-black text-white text-base flex items-center gap-2">
+                      <span>👑 {saasOwner.name}</span>
+                    </h4>
+                    <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold mt-0.5">
+                      <span>Platform Owner Admin</span>
                     </div>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        mod.status === 'active'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300'
-                      }`}
-                    >
-                      {mod.status.toUpperCase()}
-                    </span>
                   </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950">
+                    MASTER OWNER
+                  </span>
+                </div>
 
-                  {/* Credentials Box */}
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Username:</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.username}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Password:</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.password}</span>
-                    </div>
-                    {mod.phone && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Phone:</span>
-                        <span className="text-slate-700 dark:text-slate-300">{mod.phone}</span>
-                      </div>
-                    )}
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-amber-500/30 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Username:</span>
+                    <span className="font-mono font-bold text-amber-300">{saasOwner.username}</span>
                   </div>
-
-                  {/* Permissions */}
-                  <div className="space-y-1 text-xs">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Role & Permissions:</span>
-                    <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-1">
-                        {mod.permissions.can_manage_subscriptions ? '✅' : '❌'} Subscriptions
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {mod.permissions.can_reset_passwords ? '✅' : '❌'} Password Reset
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {mod.permissions.can_add_subscribers ? '✅' : '❌'} New Onboarding
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {mod.permissions.can_view_financials ? '✅' : '❌'} Financial View
-                      </div>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Email:</span>
+                    <span className="text-slate-200">{saasOwner.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Phone:</span>
+                    <span className="text-slate-200">{saasOwner.phone}</span>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                  <button
-                    onClick={() => {
-                      updateModerator(mod.id, {
-                        status: mod.status === 'active' ? 'suspended' : 'active'
-                      });
-                    }}
-                    className={`text-[11px] font-semibold ${
-                      mod.status === 'active' ? 'text-slate-500 hover:text-amber-600' : 'text-emerald-600'
-                    }`}
-                  >
-                    {mod.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to remove moderator "${mod.name}"?`)) {
-                        deleteModerator(mod.id);
-                      }
-                    }}
-                    className="text-[11px] text-red-500 hover:underline flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Delete</span>
-                  </button>
+                <div className="space-y-1 text-xs">
+                  <span className="text-[10px] uppercase font-bold text-amber-400/80">Authority Level:</span>
+                  <div className="p-2 rounded-lg bg-black/40 text-[11px] text-amber-200">
+                    {'Full unrestricted access to all control systems, financial data, team governance, and security profile.'}
+                  </div>
                 </div>
               </div>
-            ))}
+
+              <div className="pt-3 border-t border-amber-500/20 text-[11px] text-amber-400 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Active Master Control</span>
+              </div>
+            </div>
+
+            {/* Other Control Team Members */}
+            {moderators.map(mod => {
+              const roleTitle =
+                mod.owner_role === 'CO_OWNER_ADMIN'
+                  ? 'Co-Owner Admin'
+                  : mod.owner_role === 'ADMIN'
+                  ? 'Control Admin'
+                  : 'SaaS Moderator';
+
+              const roleBadgeColor =
+                mod.owner_role === 'CO_OWNER_ADMIN'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border-amber-400/50'
+                  : mod.owner_role === 'ADMIN'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border-blue-400/50'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border-emerald-400/50';
+
+              return (
+                <div
+                  key={mod.id}
+                  className="p-5 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs space-y-4 flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-black text-slate-900 dark:text-white text-base">
+                          {mod.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-xs font-bold mt-0.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleBadgeColor}`}>
+                            {mod.owner_role === 'CO_OWNER_ADMIN' ? '🤝 ' : mod.owner_role === 'ADMIN' ? '🛡️ ' : '👮 '}
+                            {roleTitle}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          mod.status === 'active'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300'
+                        }`}
+                      >
+                        {mod.status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Credentials Box */}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Username:</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.username}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Password:</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.password}</span>
+                      </div>
+                      {mod.phone && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Phone:</span>
+                          <span className="text-slate-700 dark:text-slate-300">{mod.phone}</span>
+                        </div>
+                      )}
+                      {mod.email && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Email:</span>
+                          <span className="text-slate-700 dark:text-slate-300">{mod.email}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Authority Summary */}
+                    <div className="space-y-1 text-xs">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Authority & Scope:</span>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        {mod.owner_role === 'CO_OWNER_ADMIN'
+                          ? 'Full access, user creation, approves requests, and accesses Owner Security.'
+                          : mod.owner_role === 'ADMIN'
+                          ? 'Full subscriber operations & approves requests. Restricted from Owner Security.'
+                          : 'Subscriber delete, duration extend, and suspend actions require Admin/Owner approval.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                    {canManageControlUsers ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            updateModerator(mod.id, {
+                              status: mod.status === 'active' ? 'suspended' : 'active'
+                            });
+                          }}
+                          className={`text-[11px] font-semibold cursor-pointer ${
+                            mod.status === 'active' ? 'text-slate-500 hover:text-amber-600' : 'text-emerald-600'
+                          }`}
+                        >
+                          {mod.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+
+                        <button
+                          onClick={() => setDeleteConfirmMod(mod)}
+                          className="text-[11px] text-red-500 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">
+                        {'Managed by Owner/Co-Owner'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* ================= TAB 3: OWNER SECURITY & PROFILE ================= */}
+      {/* ================= TAB 3: APPROVALS & GOVERNANCE ================= */}
+      {activeTab === 'approvals' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+            <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed">
+              <strong className="font-bold block text-sm mb-1">
+                {'Dual-Control Governance & Sensitive Action Approval Queue:'}
+              </strong>
+              <p>
+                {'Moderators can request critical operations (Subscriber Deletion, Subscription Extension, Suspension/Unsuspension). These actions require explicit approval from an Admin, Co-Owner Admin, or Owner Admin to ensure platform security.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex items-center gap-2">
+            {(['all', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(filter => {
+              const count =
+                filter === 'all'
+                  ? approvals.length
+                  : filter === 'PENDING'
+                  ? pendingApprovalsCount
+                  : approvals.filter(a => a.status === filter).length;
+
+              const label =
+                filter === 'all'
+                  ? 'ALL'
+                  : filter;
+
+              return (
+                <button
+                  key={filter}
+                  onClick={() => setApprovalFilter(filter)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    approvalFilter === filter
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Approval Cards List */}
+          <div className="space-y-3">
+            {filteredApprovals.map(action => {
+              const actionLabel =
+                action.action_type === 'DELETE_SUBSCRIBER'
+                  ? 'Delete Subscriber'
+                  : action.action_type === 'EXTEND_SUBSCRIPTION'
+                  ? `Extend Subscription (+${action.details?.extension_days || 30} Days)`
+                  : action.action_type === 'SUSPEND_TENANT'
+                  ? 'Suspend Subscriber'
+                  : 'Unsuspend Subscriber';
+
+              const actionBadgeColor =
+                action.action_type === 'DELETE_SUBSCRIBER'
+                  ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'
+                  : action.action_type === 'EXTEND_SUBSCRIPTION'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  : action.action_type === 'SUSPEND_TENANT'
+                  ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                  : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+
+              const statusBadgeColor =
+                action.status === 'PENDING'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border-amber-400/40 animate-pulse'
+                  : action.status === 'APPROVED'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border-emerald-400/40'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 border-red-400/40';
+
+              return (
+                <div
+                  key={action.id}
+                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${actionBadgeColor}`}>
+                        {actionLabel}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeColor}`}>
+                        {action.status === 'PENDING' ? '⏳ PENDING REVIEW' : action.status}
+                      </span>
+                    </div>
+
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">
+                      Target Company:{' '}
+                      <span className="text-amber-600 dark:text-amber-400">{action.target_tenant_name}</span>
+                    </div>
+
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>
+                        Requested by: <strong className="text-slate-700 dark:text-slate-300">{action.requested_by_name}</strong> ({action.requested_by_role})
+                      </span>
+                      <span>•</span>
+                      <span>{new Date(action.created_at).toLocaleString()}</span>
+                    </div>
+
+                    {action.details?.reason && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                        <strong className="text-slate-500">Justification:</strong> "{action.details.reason}"
+                      </div>
+                    )}
+
+                    {action.reviewed_by && (
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Reviewed by: <strong className="text-slate-700 dark:text-slate-300">{action.reviewed_by}</strong> on {action.reviewed_at ? new Date(action.reviewed_at).toLocaleString() : ''}
+                        {action.details?.rejection_note && (
+                          <div className="text-red-500 dark:text-red-400 mt-0.5 font-medium">
+                            Note: "{action.details.rejection_note}"
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions for PENDING */}
+                  {action.status === 'PENDING' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {canApproveRequests ? (
+                        <>
+                          <button
+                            onClick={() => handleApproveAction(action.id)}
+                            disabled={isProcessingApproval}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{'Approve & Execute'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setReviewRejectModal(action);
+                              setRejectionNote('');
+                            }}
+                            disabled={isProcessingApproval}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>{'Reject'}</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/20">
+                          {'⏳ Awaiting Admin Approval'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredApprovals.length === 0 && (
+              <div className="text-center py-12 bg-white dark:bg-[#0c162d] rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500/40 mx-auto mb-3" />
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                  {'No Approval Requests Found'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {'Any sensitive actions requested by moderators will appear here.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB 4: OWNER SECURITY & PROFILE ================= */}
       {activeTab === 'owner_profile' && (
         <div className="max-w-2xl mx-auto p-6 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-md space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -1683,13 +2265,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         </div>
       )}
 
-      {/* ================= MODAL: ADD MODERATOR ================= */}
+      {/* ================= MODAL: ADD CONTROL USER / MODERATOR ================= */}
       {isAddModeratorModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-black text-slate-900 dark:text-white">
-                {'Appoint New SaaS Moderator'}
+                {'Add Control User / Moderator'}
               </h3>
               <button onClick={() => setIsAddModeratorModalOpen(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
@@ -1697,9 +2279,32 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </div>
 
             <form onSubmit={handleCreateModerator} className="space-y-3">
+              {/* Role Selection */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Moderator Full Name *
+                  Assign System Role *
+                </label>
+                <select
+                  value={newModForm.owner_role}
+                  onChange={e => setNewModForm(prev => ({ ...prev, owner_role: e.target.value as OwnerRole }))}
+                  className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50/50 dark:bg-amber-950/20 text-slate-900 dark:text-white"
+                >
+                  <option value="MODERATOR">👮 SaaS Moderator (Sensitive actions require approval)</option>
+                  <option value="ADMIN">🛡️ Control Admin (Full subscriber control & approvals)</option>
+                  <option value="CO_OWNER_ADMIN">🤝 Co-Owner Admin (Full access & user management)</option>
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  {newModForm.owner_role === 'CO_OWNER_ADMIN'
+                    ? 'Co-Owner Admin has equal authority to create users and access Owner Security.'
+                    : newModForm.owner_role === 'ADMIN'
+                    ? 'Admin has full operations and approval authority, but cannot access Owner Security.'
+                    : 'Moderators can submit action requests for Subscriber deletion, extension, and suspension.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Full Name *
                 </label>
                 <input
                   type="text"
@@ -1719,7 +2324,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   <input
                     type="text"
                     required
-                    placeholder="mod_kamrul"
+                    placeholder="user_kamrul"
                     value={newModForm.username}
                     onChange={e => setNewModForm(prev => ({ ...prev, username: e.target.value }))}
                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1733,7 +2338,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   <input
                     type="text"
                     required
-                    placeholder="00000"
+                    placeholder="pass1234"
                     value={newModForm.password}
                     onChange={e => setNewModForm(prev => ({ ...prev, password: e.target.value }))}
                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1761,7 +2366,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   </label>
                   <input
                     type="email"
-                    placeholder="mod@saas.com"
+                    placeholder="user@control.com"
                     value={newModForm.email}
                     onChange={e => setNewModForm(prev => ({ ...prev, email: e.target.value }))}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
@@ -1772,7 +2377,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               {/* Permission Checkboxes */}
               <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                  Moderator Permissions:
+                  Permissions & Capabilities:
                 </span>
                 <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input
@@ -1813,12 +2418,252 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md"
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md cursor-pointer"
                 >
-                  Confirm Appoint Moderator
+                  Confirm Appoint User
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CONFIRM DELETE SUBSCRIBER ================= */}
+      {deleteConfirmTenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-red-300 dark:border-red-900/60 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  {'Confirm Subscriber Deletion'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {'Permanent cascade removal across all platform databases'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs space-y-2">
+              <div className="font-bold text-red-950 dark:text-red-200">
+                Are you sure you want to delete <span className="underline">{deleteConfirmTenant.name}</span> ({deleteConfirmTenant.code})?
+              </div>
+              <p className="text-red-700 dark:text-red-300 text-[11px] leading-relaxed">
+                This will permanently delete this subscriber company, all associated user accounts, vehicles, fuel stock, filling stations, pumps, and transactions. This operation cannot be undone.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTenant(null)}
+                disabled={isDeletingTenant}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDeleteTenant}
+                disabled={isDeletingTenant}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingTenant ? 'Deleting Cascade...' : 'Yes, Delete Subscriber'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CONFIRM DELETE CONTROL USER ================= */}
+      {deleteConfirmMod && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-red-300 dark:border-red-900/60 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  {'Remove Control User'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {'Revoke system credentials and access rights'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+              <div className="font-bold text-slate-900 dark:text-white">
+                {deleteConfirmMod.name} (@{deleteConfirmMod.username})
+              </div>
+              <div className="text-slate-500 text-[11px]">
+                Role: {deleteConfirmMod.owner_role}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmMod(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteModerator(deleteConfirmMod.id);
+                  setDeleteConfirmMod(null);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Yes, Remove User</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: MODERATOR ACTION APPROVAL REQUEST ================= */}
+      {modRequestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-amber-300 dark:border-amber-600/50 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  {modRequestModal.type === 'DELETE_SUBSCRIBER'
+                    ? 'Request Subscriber Deletion'
+                    : modRequestModal.type === 'EXTEND_SUBSCRIPTION'
+                    ? 'Request Subscription Extension'
+                    : modRequestModal.type === 'SUSPEND_TENANT'
+                    ? 'Request Access Suspension'
+                    : 'Request Access Unsuspension'}
+                </h3>
+              </div>
+              <button onClick={() => setModRequestModal(null)} className="text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs space-y-1">
+              <div className="font-bold text-amber-900 dark:text-amber-200">
+                Target: {modRequestModal.tenant.name} ({modRequestModal.tenant.code})
+              </div>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                {'As a SaaS Moderator, this sensitive action will be forwarded to an Admin, Co-Owner Admin, or Owner Admin for verification & approval.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitModeratorRequest} className="space-y-3">
+              {modRequestModal.type === 'EXTEND_SUBSCRIPTION' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Extension Duration (Days) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={modRequestDays}
+                    onChange={e => setModRequestDays(Number(e.target.value) || 1)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Justification / Reason for Request *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Explain why this action is necessary (e.g., Client requested cancellation via email / offline cash payment confirmed)..."
+                  value={modRequestReason}
+                  onChange={e => setModRequestReason(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModRequestModal(null)}
+                  disabled={isSubmittingApprovalRequest}
+                  className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingApprovalRequest}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingApprovalRequest ? 'Submitting...' : 'Submit Request for Approval'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REJECT APPROVAL REQUEST ================= */}
+      {reviewRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-red-300 dark:border-red-900/60 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                {'Reject Action Request'}
+              </h3>
+              <button onClick={() => setReviewRejectModal(null)} className="text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              You are rejecting the request to <strong>{reviewRejectModal.action_type}</strong> for{' '}
+              <strong>{reviewRejectModal.target_tenant_name}</strong> submitted by {reviewRejectModal.requested_by_name}.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Rejection Note / Feedback (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="State reason for rejecting this request..."
+                value={rejectionNote}
+                onChange={e => setRejectionNote(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewRejectModal(null)}
+                disabled={isProcessingApproval}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReject}
+                disabled={isProcessingApproval}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>{isProcessingApproval ? 'Processing...' : 'Confirm Rejection'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

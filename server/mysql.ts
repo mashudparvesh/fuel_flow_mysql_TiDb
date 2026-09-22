@@ -279,6 +279,12 @@ async function runMigrations(p: Pool): Promise<void> {
       try {
         await p.query('ALTER TABLE `tenants` ADD COLUMN `logo` LONGTEXT DEFAULT NULL');
       } catch (e) {}
+      try {
+        await p.query("ALTER TABLE `tenants` MODIFY COLUMN `status` VARCHAR(32) DEFAULT 'active'");
+      } catch (e) {}
+      try {
+        await p.query("ALTER TABLE `users` MODIFY COLUMN `status` VARCHAR(32) DEFAULT 'active'");
+      } catch (e) {}
       console.log('[MySQL] Schema migration completed.');
     } catch (err) {
       console.error('[MySQL] Error reading fuelflow_schema.sql:', err);
@@ -381,21 +387,36 @@ export async function fetchTenantsFromDB(): Promise<any[] | null> {
   try {
     const [rows]: any = await pool.query('SELECT * FROM `tenants` ORDER BY `created_at` DESC');
     return rows.map((r: any) => {
-      let sub = null;
+      let sub: any = null;
       try {
         if (r.subscription_raw) {
           sub = typeof r.subscription_raw === 'string' ? JSON.parse(r.subscription_raw) : r.subscription_raw;
         }
       } catch (e) {}
 
+      const formatDateStr = (d: any) => {
+        if (!d) return null;
+        if (typeof d === 'string') return d.slice(0, 10);
+        if (d instanceof Date) return d.toISOString().slice(0, 10);
+        return String(d).slice(0, 10);
+      };
+
+      const dbEndDate = formatDateStr(r.subscription_end_date);
+      const dbStartDate = formatDateStr(r.subscription_start_date);
+
       if (!sub) {
         sub = {
           plan: r.subscription_plan || 'starter',
           status: r.subscription_status || 'active',
-          start_date: r.subscription_start_date,
-          end_date: r.subscription_end_date,
+          start_date: dbStartDate,
+          end_date: dbEndDate,
           price_bdt: Number(r.subscription_price) || 0
         };
+      } else {
+        if (dbEndDate) sub.end_date = dbEndDate;
+        if (dbStartDate && !sub.start_date) sub.start_date = dbStartDate;
+        if (r.subscription_status) sub.status = r.subscription_status;
+        if (r.subscription_plan) sub.plan = r.subscription_plan;
       }
 
       return {
@@ -410,7 +431,7 @@ export async function fetchTenantsFromDB(): Promise<any[] | null> {
         email: r.email || '',
         status: r.status || 'active',
         deleted_at: r.deleted_at,
-        created_at: r.created_at,
+        created_at: formatDateStr(r.created_at) || r.created_at,
         subscription: sub
       };
     });
@@ -451,6 +472,7 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
     if (tenant.logo) {
       sub.logo = tenant.logo;
     }
+    const safeStatus = tenant.status === 'inactive' ? 'suspended' : (tenant.status || 'active');
     const values = [
       tenant.id,
       tenant.name,
@@ -460,7 +482,7 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
       tenant.address || '',
       tenant.contact_person || '',
       tenant.email || '',
-      tenant.status || 'active',
+      safeStatus,
       tenant.deleted_at || null,
       tenant.created_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
       sub.plan || 'starter',
@@ -482,7 +504,8 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
 export async function updateTenantStatusInDB(id: string, status: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
-    await pool.query('UPDATE `tenants` SET `status` = ?, `subscription_status` = ? WHERE `id` = ?', [status, status, id]);
+    const safeStatus = status === 'inactive' ? 'suspended' : (status || 'active');
+    await pool.query('UPDATE `tenants` SET `status` = ?, `subscription_status` = ? WHERE `id` = ?', [safeStatus, safeStatus, id]);
     return true;
   } catch (err) {
     console.error('[MySQL] Error updating tenant status:', err);
@@ -494,10 +517,35 @@ export async function softDeleteTenantInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await pool.query('UPDATE `tenants` SET `deleted_at` = ?, `status` = ?, `subscription_status` = ? WHERE `id` = ?', [now, 'inactive', 'suspended', id]);
+    // Use 'suspended' which is universally compatible with both legacy ENUM and VARCHAR schemas
+    await pool.query('UPDATE `tenants` SET `deleted_at` = ?, `status` = ?, `subscription_status` = ? WHERE `id` = ?', [now, 'suspended', 'suspended', id]);
     return true;
   } catch (err) {
     console.error('[MySQL] Error soft-deleting tenant:', err);
+    return false;
+  }
+}
+
+export async function deleteTenantInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    // Delete tenant cascade from all relational tables
+    await pool.query('DELETE FROM `fuel_entries` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `pump_payments` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `vehicles` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `fuel_pumps` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `vehicle_categories` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `companies` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `vendors` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `fuel_types` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `tanker_logs` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `tanker_inventories` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `users` WHERE `tenant_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `tenants` WHERE `id` = ?', [id]);
+    await updateTableCounts().catch(() => {});
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting tenant cascade:', err);
     return false;
   }
 }
@@ -510,10 +558,16 @@ export async function fetchUsersFromDB(): Promise<any[] | null> {
       let allowedCats = ['all'];
       let allowedPumps = ['all'];
       let perms = null;
+      let mustChange = false;
       try {
         if (u.allowed_categories) allowedCats = typeof u.allowed_categories === 'string' ? JSON.parse(u.allowed_categories) : u.allowed_categories;
         if (u.allowed_pumps) allowedPumps = typeof u.allowed_pumps === 'string' ? JSON.parse(u.allowed_pumps) : u.allowed_pumps;
-        if (u.permissions) perms = typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions;
+        if (u.permissions) {
+          perms = typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions;
+          if (perms && typeof perms === 'object' && perms.must_change_password !== undefined) {
+            mustChange = Boolean(perms.must_change_password);
+          }
+        }
       } catch (e) {}
 
       return {
@@ -528,6 +582,7 @@ export async function fetchUsersFromDB(): Promise<any[] | null> {
         role_title_bn: u.role_title_bn,
         company_id: u.company_id,
         status: u.status,
+        must_change_password: mustChange,
         allowed_category_ids: allowedCats,
         allowed_pump_ids: allowedPumps,
         permissions: perms,
@@ -563,6 +618,11 @@ export async function upsertUserInDB(user: any): Promise<boolean> {
         \`permissions\` = VALUES(\`permissions\`);
     `;
 
+    const permissionsObj = {
+      ...(typeof user.permissions === 'object' && user.permissions !== null ? user.permissions : {}),
+      must_change_password: user.must_change_password !== undefined ? Boolean(user.must_change_password) : false
+    };
+
     const values = [
       user.id,
       user.tenant_id,
@@ -577,7 +637,7 @@ export async function upsertUserInDB(user: any): Promise<boolean> {
       user.status || 'active',
       JSON.stringify(user.allowed_category_ids || ['all']),
       JSON.stringify(user.allowed_pump_ids || ['all']),
-      JSON.stringify(user.permissions || {}),
+      JSON.stringify(permissionsObj),
       user.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ')
     ];
 
@@ -585,6 +645,18 @@ export async function upsertUserInDB(user: any): Promise<boolean> {
     return true;
   } catch (err) {
     console.error('[MySQL] Error upserting user:', err);
+    return false;
+  }
+}
+
+export async function deleteUserInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `users` WHERE `id` = ?', [id]);
+    await updateTableCounts().catch(() => {});
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting user in DB:', err);
     return false;
   }
 }

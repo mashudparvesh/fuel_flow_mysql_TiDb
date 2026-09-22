@@ -49,6 +49,26 @@ export const INITIAL_MODERATORS: SaasModerator[] = [
     created_at: '2026-08-01'
   },
   {
+    id: 'mod_coowner_1',
+    name: 'Kamrul Hasan (Co-Owner Admin)',
+    username: 'coowner_kamrul',
+    password: 'coowner12345',
+    email: 'kamrul@fuelnest.xyz',
+    phone: '+880 1811-334455',
+    role: 'saas_moderator',
+    owner_role: 'CO_OWNER_ADMIN',
+    status: 'active',
+    permissions: {
+      can_manage_subscribers: true,
+      can_extend_subscriptions: true,
+      can_manage_pricing: true,
+      can_view_financials: true,
+      can_impersonate: true,
+      can_reset_passwords: true
+    },
+    created_at: '2026-08-05'
+  },
+  {
     id: 'mod_admin_1',
     name: 'Shafiqul Islam (Control Admin)',
     username: 'admin_shafiq',

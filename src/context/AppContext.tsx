@@ -185,6 +185,9 @@ interface AppContextType {
   // Mandatory Password Change (Update 10)
   changeUserPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 
+  // Bulk Data Import (Update 11)
+  bulkImportData: (entityType: string, rows: any[]) => Promise<{ success: boolean; count: number; message: string }>;
+
   // SaaS Multi-Level Action Approvals (Update 9)
   approvals: PendingApprovalAction[];
   fetchApprovals: () => Promise<void>;
@@ -546,6 +549,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cross-browser & server-side tenant fetch (Safe merge with persistent storage and self-healing auto-push)
   const refreshTenantsFromServer = async () => {
     try {
+      const getDeletedIds = (): string[] => {
+        try {
+          const raw = localStorage.getItem('fuelflow_deleted_tenants');
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      };
+      const deletedIds = getDeletedIds();
+
       const res = await fetch(`/api/tenants/all?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
@@ -555,19 +568,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const json = await res.json();
-        const serverTenants: Tenant[] = Array.isArray(json)
+        const serverList: Tenant[] = Array.isArray(json)
           ? json
           : (json.success && Array.isArray(json.data) ? json.data : []);
+
+        const serverTenants: Tenant[] = serverList.filter(t => !deletedIds.includes(t.id) && !t.deleted_at);
 
         if (serverTenants.length > 0) {
           setTenants(prev => {
             const merged = [...serverTenants];
-            // Retain any locally registered subscribers that might not have reached server yet and auto-heal
-            prev.forEach(pt => {
+            // Retain any locally registered subscribers that are NOT deleted
+            prev.filter(pt => !deletedIds.includes(pt.id) && !pt.deleted_at).forEach(pt => {
               const existingIdx = merged.findIndex(st => st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase()));
               if (existingIdx === -1) {
                 merged.push(pt);
-                // Self-healing: automatically sync any subscriber present locally to the server backend
+                // Self-healing: sync subscriber present locally to the server backend
                 try {
                   fetch('/api/tenants', {
                     method: 'POST',
@@ -1698,7 +1713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: false, message: 'Invalid moderator username or password!' };
   };
 
-  const loginAsCompanyUser = (tenantCodeOrId: string, usernameOrEmail: string, pass: string) => {
+  const loginAsCompanyUser = async (tenantCodeOrId: string, usernameOrEmail: string, pass: string) => {
     const cleanUser = usernameOrEmail.trim().toLowerCase();
     const cleanPass = pass.trim();
 
@@ -1712,7 +1727,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (targetTenant) {
       matchedUser = users.find(u => 
         u.tenant_id === targetTenant!.id && 
-        (u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser) &&
+        (u.username?.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser) &&
         (!u.password || verifyPassword(cleanPass, u.password))
       );
     }
@@ -1720,7 +1735,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Cross-tenant fallback search in case tenant was mismatched in dropdown
     if (!matchedUser) {
       const fallbackUser = users.find(u => 
-        (u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser) &&
+        (u.username?.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser) &&
         (!u.password || verifyPassword(cleanPass, u.password))
       );
       if (fallbackUser && fallbackUser.tenant_id) {
@@ -1805,31 +1820,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
       }
+    }
 
-      // If matchedUser synthesized, sync to state & server
-      if (matchedUser && targetTenant) {
-        setUsers(prev => {
-          if (!prev.some(u => u.id === matchedUser!.id || (u.tenant_id === targetTenant!.id && u.username.toLowerCase() === cleanUser))) {
-            const updated = [matchedUser!, ...prev];
-            try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
-            return updated;
-          }
-          return prev;
-        });
-
-        fetch('/api/users', {
+    // Direct server-side authentication fallback to ensure newly created backend users always log in smoothly
+    if (!matchedUser || !targetTenant) {
+      try {
+        const serverAuthRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(matchedUser)
-        }).catch(() => {});
-      }
+          body: JSON.stringify({
+            tenant_id: targetTenant?.id || tenantCodeOrId,
+            tenant_code: tenantCodeOrId,
+            username: cleanUser,
+            password: cleanPass
+          })
+        });
+        const serverAuthJson = await serverAuthRes.json();
+        if (serverAuthJson.success && serverAuthJson.user && serverAuthJson.tenant) {
+          targetTenant = serverAuthJson.tenant;
+          matchedUser = serverAuthJson.user;
+          // Sync into local state
+          setTenants(prev => {
+            if (!prev.some(t => t.id === targetTenant!.id)) {
+              return [targetTenant!, ...prev];
+            }
+            return prev.map(t => t.id === targetTenant!.id ? { ...t, ...targetTenant } : t);
+          });
+          setUsers(prev => {
+            if (!prev.some(u => u.id === matchedUser!.id)) {
+              return [matchedUser!, ...prev];
+            }
+            return prev.map(u => u.id === matchedUser!.id ? { ...u, ...matchedUser } : u);
+          });
+        }
+      } catch (e) {}
     }
 
     if (!targetTenant) {
       return { success: false, message: 'Company / Tenant workspace not found!' };
     }
 
-    // STRICT AUTH GUARD: Check tenant status BEFORE or IMMEDIATELY AFTER credential verification (ISSUE 2 Fix)
+    // STRICT AUTH GUARD: Check tenant status
     if (
       targetTenant.deleted_at ||
       targetTenant.status === 'suspended' ||
@@ -2161,10 +2192,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const deleteTenantSubscriber = (tenantId: string) => {
-    // 1. Immediately remove from local state so UI updates instantaneously
-    setTenants(prev => prev.filter(t => t.id !== tenantId));
-    setUsers(prev => prev.filter(u => u.tenant_id !== tenantId));
+  const deleteTenantSubscriber = async (tenantId: string) => {
+    // 1. Immediately record in persistent tombstone set
+    try {
+      const deletedRaw = localStorage.getItem('fuelflow_deleted_tenants');
+      const deletedArr: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+      if (!deletedArr.includes(tenantId)) {
+        deletedArr.push(tenantId);
+        localStorage.setItem('fuelflow_deleted_tenants', JSON.stringify(deletedArr));
+      }
+    } catch (e) {}
+
+    // 2. Immediately remove from local state & localStorage so UI updates instantaneously
+    setTenants(prev => {
+      const updated = prev.filter(t => t.id !== tenantId);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    setUsers(prev => {
+      const updated = prev.filter(u => u.tenant_id !== tenantId);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     setVehicles(prev => prev.filter(v => v.tenant_id !== tenantId));
     setFuelEntries(prev => prev.filter(e => e.tenant_id !== tenantId));
     setPumps(prev => prev.filter(p => p.tenant_id !== tenantId));
@@ -2177,10 +2226,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTankerLogs(prev => prev.filter(tl => tl.tenant_id !== tenantId));
 
     try {
-      fetch(`/api/tenants/${tenantId}/cascade`, {
+      await fetch(`/api/tenants/${tenantId}/cascade`, {
         method: 'DELETE'
-      }).catch(err => console.warn('Failed to delete tenant on server:', err));
-
+      });
       const channel = new BroadcastChannel('fuelflow_tenants_sync');
       channel.postMessage({ type: 'REFRESH_TENANTS' });
       channel.close();
@@ -2234,7 +2282,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     name: string;
     email: string;
     username: string;
-    password: string;
+    password?: string;
     phone?: string;
     role: UserRole;
     role_title_bn?: string;
@@ -2242,6 +2290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allowed_category_ids?: string[];
     allowed_pump_ids?: string[];
     permissions?: UserPermissions;
+    must_change_password?: boolean;
   }) => {
     const targetTenantId = userData.tenant_id || currentTenantId;
 
@@ -2260,16 +2309,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const newUserId = 'usr_' + Date.now();
-    const rawPass = userData.password || 'user123';
+    const rawPass = (userData.password && userData.password.trim()) || 'user123';
+    const cleanUsername = userData.username.trim();
     const hashedPassword = isHashed(rawPass) ? rawPass : hashPassword(rawPass);
     const newUser: User = {
       id: newUserId,
       tenant_id: targetTenantId,
-      name: userData.name,
-      email: userData.email,
-      username: userData.username,
+      name: userData.name.trim(),
+      email: userData.email.trim(),
+      username: cleanUsername,
       password: hashedPassword,
-      phone: userData.phone,
+      phone: userData.phone?.trim() || '',
       role: userData.role,
       role_title_bn: userData.role_title_bn || (
         userData.role === 'super_admin'
@@ -2294,10 +2344,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         can_edit_settings: userData.role === 'super_admin'
       },
       status: 'active',
+      must_change_password: userData.must_change_password !== undefined ? userData.must_change_password : true,
       avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80`,
       created_at: new Date().toISOString().split('T')[0]
     };
-    setUsers(prev => [newUser, ...prev]);
+    setUsers(prev => {
+      const updated = [newUser, ...prev];
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2325,7 +2380,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const raw = processedUpdates.password.trim();
       processedUpdates.password = isHashed(raw) ? raw : hashPassword(raw);
     }
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...processedUpdates } : u));
+    setUsers(prev => {
+      const updated = prev.map(u => u.id === id ? { ...u, ...processedUpdates } : u);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     fetch(`/api/users/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -2334,16 +2393,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
-  const deleteCompanyUser = (id: string) => {
+  const deleteCompanyUser = async (id: string) => {
     const target = users.find(u => u.id === id);
     if (target?.role === 'super_admin') {
       return { success: false, message: 'Primary Company Super Admin account cannot be deleted.' };
     }
-    setUsers(prev => prev.filter(u => u.id !== id));
-    fetch(`/api/users/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
-    return { success: true };
+    setUsers(prev => {
+      const updated = prev.filter(u => u.id !== id);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    try {
+      await fetch(`/api/users/${id}`, {
+        method: 'DELETE'
+      });
+      const channel = new BroadcastChannel('fuelflow_tenants_sync');
+      channel.postMessage({ type: 'REFRESH_USERS' });
+      channel.close();
+    } catch (e) {}
+    return { success: true, message: 'User deleted successfully.' };
   };
 
   // Reset to seed data
@@ -2416,6 +2484,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await res.json();
       if (data.success) {
         setApprovals(prev => prev.map(a => a.id === actionId ? { ...a, status: 'APPROVED' as ApprovalStatus, reviewed_by: reviewerName, reviewed_at: new Date().toISOString() } : a));
+        if (data.tenant) {
+          setTenants(prev => prev.map(t => t.id === data.tenant.id ? { ...t, ...data.tenant } : t));
+        }
         await refreshTenantsFromServer();
         return { success: true, message: data.message };
       }
@@ -2492,12 +2563,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const data = await res.json();
       if (data.success) {
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword, must_change_password: false } : u));
+        setUsers(prev => {
+          const updated = prev.map(u => u.id === userId ? { ...u, password: newPassword, must_change_password: false } : u);
+          try { localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(updated)); } catch (e) {}
+          return updated;
+        });
         return { success: true, message: data.message };
       }
       return { success: false, message: data.message || 'Failed to update password' };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Network error' };
+    }
+  };
+
+  // -----------------------------------------------------------
+  // Bulk Data Import (Update 11)
+  // -----------------------------------------------------------
+  const bulkImportData = async (entityType: string, rows: any[]): Promise<{ success: boolean; count: number; message: string }> => {
+    if (!currentTenantId) {
+      return { success: false, count: 0, message: 'No subscriber workspace active.' };
+    }
+    try {
+      const res = await fetch('/api/fleet/bulk-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: currentTenantId,
+          entity_type: entityType,
+          rows
+        })
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.items)) {
+        if (entityType === 'vehicles') {
+          setVehicles(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(v => v.id === item.id || (v.tenant_id === item.tenant_id && v.plate_number.toLowerCase() === item.plate_number.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'companies') {
+          setCompanies(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(c => c.id === item.id || (c.tenant_id === item.tenant_id && c.name.toLowerCase() === item.name.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'vendors') {
+          setVendors(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(v => v.id === item.id || (v.tenant_id === item.tenant_id && v.name.toLowerCase() === item.name.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'pumps') {
+          setPumps(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(p => p.id === item.id || (p.tenant_id === item.tenant_id && p.name.toLowerCase() === item.name.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'fuel_types') {
+          setFuelTypes(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(f => f.id === item.id || (f.tenant_id === item.tenant_id && f.name.toLowerCase() === item.name.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'categories') {
+          setCategories(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(c => c.id === item.id || (c.tenant_id === item.tenant_id && c.name.toLowerCase() === item.name.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        } else if (entityType === 'tankers') {
+          setTankers(prev => {
+            const copy = [...prev];
+            for (const item of data.items) {
+              const idx = copy.findIndex(tk => tk.id === item.id || (tk.tenant_id === item.tenant_id && tk.tanker_number.toLowerCase() === item.tanker_number.toLowerCase()));
+              if (idx >= 0) copy[idx] = item;
+              else copy.unshift(item);
+            }
+            return copy;
+          });
+        }
+        return {
+          success: true,
+          count: data.imported_count || data.items.length,
+          message: data.message || `Successfully registered ${data.imported_count || data.items.length} items.`
+        };
+      }
+      return { success: false, count: 0, message: data.message || 'Import failed.' };
+    } catch (err: any) {
+      return { success: false, count: 0, message: err?.message || 'Network error during bulk import' };
     }
   };
 
@@ -2626,6 +2803,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Mandatory Password Change (Update 10)
         changeUserPassword,
+
+        // Bulk Data Import (Update 11)
+        bulkImportData,
 
         // Company User Management & Category Access
         addCompanyUser,

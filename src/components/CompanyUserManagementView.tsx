@@ -48,6 +48,8 @@ export const CompanyUserManagementView: React.FC = () => {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [formError, setFormError] = useState('');
 
   // New User Form State
   const [formName, setFormName] = useState('');
@@ -58,6 +60,7 @@ export const CompanyUserManagementView: React.FC = () => {
   const [formRole, setFormRole] = useState<UserRole>('supervisor');
   const [formRoleTitleBn, setFormRoleTitleBn] = useState('Fleet Supervisor');
   const [formAllowedCategories, setFormAllowedCategories] = useState<string[]>(['all']);
+  const [formMustChangePassword, setFormMustChangePassword] = useState(true);
   const [formPermissions, setFormPermissions] = useState<UserPermissions>({
     can_add_fuel: true,
     can_manage_vehicles: false,
@@ -191,31 +194,34 @@ export const CompanyUserManagementView: React.FC = () => {
   // Submit Create User
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formUsername || !formPassword) {
-      alert('Name, Username and Password are required.');
+    setFormError('');
+
+    if (!formName.trim() || !formUsername.trim() || !formPassword.trim()) {
+      setFormError('Name, Username and Password are required.');
       return;
     }
 
     if (formRole === 'super_admin' && hasExistingSuperAdmin) {
-      alert('Only 1 Company Super Admin account is allowed per subscriber.');
+      setFormError('Only 1 Company Super Admin account is allowed per subscriber.');
       return;
     }
 
     const res = addCompanyUser({
       tenant_id: currentTenant.id,
-      name: formName,
-      username: formUsername,
-      email: formEmail || `${formUsername}@${currentTenant.code.toLowerCase()}.com`,
-      password: formPassword,
-      phone: formPhone,
+      name: formName.trim(),
+      username: formUsername.trim(),
+      email: formEmail.trim() || `${formUsername.trim()}@${currentTenant.code.toLowerCase()}.com`,
+      password: formPassword.trim(),
+      phone: formPhone.trim(),
       role: formRole,
       role_title_bn: formRoleTitleBn,
       allowed_category_ids: formAllowedCategories,
-      permissions: formPermissions
+      permissions: formPermissions,
+      must_change_password: formMustChangePassword
     });
 
     if (!res.success) {
-      alert(res.message || 'Failed to create user');
+      setFormError(res.message || 'Failed to create user');
       return;
     }
 
@@ -226,13 +232,14 @@ export const CompanyUserManagementView: React.FC = () => {
   // Submit Edit User
   const handleSaveEditUser = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (!selectedUserForEdit) return;
 
     const updates: Partial<User> = {
-      name: formName,
-      username: formUsername,
-      email: formEmail,
-      phone: formPhone,
+      name: formName.trim(),
+      username: formUsername.trim(),
+      email: formEmail.trim(),
+      phone: formPhone.trim(),
       role: formRole,
       role_title_bn: formRoleTitleBn,
       allowed_category_ids: formAllowedCategories,
@@ -245,7 +252,7 @@ export const CompanyUserManagementView: React.FC = () => {
 
     const res = updateCompanyUser(selectedUserForEdit.id, updates);
     if (!res.success) {
-      alert(res.message || 'Failed to update user');
+      setFormError(res.message || 'Failed to update user');
       return;
     }
 
@@ -255,6 +262,7 @@ export const CompanyUserManagementView: React.FC = () => {
   };
 
   const resetForm = () => {
+    setFormError('');
     setFormName('');
     setFormUsername('');
     setFormEmail('');
@@ -263,6 +271,7 @@ export const CompanyUserManagementView: React.FC = () => {
     setFormRole('supervisor');
     setFormRoleTitleBn('Fleet Supervisor');
     setFormAllowedCategories(['all']);
+    setFormMustChangePassword(true);
     setFormPermissions({
       can_add_fuel: true,
       can_manage_vehicles: false,
@@ -508,12 +517,9 @@ export const CompanyUserManagementView: React.FC = () => {
 
                 {u.role !== 'super_admin' ? (
                   <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete user "${u.name}"?`)) {
-                        deleteCompanyUser(u.id);
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700 flex items-center gap-1 font-semibold"
+                    type="button"
+                    onClick={() => setUserToDelete(u)}
+                    className="text-red-500 hover:text-red-700 flex items-center gap-1 font-semibold transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete</span>
@@ -569,6 +575,13 @@ export const CompanyUserManagementView: React.FC = () => {
             </div>
 
             <form onSubmit={isEditUserModalOpen ? handleSaveEditUser : handleCreateUser} className="space-y-4">
+              {formError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               {/* Name & Username */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -616,6 +629,17 @@ export const CompanyUserManagementView: React.FC = () => {
                     onChange={e => setFormPassword(e.target.value)}
                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
                   />
+                  {!isEditUserModalOpen && (
+                    <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formMustChangePassword}
+                        onChange={e => setFormMustChangePassword(e.target.checked)}
+                        className="w-3.5 h-3.5 text-amber-500 rounded focus:ring-amber-500"
+                      />
+                      <span>Force password reset on first login (বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                    </label>
+                  )}
                 </div>
 
                 <div>
@@ -802,6 +826,45 @@ export const CompanyUserManagementView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ================= MODAL: CONFIRM DELETE USER ================= */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-red-500/30 rounded-2xl shadow-2xl p-6">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete User Account</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              Are you sure you want to permanently delete user <strong className="text-slate-900 dark:text-white">{userToDelete.name}</strong> (@{userToDelete.username})? They will immediately lose access to this workspace.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await deleteCompanyUser(userToDelete.id);
+                  setUserToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirm Delete</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

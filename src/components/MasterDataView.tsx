@@ -39,6 +39,8 @@ export const MasterDataView: React.FC = () => {
     deletePump,
     fuelTypes,
     updateFuelPrice,
+    addFuelType,
+    deleteFuelType,
     categories,
     addCategory,
     deleteCategory
@@ -47,6 +49,16 @@ export const MasterDataView: React.FC = () => {
   const isViewer = currentUser?.role === 'client_viewer';
 
   const [activeTab, setActiveTab] = useState<'companies' | 'vendors' | 'pumps' | 'fuel_types' | 'categories'>('companies');
+
+  // Fuel Type Add & Delete states
+  const [showAddFuelModal, setShowAddFuelModal] = useState(false);
+  const [newFuelName, setNewFuelName] = useState('');
+  const [newFuelCode, setNewFuelCode] = useState('');
+  const [newFuelUnit, setNewFuelUnit] = useState('Liter');
+  const [newFuelPrice, setNewFuelPrice] = useState('');
+  const [deleteConfirmFuelType, setDeleteConfirmFuelType] = useState<FuelType | null>(null);
+  const [fuelActionError, setFuelActionError] = useState<string | null>(null);
+  const [isSubmittingFuel, setIsSubmittingFuel] = useState(false);
 
   // Pagination states (10 items max per list)
   const pageSize = 10;
@@ -388,6 +400,57 @@ export const MasterDataView: React.FC = () => {
     updateFuelPrice(selectedFuelType.id, parseFloat(newPriceValue));
     setSelectedFuelType(null);
     setNewPriceValue('');
+  };
+
+  // Add New Fuel Type
+  const handleAddFuelType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFuelName.trim() || !newFuelPrice) return;
+    setIsSubmittingFuel(true);
+    setFuelActionError(null);
+    try {
+      const res = await addFuelType({
+        name: newFuelName.trim(),
+        code: newFuelCode.trim().toLowerCase() || newFuelName.trim().toLowerCase().replace(/\s+/g, '_'),
+        unit: newFuelUnit.trim() || 'Liter',
+        current_price: parseFloat(newFuelPrice) || 0
+      });
+      setIsSubmittingFuel(false);
+      if (res.success) {
+        setShowAddFuelModal(false);
+        setNewFuelName('');
+        setNewFuelCode('');
+        setNewFuelUnit('Liter');
+        setNewFuelPrice('');
+        showNotification(`Fuel type "${newFuelName.trim()}" added successfully!`);
+      } else {
+        setFuelActionError(res.message);
+      }
+    } catch (err: any) {
+      setIsSubmittingFuel(false);
+      setFuelActionError(err?.message || 'Error adding fuel type');
+    }
+  };
+
+  // Delete Fuel Type
+  const handleDeleteFuelType = async () => {
+    if (!deleteConfirmFuelType) return;
+    setIsSubmittingFuel(true);
+    setFuelActionError(null);
+    try {
+      const name = deleteConfirmFuelType.name;
+      const res = await deleteFuelType(deleteConfirmFuelType.id);
+      setIsSubmittingFuel(false);
+      if (res.success) {
+        setDeleteConfirmFuelType(null);
+        showNotification(`Fuel type "${name}" deleted successfully!`);
+      } else {
+        setFuelActionError(res.message);
+      }
+    } catch (err: any) {
+      setIsSubmittingFuel(false);
+      setFuelActionError(err?.message || 'Error deleting fuel type');
+    }
   };
 
   // Save Category
@@ -737,7 +800,7 @@ export const MasterDataView: React.FC = () => {
       {/* TAB 4: Fuel Types & Pricing */}
       {activeTab === 'fuel_types' && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200 dark:border-blue-900/60 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
                 {t.fuelTypesSub}
@@ -746,6 +809,18 @@ export const MasterDataView: React.FC = () => {
                 {t.fuelTypesDesc}
               </p>
             </div>
+            {!isViewer && (
+              <button
+                onClick={() => {
+                  setFuelActionError(null);
+                  setShowAddFuelModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all self-start sm:self-auto cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Fuel Type</span>
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -769,7 +844,7 @@ export const MasterDataView: React.FC = () => {
                   <div className="mt-3 text-[11px] text-slate-600 dark:text-slate-300">
                     <span className="font-semibold text-slate-800 dark:text-slate-200">{t.prevPriceChanges}</span>
                     <ul className="mt-1 space-y-0.5 max-h-20 overflow-y-auto">
-                      {ft.price_history.slice(-3).reverse().map((h, i) => (
+                      {ft.price_history && ft.price_history.slice(-3).reverse().map((h, i) => (
                         <li key={i} className="text-[10px] text-slate-600 dark:text-slate-300 flex justify-between font-mono">
                           <span>{h.date}:</span>
                           <span>BDT {h.price.toFixed(2)}</span>
@@ -780,16 +855,28 @@ export const MasterDataView: React.FC = () => {
                 </div>
 
                 {!isViewer && (
-                  <button
-                    onClick={() => {
-                      setSelectedFuelType(ft);
-                      setNewPriceValue(ft.current_price.toString());
-                    }}
-                    className="mt-4 w-full py-1.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>{t.updatePrice}</span>
-                  </button>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedFuelType(ft);
+                        setNewPriceValue(ft.current_price.toString());
+                      }}
+                      className="flex-1 py-1.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>{t.updatePrice}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFuelActionError(null);
+                        setDeleteConfirmFuelType(ft);
+                      }}
+                      title="Delete Fuel Type"
+                      className="p-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -901,6 +988,168 @@ export const MasterDataView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Add New Fuel Type */}
+      {showAddFuelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-blue-900/40">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                    Add New Fuel Type
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Define a fuel grade with pricing & measurement unit
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddFuelModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {fuelActionError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-xs font-semibold">
+                {fuelActionError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddFuelType} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Fuel Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. CNG, LPG Autogas, High-Octane 98"
+                  value={newFuelName}
+                  onChange={e => setNewFuelName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Short Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. cng, lpg"
+                    value={newFuelCode}
+                    onChange={e => setNewFuelCode(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Unit of Measure *
+                  </label>
+                  <select
+                    value={newFuelUnit}
+                    onChange={e => setNewFuelUnit(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="Liter">Liter</option>
+                    <option value="Cubic Meter (m³)">Cubic Meter (m³)</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Gallon">Gallon</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Price per Unit (BDT) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="e.g. 52.50"
+                  value={newFuelPrice}
+                  onChange={e => setNewFuelPrice(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono font-bold"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddFuelModal(false)}
+                  className="w-1/2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingFuel}
+                  className="w-1/2 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingFuel ? 'Saving...' : 'Add Fuel Type'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Delete Confirm Fuel Type */}
+      {deleteConfirmFuelType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-blue-900/40">
+            <div className="flex items-center gap-3 mb-3 text-red-500">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                  Delete Fuel Type?
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {deleteConfirmFuelType.name} ({deleteConfirmFuelType.code.toUpperCase()})
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">
+              Are you sure you want to delete this fuel type? If fuel entries or tankers are linked to it, the system will prevent deletion to preserve audit history.
+            </p>
+
+            {fuelActionError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-xs font-semibold">
+                {fuelActionError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmFuelType(null)}
+                className="w-1/2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingFuel}
+                onClick={handleDeleteFuelType}
+                className="w-1/2 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-colors disabled:opacity-50"
+              >
+                {isSubmittingFuel ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

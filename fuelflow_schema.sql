@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `tenants` (
   `address` TEXT DEFAULT NULL,
   `contact_person` VARCHAR(128) DEFAULT NULL,
   `email` VARCHAR(128) DEFAULT NULL,
-  `status` ENUM('active', 'expired', 'suspended', 'trial') DEFAULT 'active',
+  `status` VARCHAR(32) DEFAULT 'active',
   `deleted_at` DATETIME DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `subscription_plan` VARCHAR(64) DEFAULT 'starter',

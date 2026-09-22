@@ -9,8 +9,10 @@ import {
   upsertTenantInDB,
   updateTenantStatusInDB,
   softDeleteTenantInDB,
+  deleteTenantInDB,
   fetchUsersFromDB,
   upsertUserInDB,
+  deleteUserInDB,
   syncAllDataToMySQL,
   fetchFleetDataFromDB,
   deleteVehicleInDB,
@@ -20,6 +22,7 @@ import {
   deleteCategoryInDB,
   deleteTankerInDB
 } from "./server/mysql.ts";
+import { verifyPassword, hashPassword } from "./src/utils/authSecurity.ts";
 
 // Initial fallback tenant data
 const DEFAULT_TENANTS = [
@@ -922,13 +925,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   app.delete('/api/tenants/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      activeTenants = loadTenants();
-      const targetTenant = activeTenants.find(t => t.id === id);
-
-      if (!targetTenant) {
-        res.status(404).json({ success: false, message: 'Subscriber workspace not found.' });
-        return;
+      const dbTenants = await fetchTenantsFromDB().catch(() => null);
+      if (dbTenants && dbTenants.length > 0) {
+        activeTenants = dbTenants;
+      } else {
+        activeTenants = loadTenants();
       }
+      const targetTenant = activeTenants.find(t => t.id === id);
 
       // Permanently remove from activeTenants list
       activeTenants = activeTenants.filter(t => t.id !== id);
@@ -952,11 +955,14 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
       saveFleetData(fleet);
 
-      await softDeleteTenantInDB(id).catch(e => console.warn('[MySQL] Soft delete error:', e));
+      await deleteTenantInDB(id).catch(async (e) => {
+        console.warn('[MySQL] Cascade delete fallback to soft delete:', e);
+        await softDeleteTenantInDB(id).catch(() => {});
+      });
 
       res.json({
         success: true,
-        message: `Subscriber workspace "${targetTenant.name}" permanently deleted.`
+        message: `Subscriber workspace "${targetTenant?.name || id}" permanently deleted.`
       });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Error deleting tenant' });
@@ -967,12 +973,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   app.delete('/api/tenants/:id/cascade', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      activeTenants = loadTenants();
-      const targetTenant = activeTenants.find(t => t.id === id);
-      if (!targetTenant) {
-        res.status(404).json({ success: false, message: 'Subscriber not found.' });
-        return;
+      const dbTenants = await fetchTenantsFromDB().catch(() => null);
+      if (dbTenants && dbTenants.length > 0) {
+        activeTenants = dbTenants;
+      } else {
+        activeTenants = loadTenants();
       }
+      const targetTenant = activeTenants.find(t => t.id === id);
 
       // Remove tenant from activeTenants
       activeTenants = activeTenants.filter(t => t.id !== id);
@@ -996,11 +1003,14 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
       saveFleetData(fleet);
 
-      await softDeleteTenantInDB(id).catch(() => {});
+      await deleteTenantInDB(id).catch(async (e) => {
+        console.warn('[MySQL] Cascade delete fallback to soft delete:', e);
+        await softDeleteTenantInDB(id).catch(() => {});
+      });
 
       res.json({
         success: true,
-        message: `Subscriber workspace "${targetTenant.name}" and all associated fleet data permanently deleted.`
+        message: `Subscriber workspace "${targetTenant?.name || id}" and all associated fleet data permanently deleted.`
       });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Error deleting subscriber' });
@@ -1350,8 +1360,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         return;
       }
 
-      activeTenants = loadTenants();
-      const tenant = activeTenants.find(t => t.id === action.target_tenant_id);
+      const dbTenants = await fetchTenantsFromDB().catch(() => null);
+      if (dbTenants && dbTenants.length > 0) {
+        activeTenants = dbTenants;
+      } else {
+        activeTenants = loadTenants();
+      }
+      let tenant = activeTenants.find(t => t.id === action.target_tenant_id);
 
       // Execute requested action
       if (tenant) {
@@ -1372,20 +1387,30 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
           fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== action.target_tenant_id);
           fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== action.target_tenant_id);
           saveFleetData(fleet);
-          await softDeleteTenantInDB(action.target_tenant_id).catch(() => {});
+          await deleteTenantInDB(action.target_tenant_id).catch(async () => {
+            await softDeleteTenantInDB(action.target_tenant_id).catch(() => {});
+          });
         } else if (action.action_type === 'EXTEND_SUBSCRIPTION') {
           const days = Number(action.details?.extension_days || 30);
-          if (tenant.subscription) {
-            const currentEnd = new Date(tenant.subscription.end_date);
-            const now = new Date();
-            const baseDate = currentEnd > now ? currentEnd : now;
-            baseDate.setDate(baseDate.getDate() + days);
-            tenant.subscription.end_date = baseDate.toISOString().split('T')[0];
-            tenant.subscription.status = 'active';
-            tenant.status = 'active';
-            saveTenants(activeTenants);
-            await upsertTenantInDB(tenant).catch(() => {});
+          if (!tenant.subscription) {
+            tenant.subscription = {
+              plan: 'starter',
+              status: 'active',
+              start_date: new Date().toISOString().split('T')[0],
+              end_date: new Date().toISOString().split('T')[0],
+              price_bdt: 0
+            };
           }
+          const currentEnd = tenant.subscription.end_date ? new Date(tenant.subscription.end_date) : new Date();
+          const now = new Date();
+          const baseDate = !isNaN(currentEnd.getTime()) && currentEnd > now ? currentEnd : now;
+          baseDate.setDate(baseDate.getDate() + days);
+          const newEndDate = baseDate.toISOString().split('T')[0];
+          tenant.subscription.end_date = newEndDate;
+          tenant.subscription.status = 'active';
+          tenant.status = 'active';
+          saveTenants(activeTenants);
+          await upsertTenantInDB(tenant).catch(() => {});
         } else if (action.action_type === 'SUSPEND_TENANT') {
           tenant.status = 'suspended';
           if (tenant.subscription) tenant.subscription.status = 'suspended';
@@ -1407,6 +1432,8 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       res.json({
         success: true,
         action,
+        tenant,
+        new_end_date: tenant?.subscription?.end_date,
         message: `Action ${action.action_type} approved and executed successfully.`
       });
     } catch (err: any) {
@@ -1461,13 +1488,22 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       }
 
       activeUsers = loadUsers();
-      const user = activeUsers.find(u => u.id === user_id);
+      let user = activeUsers.find(u => u.id === user_id);
+      if (!user) {
+        const dbUsers = await fetchUsersFromDB().catch(() => null);
+        if (dbUsers) {
+          user = dbUsers.find(u => u.id === user_id);
+          if (user) activeUsers.push(user);
+        }
+      }
+
       if (!user) {
         res.status(404).json({ success: false, message: 'User account not found.' });
         return;
       }
 
-      user.password = cleanPass;
+      const hashed = hashPassword(cleanPass);
+      user.password = hashed;
       user.must_change_password = false;
       saveUsers(activeUsers);
 
@@ -1534,6 +1570,258 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Server error syncing user' });
+    }
+  });
+
+  // 5.2b PATCH /api/users/:id - Update company user
+  app.patch('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      activeUsers = loadUsers();
+      let user = activeUsers.find(u => u.id === id);
+      if (!user) {
+        const dbUsers = await fetchUsersFromDB().catch(() => null);
+        if (dbUsers) {
+          user = dbUsers.find(u => u.id === id);
+          if (user) activeUsers.push(user);
+        }
+      }
+      if (!user) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+      Object.assign(user, updates);
+      saveUsers(activeUsers);
+      await upsertUserInDB(user).catch(() => {});
+      res.json({ success: true, user });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error updating user' });
+    }
+  });
+
+  // 5.2c DELETE /api/users/:id - Delete company user
+  app.delete('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      activeUsers = loadUsers().filter(u => u.id !== id);
+      saveUsers(activeUsers);
+      await deleteUserInDB(id).catch(e => console.warn('[MySQL] User delete error:', e));
+      res.json({ success: true, message: 'User deleted successfully.' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error deleting user' });
+    }
+  });
+
+  // 5.2d POST /api/fleet/bulk-import - Bulk Excel / CSV Data Import
+  app.post('/api/fleet/bulk-import', async (req: Request, res: Response) => {
+    try {
+      const { tenant_id, entity_type, rows } = req.body;
+      if (!tenant_id || !entity_type || !Array.isArray(rows) || rows.length === 0) {
+        res.status(400).json({ success: false, message: 'tenant_id, entity_type, and non-empty rows array required.' });
+        return;
+      }
+
+      const fleet = loadFleetData();
+      let importedCount = 0;
+      const addedItems: any[] = [];
+
+      if (entity_type === 'vehicles') {
+        fleet.vehicles = fleet.vehicles || [];
+        for (const r of rows) {
+          if (!r.plate_number && !r.registration_number) continue;
+          const plate = String(r.plate_number || r.registration_number).trim();
+          const existingIdx = fleet.vehicles.findIndex(v => v.tenant_id === tenant_id && v.plate_number.toLowerCase() === plate.toLowerCase());
+          const vehicleItem = {
+            id: r.id || 'veh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            plate_number: plate,
+            model: r.model || 'Commercial Vehicle',
+            category_id: r.category_id || 'cat_1',
+            company_id: r.company_id || 'comp_1',
+            vendor_id: r.vendor_id || undefined,
+            driver_name: r.driver_name || 'Assigned Driver',
+            driver_phone: r.driver_phone || '',
+            fuel_type: r.fuel_type || 'Diesel',
+            fuel_tank_capacity: Number(r.fuel_tank_capacity) || 100,
+            initial_odometer: Number(r.initial_odometer) || 0,
+            status: r.status || 'active',
+            notes: r.notes || 'Bulk imported via Excel/CSV',
+            created_at: new Date().toISOString().split('T')[0]
+          };
+          if (existingIdx >= 0) {
+            fleet.vehicles[existingIdx] = { ...fleet.vehicles[existingIdx], ...vehicleItem };
+          } else {
+            fleet.vehicles.unshift(vehicleItem);
+          }
+          addedItems.push(vehicleItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'companies') {
+        fleet.companies = fleet.companies || [];
+        for (const r of rows) {
+          if (!r.name) continue;
+          const name = String(r.name).trim();
+          const compItem = {
+            id: r.id || 'comp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            name,
+            code: r.code || name.substring(0, 4).toUpperCase(),
+            contact_person: r.contact_person || '',
+            phone: r.phone || '',
+            email: r.email || '',
+            address: r.address || '',
+            status: r.status || 'active'
+          };
+          const existingIdx = fleet.companies.findIndex(c => c.tenant_id === tenant_id && c.name.toLowerCase() === name.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.companies[existingIdx] = { ...fleet.companies[existingIdx], ...compItem };
+          } else {
+            fleet.companies.unshift(compItem);
+          }
+          addedItems.push(compItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'vendors') {
+        fleet.vendors = fleet.vendors || [];
+        for (const r of rows) {
+          if (!r.name) continue;
+          const name = String(r.name).trim();
+          const venItem = {
+            id: r.id || 'ven_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            name,
+            phone: r.phone || '',
+            contact_person: r.contact_person || '',
+            type: r.type || 'fuel',
+            address: r.address || '',
+            status: r.status || 'active'
+          };
+          const existingIdx = fleet.vendors.findIndex(v => v.tenant_id === tenant_id && v.name.toLowerCase() === name.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.vendors[existingIdx] = { ...fleet.vendors[existingIdx], ...venItem };
+          } else {
+            fleet.vendors.unshift(venItem);
+          }
+          addedItems.push(venItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'pumps') {
+        fleet.pumps = fleet.pumps || [];
+        for (const r of rows) {
+          if (!r.name) continue;
+          const name = String(r.name).trim();
+          const pumpItem = {
+            id: r.id || 'pump_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            name,
+            location: r.location || '',
+            contact_number: r.contact_number || r.phone || '',
+            fuel_types: Array.isArray(r.fuel_types) ? r.fuel_types : ['Diesel', 'Octane'],
+            payment_terms: r.payment_terms || 'Credit',
+            current_balance: Number(r.current_balance) || 0,
+            status: r.status || 'active'
+          };
+          const existingIdx = fleet.pumps.findIndex(p => p.tenant_id === tenant_id && p.name.toLowerCase() === name.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.pumps[existingIdx] = { ...fleet.pumps[existingIdx], ...pumpItem };
+          } else {
+            fleet.pumps.unshift(pumpItem);
+          }
+          addedItems.push(pumpItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'fuel_types') {
+        fleet.fuelTypes = fleet.fuelTypes || [];
+        for (const r of rows) {
+          if (!r.name) continue;
+          const name = String(r.name).trim();
+          const fuelItem = {
+            id: r.id || 'ft_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            name,
+            code: r.code || name.toUpperCase().replace(/\s+/g, '_'),
+            unit: r.unit || 'Liter',
+            current_price: Number(r.current_price) || 105,
+            status: r.status || 'active'
+          };
+          const existingIdx = fleet.fuelTypes.findIndex(f => f.tenant_id === tenant_id && f.name.toLowerCase() === name.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.fuelTypes[existingIdx] = { ...fleet.fuelTypes[existingIdx], ...fuelItem };
+          } else {
+            fleet.fuelTypes.unshift(fuelItem);
+          }
+          addedItems.push(fuelItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'categories') {
+        fleet.categories = fleet.categories || [];
+        for (const r of rows) {
+          if (!r.name) continue;
+          const name = String(r.name).trim();
+          const catItem = {
+            id: r.id || 'cat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            name,
+            name_bn: r.name_bn || name,
+            description: r.description || ''
+          };
+          const existingIdx = fleet.categories.findIndex(c => c.tenant_id === tenant_id && c.name.toLowerCase() === name.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.categories[existingIdx] = { ...fleet.categories[existingIdx], ...catItem };
+          } else {
+            fleet.categories.unshift(catItem);
+          }
+          addedItems.push(catItem);
+          importedCount++;
+        }
+      } else if (entity_type === 'tankers') {
+        fleet.tankers = fleet.tankers || [];
+        for (const r of rows) {
+          if (!r.tanker_number && !r.name) continue;
+          const num = String(r.tanker_number || r.name).trim();
+          const tankerItem = {
+            id: r.id || 'tank_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            tenant_id,
+            tanker_number: num,
+            capacity_liters: Number(r.capacity_liters) || 5000,
+            current_fuel_liters: Number(r.current_fuel_liters) || 0,
+            fuel_type: r.fuel_type || 'Diesel',
+            assigned_driver: r.assigned_driver || '',
+            driver_phone: r.driver_phone || '',
+            status: r.status || 'active'
+          };
+          const existingIdx = fleet.tankers.findIndex(tk => tk.tenant_id === tenant_id && tk.tanker_number.toLowerCase() === num.toLowerCase());
+          if (existingIdx >= 0) {
+            fleet.tankers[existingIdx] = { ...fleet.tankers[existingIdx], ...tankerItem };
+          } else {
+            fleet.tankers.unshift(tankerItem);
+          }
+          addedItems.push(tankerItem);
+          importedCount++;
+        }
+      }
+
+      saveFleetData(fleet);
+      await syncAllDataToMySQL({
+        vehicles: fleet.vehicles,
+        companies: fleet.companies,
+        vendors: fleet.vendors,
+        fuel_pumps: fleet.pumps,
+        fuel_types: fleet.fuelTypes,
+        vehicle_categories: fleet.categories,
+        tanker_inventories: fleet.tankers
+      }).catch(e => console.warn('[MySQL] Bulk sync warning:', e));
+
+      res.json({
+        success: true,
+        imported_count: importedCount,
+        entity_type,
+        items: addedItems,
+        message: `Successfully registered ${importedCount} items from bulk upload.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error importing bulk data' });
     }
   });
 
@@ -1975,93 +2263,131 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   });
 
 
-  // 6. POST /api/auth/login - Strict Authentication Guard (ISSUE 2 Fix)
-  // Replicates LoginController attempt validation
-  app.post('/api/auth/login', (req: Request, res: Response) => {
-    const { tenant_id, tenant_code, username, password } = req.body;
-    activeTenants = loadTenants();
-    activeUsers = loadUsers();
-
-    const cleanUser = String(username || '').trim().toLowerCase();
-    const cleanPass = String(password || '').trim();
-
-    let targetTenant = activeTenants.find(t =>
-      (tenant_id && t.id === tenant_id) ||
-      (tenant_code && t.code.toUpperCase() === String(tenant_code).toUpperCase())
-    );
-
-    // Fallback search tenant by username if tenant wasn't specified
-    if (!targetTenant) {
-      targetTenant = activeTenants.find(t => 
-        t.subscription?.super_admin_username?.toLowerCase() === cleanUser ||
-        activeUsers.some(u => u.tenant_id === t.id && (u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser))
-      );
-    }
-
-    if (!targetTenant) {
-      res.status(404).json({ success: false, message: 'Company / Tenant not found.' });
-      return;
-    }
-
-    // STRICT STATUS CHECK: Check tenant status BEFORE or IMMEDIATELY AFTER credential verification
-    if (
-      targetTenant.deleted_at ||
-      targetTenant.status === 'suspended' ||
-      targetTenant.status === 'inactive' ||
-      targetTenant.subscription?.status === 'suspended' ||
-      targetTenant.subscription?.status === 'inactive'
-    ) {
-      res.status(403).json({
-        success: false,
-        suspended: true,
-        message: "This account is suspended. Please contact the support team."
-      });
-      return;
-    }
-
-    // Verify user in tenant
-    let matchedUser = activeUsers.find(u =>
-      u.tenant_id === targetTenant!.id &&
-      (u.username.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser)
-    );
-
-    // If not in activeUsers, check tenant subscription super_admin credentials
-    if (!matchedUser && targetTenant.subscription?.super_admin_username) {
-      if (targetTenant.subscription.super_admin_username.toLowerCase() === cleanUser) {
-        matchedUser = {
-          id: 'usr_sa_' + targetTenant.id,
-          tenant_id: targetTenant.id,
-          name: targetTenant.contact_person || `${targetTenant.name} Admin`,
-          email: targetTenant.email || `${cleanUser}@example.com`,
-          username: targetTenant.subscription.super_admin_username,
-          password: targetTenant.subscription.super_admin_password,
-          phone: targetTenant.phone || '',
-          role: 'super_admin',
-          role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
-          status: 'active',
-          allowed_category_ids: ['all'],
-          allowed_pump_ids: ['all'],
-          permissions: {
-            can_add_fuel: true,
-            can_manage_vehicles: true,
-            can_manage_pumps: true,
-            can_view_reports: true,
-            can_manage_users: true,
-            can_edit_settings: true
-          },
-          created_at: targetTenant.created_at || '2026-08-01'
-        };
-        activeUsers.unshift(matchedUser);
-        saveUsers(activeUsers);
+  // 6. POST /api/auth/login - Strict Authentication Guard (ISSUE 2 & 4 Fix)
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
+    try {
+      const { tenant_id, tenant_code, username, password } = req.body;
+      const dbTenants = await fetchTenantsFromDB().catch(() => null);
+      if (dbTenants && dbTenants.length > 0) {
+        activeTenants = dbTenants;
+      } else {
+        activeTenants = loadTenants();
       }
-    }
 
-    res.json({
-      success: true,
-      message: "Credentials verified.",
-      tenant: targetTenant,
-      user: matchedUser
-    });
+      const dbUsers = await fetchUsersFromDB().catch(() => null);
+      if (dbUsers && dbUsers.length > 0) {
+        activeUsers = dbUsers;
+      } else {
+        activeUsers = loadUsers();
+      }
+
+      const cleanUser = String(username || '').trim().toLowerCase();
+      const cleanPass = String(password || '').trim();
+
+      // Look for target tenant
+      let targetTenant = activeTenants.find(t =>
+        (tenant_id && t.id === tenant_id) ||
+        (tenant_code && t.code.toUpperCase() === String(tenant_code).toUpperCase())
+      );
+
+      // Verify user across target tenant first, or global fallback if tenant not passed or mismatched
+      let matchedUser: any = null;
+      if (targetTenant) {
+        matchedUser = activeUsers.find(u =>
+          u.tenant_id === targetTenant!.id &&
+          (u.username.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser) &&
+          verifyPassword(cleanPass, u.password)
+        );
+      }
+
+      // Cross-tenant fallback search
+      if (!matchedUser) {
+        matchedUser = activeUsers.find(u =>
+          (u.username.toLowerCase() === cleanUser || u.email?.toLowerCase() === cleanUser) &&
+          verifyPassword(cleanPass, u.password)
+        );
+        if (matchedUser && matchedUser.tenant_id) {
+          const tFound = activeTenants.find(t => t.id === matchedUser.tenant_id);
+          if (tFound) targetTenant = tFound;
+        }
+      }
+
+      // Check tenant subscription super_admin credentials fallback
+      if (!matchedUser) {
+        for (const t of activeTenants) {
+          if (
+            t.subscription?.super_admin_username &&
+            t.subscription.super_admin_username.toLowerCase() === cleanUser &&
+            (!t.subscription.super_admin_password || verifyPassword(cleanPass, t.subscription.super_admin_password))
+          ) {
+            targetTenant = t;
+            matchedUser = {
+              id: 'usr_sa_' + t.id,
+              tenant_id: t.id,
+              name: t.contact_person || `${t.name} Admin`,
+              email: t.email || `${cleanUser}@example.com`,
+              username: t.subscription.super_admin_username,
+              password: t.subscription.super_admin_password,
+              phone: t.phone || '',
+              role: 'super_admin',
+              role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
+              status: 'active',
+              must_change_password: false,
+              allowed_category_ids: ['all'],
+              allowed_pump_ids: ['all'],
+              permissions: {
+                can_add_fuel: true,
+                can_manage_vehicles: true,
+                can_manage_pumps: true,
+                can_view_reports: true,
+                can_manage_users: true,
+                can_edit_settings: true
+              },
+              created_at: t.created_at || '2026-08-01'
+            };
+            break;
+          }
+        }
+      }
+
+      if (!matchedUser || !targetTenant) {
+        res.status(401).json({ success: false, message: 'Invalid username or password. Please verify your credentials.' });
+        return;
+      }
+
+      // STRICT STATUS CHECK
+      if (
+        targetTenant.deleted_at ||
+        targetTenant.status === 'suspended' ||
+        targetTenant.status === 'inactive' ||
+        targetTenant.subscription?.status === 'suspended' ||
+        targetTenant.subscription?.status === 'inactive'
+      ) {
+        res.status(403).json({
+          success: false,
+          suspended: true,
+          message: "This workspace is suspended or expired. Please contact the administrator."
+        });
+        return;
+      }
+
+      if (matchedUser.status === 'suspended') {
+        res.status(403).json({
+          success: false,
+          message: "Your user account is suspended. Please contact your company administrator."
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: "Credentials verified.",
+        tenant: targetTenant,
+        user: matchedUser
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Login error' });
+    }
   });
 
   // Health check
