@@ -48,11 +48,11 @@ export const INITIAL_FUEL_TYPES: FuelType[] = [
 ];
 
 export const INITIAL_CATEGORIES: VehicleCategory[] = [
-  { id: 'cat_1', tenant_id: 'default', user_id: 'u_admin', name: 'Heavy Excavator', metric_type: 'lph', default_benchmark: 14.0, icon_name: 'Shovel' },
-  { id: 'cat_2', tenant_id: 'default', user_id: 'u_admin', name: 'Dump Truck', metric_type: 'kmpl', default_benchmark: 3.2, icon_name: 'Truck' },
-  { id: 'cat_3', tenant_id: 'default', user_id: 'u_admin', name: 'Diesel Generator', metric_type: 'lph', default_benchmark: 18.0, icon_name: 'Zap' },
-  { id: 'cat_4', tenant_id: 'default', user_id: 'u_admin', name: 'Mobile Tanker Bowzer', metric_type: 'kmpl', default_benchmark: 4.0, icon_name: 'Fuel' },
-  { id: 'cat_5', tenant_id: 'default', user_id: 'u_admin', name: 'Site Pickup & SUV', metric_type: 'kmpl', default_benchmark: 8.5, icon_name: 'Car' }
+  { id: 'cat_1', tenant_id: 'default', user_id: 'u_admin', name: 'Heavy Excavator', description: 'Heavy earth moving and mining excavators', metric_type: 'lph', default_benchmark: 14.0, icon_name: 'Shovel' },
+  { id: 'cat_2', tenant_id: 'default', user_id: 'u_admin', name: 'Dump Truck', description: 'Heavy material transport dump trucks', metric_type: 'kmpl', default_benchmark: 3.2, icon_name: 'Truck' },
+  { id: 'cat_3', tenant_id: 'default', user_id: 'u_admin', name: 'Diesel Generator', description: 'Continuous running standby diesel generators', metric_type: 'lph', default_benchmark: 18.0, icon_name: 'Zap' },
+  { id: 'cat_4', tenant_id: 'default', user_id: 'u_admin', name: 'Mobile Tanker Bowzer', description: 'On-site mobile fuel dispensing tankers', metric_type: 'kmpl', default_benchmark: 4.0, icon_name: 'Fuel' },
+  { id: 'cat_5', tenant_id: 'default', user_id: 'u_admin', name: 'Site Pickup & SUV', description: 'Site engineering and supervisory pickups', metric_type: 'kmpl', default_benchmark: 8.5, icon_name: 'Car' }
 ];
 
 export const INITIAL_VEHICLES: Vehicle[] = [];

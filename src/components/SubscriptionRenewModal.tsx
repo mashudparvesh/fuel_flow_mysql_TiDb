@@ -128,7 +128,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
                   {currentPlan.price_bdt.toLocaleString()} BDT
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400 ml-1.5">
-                  ({language === 'bn' ? currentPlan.name_bn : currentPlan.name})
+                  ({language === 'bn' ? currentPlan.name_bn : (currentPlan.name_en || currentPlan.name_bn)})
                 </span>
               </div>
 
