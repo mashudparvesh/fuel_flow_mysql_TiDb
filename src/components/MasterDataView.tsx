@@ -18,11 +18,16 @@ import {
   AlertTriangle,
   MapPin,
   Phone,
+  FileSpreadsheet,
   X
 } from 'lucide-react';
 import { Company, FuelPump, FuelType } from '../types';
 
-export const MasterDataView: React.FC = () => {
+interface MasterDataViewProps {
+  onOpenBulkImport?: (entity?: any) => void;
+}
+
+export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport }) => {
   const {
     language,
     currentUser,
@@ -472,11 +477,26 @@ export const MasterDataView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Title */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-          {t.title}
-        </h2>
-        <p className="text-xs text-slate-500 font-medium">{t.subtitle}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            {t.title}
+          </h2>
+          <p className="text-xs text-slate-500 font-medium">{t.subtitle}</p>
+        </div>
+
+        {onOpenBulkImport && !isViewer && (
+          <button
+            type="button"
+            id="masterdata-bulk-import-btn"
+            onClick={() => onOpenBulkImport(activeTab)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-emerald-600/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
+            title="Bulk import data from Excel/CSV (Includes sample format templates)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Bulk Import {activeTab.replace('_', ' ').toUpperCase()} (Excel/CSV)</span>
+          </button>
+        )}
       </div>
 
       {/* Tabs */}

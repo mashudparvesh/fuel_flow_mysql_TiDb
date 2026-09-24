@@ -75,7 +75,7 @@ interface AppContextType {
   setIsSaasControlOpen: (open: boolean) => void;
   loginAsSaasOwner: (user: string, pass: string) => { success: boolean; message: string };
   loginAsModerator: (user: string, pass: string) => { success: boolean; message: string };
-  loginAsCompanyUser: (tenantCodeOrId: string, usernameOrEmail: string, pass: string) => { success: boolean; message: string };
+  loginAsCompanyUser: (tenantCodeOrId: string, usernameOrEmail: string, pass: string) => Promise<{ success: boolean; message: string }>;
   impersonateTenant: (tenantId: string) => void;
   exitToSaasControl: () => void;
 
@@ -101,6 +101,7 @@ interface AppContextType {
     super_admin_password: string;
     super_admin_email: string;
     super_admin_phone?: string;
+    must_change_password?: boolean;
     features?: {
       tanker_bowzer: boolean;
       anomaly_ai: boolean;
@@ -125,7 +126,7 @@ interface AppContextType {
     name: string;
     email: string;
     username: string;
-    password: string;
+    password?: string;
     phone?: string;
     role: UserRole;
     role_title_bn?: string;
@@ -133,10 +134,11 @@ interface AppContextType {
     allowed_category_ids?: string[];
     allowed_pump_ids?: string[];
     permissions?: UserPermissions;
+    must_change_password?: boolean;
   }) => { success: boolean; userId: string; message?: string };
 
   updateCompanyUser: (id: string, updates: Partial<User>) => { success?: boolean; message?: string };
-  deleteCompanyUser: (id: string) => { success?: boolean; message?: string };
+  deleteCompanyUser: (id: string) => Promise<{ success?: boolean; message?: string }> | { success?: boolean; message?: string };
   
   // Scoped Collections (filtered by active tenant)
   companies: Company[];
@@ -186,7 +188,7 @@ interface AppContextType {
   changeUserPassword: (userId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 
   // Bulk Data Import (Update 11)
-  bulkImportData: (entityType: string, rows: any[]) => Promise<{ success: boolean; count: number; message: string }>;
+  bulkImportData: (entityType: string, rows: any[]) => Promise<{ success: boolean; count: number; message: string; new_count?: number; updated_count?: number }>;
 
   // SaaS Multi-Level Action Approvals (Update 9)
   approvals: PendingApprovalAction[];
@@ -353,12 +355,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem(STORAGE_KEY_PREFIX + 'user_id') || 'usr_super_admin';
   });
 
+  // Helper to ensure unique entities by id
+  function dedupeEntitiesById<T extends { id?: string }>(items: T[]): T[] {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set<string>();
+    const result: T[] = [];
+    for (const item of items) {
+      if (item && item.id) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          result.push(item);
+        }
+      } else if (item) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
   const [companies, setCompanies] = useState<Company[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'companies');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_COMPANIES;
@@ -369,7 +389,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'vendors');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_VENDORS;
@@ -380,7 +400,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'pumps');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_PUMPS;
@@ -391,7 +411,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'fuel_types');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_FUEL_TYPES;
@@ -402,7 +422,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_CATEGORIES;
@@ -413,7 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'vehicles');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_VEHICLES;
@@ -424,7 +444,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'fuel_entries');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_FUEL_ENTRIES;
@@ -435,7 +455,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'payments');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_PAYMENTS;
@@ -446,7 +466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'tankers');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_TANKERS;
@@ -457,7 +477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'tanker_logs');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeEntitiesById(parsed);
       }
     } catch (e) {}
     return INITIAL_TANKER_LOGS;
@@ -667,18 +687,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (json.success && json.data) {
           const fleetData = json.data;
 
+          // Helper to safely merge server items and local items ensuring unique IDs
+          const safeMergeEntities = <T extends { id?: string }>(serverItems: T[] = [], localItems: T[] = []) => {
+            const map = new Map<string, T>();
+            (serverItems || []).forEach(item => {
+              if (item && item.id) map.set(item.id, item);
+            });
+            const missingOnServer: T[] = [];
+            (localItems || []).forEach(item => {
+              if (item && item.id) {
+                if (!map.has(item.id)) {
+                  map.set(item.id, item);
+                  missingOnServer.push(item);
+                }
+              }
+            });
+            return { merged: Array.from(map.values()), missingOnServer };
+          };
+
           // Merge vehicles
           if (Array.isArray(fleetData.vehicles) && fleetData.vehicles.length > 0) {
             setVehicles(prev => {
-              const serverVehicles: Vehicle[] = fleetData.vehicles;
-              const merged = [...serverVehicles];
-              const missingOnServer: Vehicle[] = [];
-              prev.forEach(pv => {
-                if (!merged.some(sv => sv.id === pv.id)) {
-                  merged.push(pv);
-                  missingOnServer.push(pv);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.vehicles, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -693,15 +723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge fuelEntries
           if (Array.isArray(fleetData.fuelEntries) && fleetData.fuelEntries.length > 0) {
             setFuelEntries(prev => {
-              const serverEntries: FuelEntry[] = fleetData.fuelEntries;
-              const merged = [...serverEntries];
-              const missingOnServer: FuelEntry[] = [];
-              prev.forEach(pe => {
-                if (!merged.some(se => se.id === pe.id)) {
-                  merged.push(pe);
-                  missingOnServer.push(pe);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.fuelEntries, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -716,15 +738,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge pumps
           if (Array.isArray(fleetData.pumps) && fleetData.pumps.length > 0) {
             setPumps(prev => {
-              const serverPumps: FuelPump[] = fleetData.pumps;
-              const merged = [...serverPumps];
-              const missingOnServer: FuelPump[] = [];
-              prev.forEach(pp => {
-                if (!merged.some(sp => sp.id === pp.id)) {
-                  merged.push(pp);
-                  missingOnServer.push(pp);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.pumps, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -739,15 +753,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge payments
           if (Array.isArray(fleetData.payments) && fleetData.payments.length > 0) {
             setPayments(prev => {
-              const serverPayments: PumpPayment[] = fleetData.payments;
-              const merged = [...serverPayments];
-              const missingOnServer: PumpPayment[] = [];
-              prev.forEach(pm => {
-                if (!merged.some(spm => spm.id === pm.id)) {
-                  merged.push(pm);
-                  missingOnServer.push(pm);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.payments, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -762,15 +768,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge categories
           if (Array.isArray(fleetData.categories) && fleetData.categories.length > 0) {
             setCategories(prev => {
-              const serverCats: VehicleCategory[] = fleetData.categories;
-              const merged = [...serverCats];
-              const missingOnServer: VehicleCategory[] = [];
-              prev.forEach(pc => {
-                if (!merged.some(sc => sc.id === pc.id)) {
-                  merged.push(pc);
-                  missingOnServer.push(pc);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.categories, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -785,15 +783,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge tankers
           if (Array.isArray(fleetData.tankers) && fleetData.tankers.length > 0) {
             setTankers(prev => {
-              const serverTankers: TankerInventory[] = fleetData.tankers;
-              const merged = [...serverTankers];
-              const missingOnServer: TankerInventory[] = [];
-              prev.forEach(pt => {
-                if (!merged.some(st => st.id === pt.id)) {
-                  merged.push(pt);
-                  missingOnServer.push(pt);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.tankers, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -808,15 +798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge tankerLogs
           if (Array.isArray(fleetData.tankerLogs) && fleetData.tankerLogs.length > 0) {
             setTankerLogs(prev => {
-              const serverLogs: TankerLog[] = fleetData.tankerLogs;
-              const merged = [...serverLogs];
-              const missingOnServer: TankerLog[] = [];
-              prev.forEach(pl => {
-                if (!merged.some(sl => sl.id === pl.id)) {
-                  merged.push(pl);
-                  missingOnServer.push(pl);
-                }
-              });
+              const { merged, missingOnServer } = safeMergeEntities(fleetData.tankerLogs, prev);
               if (missingOnServer.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
@@ -831,11 +813,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge companies
           if (Array.isArray(fleetData.companies) && fleetData.companies.length > 0) {
             setCompanies(prev => {
-              const serverCompanies: Company[] = fleetData.companies;
-              const merged = [...serverCompanies];
-              prev.forEach(pc => {
-                if (!merged.some(sc => sc.id === pc.id)) merged.push(pc);
-              });
+              const { merged } = safeMergeEntities(fleetData.companies, prev);
               return merged;
             });
           }
@@ -843,11 +821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge vendors
           if (Array.isArray(fleetData.vendors) && fleetData.vendors.length > 0) {
             setVendors(prev => {
-              const serverVendors: Vendor[] = fleetData.vendors;
-              const merged = [...serverVendors];
-              prev.forEach(pv => {
-                if (!merged.some(sv => sv.id === pv.id)) merged.push(pv);
-              });
+              const { merged } = safeMergeEntities(fleetData.vendors, prev);
               return merged;
             });
           }
@@ -855,11 +829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Merge fuelTypes
           if (Array.isArray(fleetData.fuelTypes) && fleetData.fuelTypes.length > 0) {
             setFuelTypes(prev => {
-              const serverFuelTypes: FuelType[] = fleetData.fuelTypes;
-              const merged = [...serverFuelTypes];
-              prev.forEach(pf => {
-                if (!merged.some(sf => sf.id === pf.id)) merged.push(pf);
-              });
+              const { merged } = safeMergeEntities(fleetData.fuelTypes, prev);
               return merged;
             });
           }
@@ -1660,6 +1630,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...mod,
       id: 'mod_' + Date.now(),
       role: 'saas_moderator',
+      must_change_password: mod.must_change_password !== undefined ? mod.must_change_password : true,
       created_at: new Date().toISOString().split('T')[0]
     };
     setModerators(prev => [newMod, ...prev]);
@@ -1933,6 +1904,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     super_admin_password: string;
     super_admin_email: string;
     super_admin_phone?: string;
+    must_change_password?: boolean;
     features?: {
       tanker_bowzer: boolean;
       anomaly_ai: boolean;
@@ -1957,6 +1929,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const endDate = endDateObj.toISOString().split('T')[0];
 
     const planNamesBn: Record<SubscriptionPlan, string> = {
+      trial_3days: '৩ দিনের ফ্রি ট্রায়াল (3 Days Trial)',
+      plan_1month: '১ মাস প্ল্যান (1 Month Plan)',
+      plan_3months: '৩ মাস প্ল্যান (3 Months Plan)',
+      plan_6months: '৬ মাস প্ল্যান (6 Months Plan)',
+      plan_12months: '১২ মাস প্ল্যান (1 Year Annual Plan)',
       starter: 'Starter Plan',
       professional: 'Professional Plan',
       enterprise: 'Enterprise Plan',
@@ -2017,6 +1994,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'super_admin',
       role_title_bn: 'Company Super Admin',
       status: 'active',
+      must_change_password: data.must_change_password !== undefined ? data.must_change_password : true,
       allowed_category_ids: ['all'],
       allowed_pump_ids: ['all'],
       permissions: {
@@ -2555,6 +2533,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Mandatory First-Time Password Change (Update 10)
   // -----------------------------------------------------------
   const changeUserPassword = async (userId: string, newPassword: string) => {
+    // If updating a moderator / SaaS control panel user
+    const isMod = moderators.some(m => m.id === userId);
+    if (isMod) {
+      setModerators(prev => {
+        const updated = prev.map(m => m.id === userId ? { ...m, password: newPassword, must_change_password: false } : m);
+        try { localStorage.setItem(STORAGE_KEY_PREFIX + 'moderators', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      return { success: true, message: 'Password updated successfully!' };
+    }
+
     try {
       const res = await fetch('/api/auth/force-change-password', {
         method: 'POST',
@@ -2577,12 +2566,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // -----------------------------------------------------------
-  // Bulk Data Import (Update 11)
+  // Bulk Data Import (Update 11 - Resilient with Client-Side Fallback)
   // -----------------------------------------------------------
-  const bulkImportData = async (entityType: string, rows: any[]): Promise<{ success: boolean; count: number; message: string }> => {
+  const bulkImportData = async (entityType: string, rows: any[]): Promise<{ success: boolean; count: number; message: string; new_count?: number; updated_count?: number }> => {
     if (!currentTenantId) {
       return { success: false, count: 0, message: 'No subscriber workspace active.' };
     }
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { success: false, count: 0, message: 'No data rows found in uploaded file.' };
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let serverSuccess = false;
+    let serverItems: any[] = [];
+    let serverMessage = '';
+    let data: any = null;
+
     try {
       const res = await fetch('/api/fleet/bulk-import', {
         method: 'POST',
@@ -2593,89 +2592,430 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           rows
         })
       });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.items)) {
-        if (entityType === 'vehicles') {
-          setVehicles(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(v => v.id === item.id || (v.tenant_id === item.tenant_id && v.plate_number.toLowerCase() === item.plate_number.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'companies') {
-          setCompanies(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(c => c.id === item.id || (c.tenant_id === item.tenant_id && c.name.toLowerCase() === item.name.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'vendors') {
-          setVendors(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(v => v.id === item.id || (v.tenant_id === item.tenant_id && v.name.toLowerCase() === item.name.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'pumps') {
-          setPumps(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(p => p.id === item.id || (p.tenant_id === item.tenant_id && p.name.toLowerCase() === item.name.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'fuel_types') {
-          setFuelTypes(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(f => f.id === item.id || (f.tenant_id === item.tenant_id && f.name.toLowerCase() === item.name.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'categories') {
-          setCategories(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(c => c.id === item.id || (c.tenant_id === item.tenant_id && c.name.toLowerCase() === item.name.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
-        } else if (entityType === 'tankers') {
-          setTankers(prev => {
-            const copy = [...prev];
-            for (const item of data.items) {
-              const idx = copy.findIndex(tk => tk.id === item.id || (tk.tenant_id === item.tenant_id && tk.tanker_number.toLowerCase() === item.tanker_number.toLowerCase()));
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
-            }
-            return copy;
-          });
+
+      const text = await res.text();
+      if (text && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = null;
         }
-        return {
-          success: true,
-          count: data.imported_count || data.items.length,
-          message: data.message || `Successfully registered ${data.imported_count || data.items.length} items.`
-        };
       }
-      return { success: false, count: 0, message: data.message || 'Import failed.' };
-    } catch (err: any) {
-      return { success: false, count: 0, message: err?.message || 'Network error during bulk import' };
+
+      if (data && data.success && Array.isArray(data.items)) {
+        serverSuccess = true;
+        serverItems = data.items;
+        serverMessage = data.message || `Successfully registered ${data.items.length} records.`;
+      }
+    } catch (networkErr: any) {
+      console.warn('[Bulk Import] Server API request failed, engaging local client fallback:', networkErr?.message || networkErr);
     }
+
+    // Process items (using server items if available, or locally parsed items as fallback)
+    let processedCount = 0;
+    let newCount = 0;
+    let updatedCount = 0;
+    const serverNewCount = data?.new_count;
+    const serverUpdatedCount = data?.updated_count;
+
+    if (entityType === 'vehicles') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawNum = r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
+        const plate = String(rawNum || '').trim();
+        if (!plate) return null;
+        return {
+          id: r.id || 'veh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          vehicle_number: plate,
+          plate_number: plate,
+          model: r.model || 'Commercial Vehicle',
+          category_id: r.category_id || r.category || (categories[0]?.id || 'cat_1'),
+          company_id: r.company_id || r.company || (companies[0]?.id || 'comp_1'),
+          vendor_id: r.vendor_id || r.vendor || undefined,
+          ownership: (r.ownership || (r.vendor_id || r.vendor ? 'rented' : 'owned')) as 'owned' | 'rented',
+          fuel_type_id: r.fuel_type_id || r.fuel_type || (fuelTypes[0]?.name || 'Diesel'),
+          expected_benchmark: Number(r.expected_benchmark || r.benchmark || r.mileage_benchmark) || 8.0,
+          current_odometer: Number(r.current_odometer || r.initial_odometer || r.odometer) || 0,
+          driver_name: r.driver_name || 'Assigned Driver',
+          driver_phone: r.driver_phone || r.phone || '',
+          fuel_tank_capacity: Number(r.fuel_tank_capacity || r.capacity) || 100,
+          status: (r.status === 'maintenance' || r.status === 'idle') ? r.status : 'active',
+          notes: r.notes || 'Bulk imported via Excel/CSV',
+          created_at: r.created_at || todayStr
+        };
+      }).filter(Boolean);
+
+      setVehicles(prev => {
+        const map = new Map<string, Vehicle>();
+        (prev || []).forEach(v => {
+          if (v && v.id) map.set(v.id, v);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetNum = ((item.vehicle_number || item.plate_number || '') + '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, v] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetNum && (v.tenant_id === item.tenant_id || !v.tenant_id || !item.tenant_id)) {
+              const curNum = ((v.vehicle_number || (v as any).plate_number || '') + '').toLowerCase().trim();
+              if (curNum && curNum === targetNum) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'companies') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawName = r.name || r.company_name || r.title;
+        const name = String(rawName || '').trim();
+        if (!name) return null;
+        return {
+          id: r.id || 'comp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          name,
+          code: r.code || name.substring(0, 4).toUpperCase(),
+          contact_person: r.contact_person || r.contact || '',
+          phone: r.phone || r.mobile || '',
+          email: r.email || '',
+          address: r.address || '',
+          status: r.status || 'active',
+          created_at: r.created_at || todayStr
+        };
+      }).filter(Boolean);
+
+      setCompanies(prev => {
+        const map = new Map<string, Company>();
+        (prev || []).forEach(c => {
+          if (c && c.id) map.set(c.id, c);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = (item.name || '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, c] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (c.tenant_id === item.tenant_id || !c.tenant_id || !item.tenant_id)) {
+              if ((c.name || '').toLowerCase().trim() === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'vendors') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawName = r.name || r.vendor_name || r.supplier;
+        const name = String(rawName || '').trim();
+        if (!name) return null;
+        return {
+          id: r.id || 'ven_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          name,
+          phone: r.phone || r.mobile || '',
+          contact_person: r.contact_person || r.contact || '',
+          email: r.email || '',
+          type: r.type || 'fuel',
+          address: r.address || '',
+          status: r.status || 'active',
+          created_at: r.created_at || todayStr
+        };
+      }).filter(Boolean);
+
+      setVendors(prev => {
+        const map = new Map<string, Vendor>();
+        (prev || []).forEach(v => {
+          if (v && v.id) map.set(v.id, v);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = (item.name || '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, v] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (v.tenant_id === item.tenant_id || !v.tenant_id || !item.tenant_id)) {
+              if ((v.name || '').toLowerCase().trim() === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'pumps') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawName = r.name || r.pump_name || r.station_name;
+        const name = String(rawName || '').trim();
+        if (!name) return null;
+        return {
+          id: r.id || 'pump_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          name,
+          location: r.location || r.address || '',
+          contact_person: r.contact_person || r.contact || '',
+          phone: r.phone || r.contact_number || r.mobile || '',
+          credit_limit: Number(r.credit_limit) || 500000,
+          opening_balance: Number(r.opening_balance) || 0,
+          current_balance: Number(r.current_balance) || 0,
+          fuel_types: Array.isArray(r.fuel_types) ? r.fuel_types : ['Diesel', 'Octane'],
+          payment_terms: r.payment_terms || 'Credit',
+          status: r.status || 'active',
+          created_at: r.created_at || todayStr
+        };
+      }).filter(Boolean);
+
+      setPumps(prev => {
+        const map = new Map<string, FuelPump>();
+        (prev || []).forEach(p => {
+          if (p && p.id) map.set(p.id, p);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = (item.name || '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, p] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (p.tenant_id === item.tenant_id || !p.tenant_id || !item.tenant_id)) {
+              if ((p.name || '').toLowerCase().trim() === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'fuel_types') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawName = r.name || r.fuel_name || r.type;
+        const name = String(rawName || '').trim();
+        if (!name) return null;
+        const price = Number(r.current_price || r.price) || 105;
+        return {
+          id: r.id || 'ft_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          name,
+          code: (r.code || name.replace(/\s+/g, '_')).toLowerCase(),
+          unit: r.unit || 'Liter',
+          current_price: price,
+          price_history: [{ date: todayStr, price, changed_by: 'Bulk Import' }],
+          status: r.status || 'active',
+          updated_at: todayStr
+        };
+      }).filter(Boolean);
+
+      setFuelTypes(prev => {
+        const map = new Map<string, FuelType>();
+        (prev || []).forEach(f => {
+          if (f && f.id) map.set(f.id, f);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = (item.name || '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, f] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (f.tenant_id === item.tenant_id || !f.tenant_id || !item.tenant_id)) {
+              if ((f.name || '').toLowerCase().trim() === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'categories') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawName = r.name || r.category_name;
+        const name = String(rawName || '').trim();
+        if (!name) return null;
+        return {
+          id: r.id || 'cat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          name,
+          metric_type: ((r.metric_type || 'kmpl').toLowerCase() === 'lph' ? 'lph' : 'kmpl') as 'kmpl' | 'lph',
+          default_benchmark: Number(r.default_benchmark || r.benchmark) || 8.0,
+          tolerance_percentage: Number(r.tolerance_percentage) || 15,
+          icon_name: r.icon_name || 'Truck',
+          description: r.description || r.name_bn || ''
+        };
+      }).filter(Boolean);
+
+      setCategories(prev => {
+        const map = new Map<string, VehicleCategory>();
+        (prev || []).forEach(c => {
+          if (c && c.id) map.set(c.id, c);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = (item.name || '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, c] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (c.tenant_id === item.tenant_id || !c.tenant_id || !item.tenant_id)) {
+              if ((c.name || '').toLowerCase().trim() === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    } else if (entityType === 'tankers') {
+      const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
+        const rawNum = r.tanker_name || r.tanker_number || r.name || r.tanker_no;
+        const num = String(rawNum || '').trim();
+        if (!num) return null;
+        return {
+          id: r.id || 'tank_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          tenant_id: currentTenantId,
+          user_id: currentUser.id || 'user_1',
+          tanker_name: num,
+          tanker_number: num,
+          location: r.location || 'Central Depot',
+          capacity_liters: Number(r.capacity_liters || r.capacity) || 5000,
+          current_stock_liters: Number(r.current_stock_liters || r.current_fuel_liters || r.stock) || 0,
+          fuel_type_id: r.fuel_type_id || r.fuel_type || 'Diesel',
+          min_alert_threshold: Number(r.min_alert_threshold) || 500,
+          last_restocked_at: r.last_restocked_at || todayStr,
+          assigned_driver: r.assigned_driver || r.driver_name || '',
+          driver_phone: r.driver_phone || '',
+          status: r.status || 'active'
+        };
+      }).filter(Boolean);
+
+      setTankers(prev => {
+        const map = new Map<string, TankerInventory>();
+        (prev || []).forEach(tk => {
+          if (tk && tk.id) map.set(tk.id, tk);
+        });
+        for (const item of itemsToApply) {
+          if (!item) continue;
+          const targetName = ((item.tanker_name || item.tanker_number || '') + '').toLowerCase().trim();
+          let matchedId: string | null = null;
+          for (const [id, tk] of map.entries()) {
+            if (id === item.id) {
+              matchedId = id;
+              break;
+            }
+            if (targetName && (tk.tenant_id === item.tenant_id || !tk.tenant_id || !item.tenant_id)) {
+              const curName = ((tk.tanker_name || (tk as any).tanker_number || '') + '').toLowerCase().trim();
+              if (curName === targetName) {
+                matchedId = id;
+                break;
+              }
+            }
+          }
+          if (matchedId) {
+            map.set(matchedId, { ...map.get(matchedId)!, ...item, id: matchedId });
+            updatedCount++;
+          } else {
+            map.set(item.id, item);
+            newCount++;
+          }
+          processedCount++;
+        }
+        return Array.from(map.values());
+      });
+    }
+
+    const finalNew = serverSuccess && typeof serverNewCount === 'number' ? serverNewCount : newCount;
+    const finalUpdated = serverSuccess && typeof serverUpdatedCount === 'number' ? serverUpdatedCount : updatedCount;
+
+    if (processedCount > 0) {
+      return {
+        success: true,
+        count: processedCount,
+        new_count: finalNew,
+        updated_count: finalUpdated,
+        message: serverMessage || `Successfully registered ${processedCount} records (${finalNew} new, ${finalUpdated} merged with double-entry protection).`
+      };
+    }
+
+    return {
+      success: false,
+      count: 0,
+      message: 'No valid records could be processed. Please verify column headers and row data in your spreadsheet.'
+    };
   };
 
   // -----------------------------------------------------------

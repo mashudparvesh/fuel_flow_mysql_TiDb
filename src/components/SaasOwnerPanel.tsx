@@ -203,6 +203,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     super_admin_password: '',
     super_admin_email: '',
     super_admin_phone: '',
+    must_change_password: true,
     notes: ''
   });
 
@@ -214,6 +215,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     email: '',
     phone: '',
     owner_role: 'MODERATOR' as OwnerRole,
+    must_change_password: true,
     can_manage_subscriptions: true,
     can_reset_passwords: true,
     can_add_subscribers: true,
@@ -340,6 +342,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       super_admin_password: newSubForm.super_admin_password,
       super_admin_email: newSubForm.super_admin_email || newSubForm.email || 'admin@domain.com',
       super_admin_phone: newSubForm.super_admin_phone || newSubForm.phone,
+      must_change_password: newSubForm.must_change_password,
       notes: newSubForm.notes
     });
 
@@ -366,6 +369,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       super_admin_password: '',
       super_admin_email: '',
       super_admin_phone: '',
+      must_change_password: true,
       notes: ''
     });
   };
@@ -568,6 +572,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       phone: newModForm.phone,
       status: 'active',
       owner_role: newModForm.owner_role || 'MODERATOR',
+      must_change_password: newModForm.must_change_password,
       permissions: {
         can_manage_subscribers: Boolean(newModForm.can_add_subscribers || newModForm.can_manage_subscriptions),
         can_extend_subscriptions: Boolean(newModForm.can_manage_subscriptions),
@@ -588,6 +593,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       email: '',
       phone: '',
       owner_role: 'MODERATOR',
+      must_change_password: true,
       can_manage_subscriptions: true,
       can_reset_passwords: true,
       can_add_subscribers: true,
@@ -1339,9 +1345,20 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         <span className="text-slate-400">Username:</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.username}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center">
                         <span className="text-slate-400">Password:</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.password}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-slate-800 dark:text-white">{mod.password}</span>
+                          {mod.must_change_password ? (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[9px] font-bold border border-amber-500/20" title="Must change password on login">
+                              Reset Required
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-bold border border-emerald-500/20" title="Password is set">
+                              Active
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {mod.phone && (
                         <div className="flex justify-between">
@@ -1384,6 +1401,18 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           }`}
                         >
                           {mod.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            updateModerator(mod.id, {
+                              must_change_password: !mod.must_change_password
+                            });
+                          }}
+                          className="text-[11px] text-amber-600 hover:underline cursor-pointer"
+                          title="Toggle force password change on next login"
+                        >
+                          {mod.must_change_password ? 'Clear PW Mandate' : 'Force PW Reset'}
                         </button>
 
                         <button
@@ -2104,6 +2133,15 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       onChange={e => setNewSubForm(prev => ({ ...prev, super_admin_password: e.target.value }))}
                       className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
                     />
+                    <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newSubForm.must_change_password}
+                        onChange={e => setNewSubForm(prev => ({ ...prev, must_change_password: e.target.checked }))}
+                        className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 border-slate-300 dark:border-slate-600"
+                      />
+                      <span>Force password change on first login (বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -2344,6 +2382,18 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-[11px] text-slate-700 dark:text-slate-300 font-semibold cursor-pointer bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={newModForm.must_change_password}
+                    onChange={e => setNewModForm(prev => ({ ...prev, must_change_password: e.target.checked }))}
+                    className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 border-slate-300 dark:border-slate-600"
+                  />
+                  <span>Force password change on first login (প্রথমবার লগইনে বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-2">

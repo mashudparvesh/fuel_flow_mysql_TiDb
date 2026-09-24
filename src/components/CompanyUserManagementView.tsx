@@ -25,6 +25,7 @@ import {
   Building2,
   Shield,
   Crown,
+  AlertCircle,
   X
 } from 'lucide-react';
 

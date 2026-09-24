@@ -26,6 +26,7 @@ import {
   Sliders,
   DollarSign
 } from 'lucide-react';
+import { OFFICIAL_SUBSCRIPTION_PLANS, SubscriptionPlanId, SubscriptionPlanConfig } from '../types';
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
@@ -40,7 +41,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Registration Modal State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'pro'>('starter');
+  const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanId>('trial_3days');
   const [regCompanyName, setRegCompanyName] = useState('');
   const [regAdminName, setRegAdminName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -49,8 +50,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [regError, setRegError] = useState('');
   const [regSuccessResult, setRegSuccessResult] = useState<{
     companyName: string;
-    username: string;
-    tempPassword: string;
+    email: string;
+    isTrial: boolean;
+    planName: string;
   } | null>(null);
 
   // Custom Enterprise Modal State
@@ -81,110 +83,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const isAnomaly = isLph ? variancePercent > 20 : variancePercent < -20;
 
   // Open Registration modal for plan
-  const handleOpenRegister = (plan: 'starter' | 'pro') => {
-    setSelectedPlan(plan);
+  const handleOpenRegister = (planId: SubscriptionPlanId = 'trial_3days') => {
+    setSelectedPlanId(planId);
     setRegError('');
     setRegSuccessResult(null);
     setIsRegisterOpen(true);
   };
 
-  // Submit Registration & Automated Provisioning
-  const handleRegisterSubmit = async (e: React.FormEvent, simulatePayment = false) => {
+  // Submit Registration & Redirect to Payment or Activate Trial
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
 
-    if (!regCompanyName.trim() || !regAdminName.trim() || !regEmail.trim()) {
-      setRegError('Please provide Company Name, Admin Name, and Email.');
+    if (!regCompanyName.trim() || !regAdminName.trim() || !regEmail.trim() || !regPhone.trim()) {
+      setRegError('অনুগ্রহ করে কোম্পানির নাম, অ্যাডমিনের নাম, ইমেইল ও ফোন নম্বর সঠিকভাবে পূরণ করুন।');
       return;
     }
 
     setRegLoading(true);
 
+    const activePlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[0];
+
     try {
-      if (simulatePayment) {
-        // Direct simulation for instant credentials
-        const res = await fetch('/api/payment/simulate-success', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: regCompanyName.trim(),
-            admin_name: regAdminName.trim(),
-            email: regEmail.trim(),
-            phone: regPhone.trim(),
-            plan_id: selectedPlan,
-            max_vehicles: selectedPlan === 'starter' ? 5 : 20,
-            custom_price: selectedPlan === 'starter' ? 1500 : 3500
-          })
-        });
+      // 1. Submit Registration Record to Backend
+      const res = await fetch('/api/subscribers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_name: regCompanyName.trim(),
+          admin_name: regAdminName.trim(),
+          email: regEmail.trim(),
+          phone: regPhone.trim(),
+          plan_id: selectedPlanId
+        })
+      });
 
-        const data = await res.json();
-        setRegLoading(false);
+      const data = await res.json();
+      setRegLoading(false);
 
-        if (data.success) {
-          setRegSuccessResult({
-            companyName: data.tenant.name,
-            username: data.super_admin_username,
-            tempPassword: data.temporary_password
-          });
-        } else {
-          setRegError(data.message || 'Provisioning failed. Please try again.');
-        }
-      } else {
-        // Call checkout
-        const res = await fetch('/api/payment/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            full_name: regAdminName.trim(),
-            email: regEmail.trim(),
-            phone: regPhone.trim(),
-            amount: selectedPlan === 'starter' ? 1500 : 3500,
-            metadata: {
-              company_name: regCompanyName.trim(),
-              plan_id: selectedPlan,
-              max_vehicles: selectedPlan === 'starter' ? 5 : 20,
-              phone: regPhone.trim()
-            }
-          })
-        });
-
-        const data = await res.json();
-        setRegLoading(false);
-
-        if (data.success && data.payment_url) {
-          if (data.is_sandbox) {
-            // In sandbox simulation mode, complete immediately
-            const simRes = await fetch('/api/payment/simulate-success', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                company_name: regCompanyName.trim(),
-                admin_name: regAdminName.trim(),
-                email: regEmail.trim(),
-                phone: regPhone.trim(),
-                plan_id: selectedPlan,
-                max_vehicles: selectedPlan === 'starter' ? 5 : 20,
-                custom_price: selectedPlan === 'starter' ? 1500 : 3500
-              })
-            });
-            const simData = await simRes.json();
-            if (simData.success) {
-              setRegSuccessResult({
-                companyName: simData.tenant.name,
-                username: simData.super_admin_username,
-                tempPassword: simData.temporary_password
-              });
-              return;
-            }
-          }
-          window.location.href = data.payment_url;
-        } else {
-          setRegError(data.message || 'Unable to initiate payment.');
-        }
+      if (!data.success && !data.tenant) {
+        setRegError(data.message || 'নিবন্ধন প্রক্রিয়া সম্পন্ন করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।');
+        return;
       }
+
+      // 2. If it is a paid plan, open the official payment URL in a new window
+      if (!activePlan.is_trial && activePlan.payment_url) {
+        window.open(activePlan.payment_url, '_blank');
+      }
+
+      // 3. Show ONLY Thank You confirmation in popup (NO username or password exposed)
+      setRegSuccessResult({
+        companyName: regCompanyName.trim(),
+        email: regEmail.trim(),
+        isTrial: activePlan.is_trial,
+        planName: activePlan.name_bn
+      });
+
     } catch (err: any) {
       setRegLoading(false);
-      setRegError(err?.message || 'Connection error. Please try again.');
+      setRegError(err?.message || 'নেটওয়ার্ক সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
     }
   };
 
@@ -236,8 +193,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </a>
           </nav>
 
-          {/* Header Action Button */}
-          <div className="flex items-center gap-3">
+          {/* Header Action Buttons */}
+          <div className="flex items-center gap-2.5">
             {isAuthenticated ? (
               <button
                 onClick={onNavigateToDashboard}
@@ -247,13 +204,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
-              <button
-                onClick={onNavigateToLogin}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 text-xs sm:text-sm font-black shadow-md transition-all transform active:scale-95"
-              >
-                <User className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
+              <>
+                <button
+                  onClick={() => handleOpenRegister('trial_3days')}
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Register</span>
+                </button>
+                <button
+                  onClick={onNavigateToLogin}
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 text-xs sm:text-sm font-black shadow-md transition-all transform active:scale-95 cursor-pointer"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -267,7 +233,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="lg:col-span-7 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold mb-6 animate-pulse">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Automated Commercial SaaS &bull; Instant Provisioning</span>
+                <span>3-Day Free Trial Available &bull; Instant Cloud Provisioning</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
@@ -285,19 +251,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* Action Buttons */}
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                 <button
-                  onClick={() => handleOpenRegister('starter')}
-                  className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2.5"
+                  onClick={() => handleOpenRegister('trial_3days')}
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer"
                 >
-                  <span>Start Workspace Now</span>
+                  <span>Start 3-Day Free Trial</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
                 <a
-                  href="#interactive-demo"
+                  href="#pricing"
                   className="w-full sm:w-auto px-7 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-sm transition-all flex items-center justify-center gap-2"
                 >
-                  <Calculator className="w-4 h-4 text-amber-400" />
-                  <span>Try Live Simulator</span>
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <span>View All Plans & Pricing</span>
                 </a>
               </div>
 
@@ -305,15 +271,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="mt-10 pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Instant Baniq Pay Setup (bKash/Nagad/Rocket)</span>
+                  <span>Instant Payment Gateway (bKash/Nagad/Rocket/Bank)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Zero Infrastructure Configuration</span>
+                  <span>3-Day Free Trial (No Card Needed)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>{activeTenants.length}+ Active Subscribers</span>
+                  <span>Full Options & Modules Included</span>
                 </div>
               </div>
             </div>
@@ -452,8 +418,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div className="mt-4 text-center">
                   <button
-                    onClick={() => handleOpenRegister('pro')}
-                    className="text-xs font-bold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1"
+                    onClick={() => handleOpenRegister('plan_1month')}
+                    className="text-xs font-bold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>Deploy this anomaly AI for your fleet &rarr;</span>
                   </button>
@@ -537,185 +503,86 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">
-              Transparent Commercial Subscriptions
+              Official Fleet Subscriptions & Plans
             </h2>
             <p className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Automated Workspace Provisioning in Seconds
+              অফিসিয়াল সাবস্ক্রিপশন প্ল্যান ও স্বচ্ছ মূল্যতালিকা
             </p>
             <p className="text-sm text-slate-400 mt-3">
-              Pay seamlessly using personal or merchant bKash, Nagad, Rocket, or Bank via Baniq Pay.
+              প্রতিটি প্ল্যানে সব অপশন ও ফিচার আনলকড। ট্রায়াল প্ল্যানে কার্ড ছাড়াই ৩ দিন বিনামূল্যে ব্যবহার করুন।
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            {/* PLAN 1: STARTER */}
-            <div className="rounded-3xl bg-slate-900/80 border border-slate-800 p-8 flex flex-col justify-between hover:border-slate-700 transition-all relative">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Starter Plan</h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                    Small Fleet
-                  </span>
-                </div>
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">1,500</span>
-                    <span className="text-base font-bold text-slate-400">BDT</span>
-                    <span className="text-xs text-slate-400">/ month</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-stretch">
+            {OFFICIAL_SUBSCRIPTION_PLANS.map((plan) => {
+              const isTrial = plan.is_trial;
+              const isFeatured = plan.id === 'plan_1month' || plan.id === 'plan_12months';
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`rounded-3xl p-6 flex flex-col justify-between transition-all relative ${
+                    isFeatured
+                      ? 'bg-slate-900 border-2 border-amber-500/80 shadow-2xl shadow-amber-500/10'
+                      : 'bg-slate-900/80 border border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  {plan.badge && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-md">
+                      {plan.badge}
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-bold text-white">
+                        {plan.name_bn}
+                      </h3>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-amber-300">
+                        {plan.duration_days} Days
+                      </span>
+                    </div>
+
+                    <div className="mb-5">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-white">
+                          {plan.price_bdt === 0 ? 'Free' : plan.price_bdt.toLocaleString()}
+                        </span>
+                        {plan.price_bdt > 0 && (
+                          <span className="text-xs font-bold text-slate-400">BDT</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {isTrial ? '৩ দিনের ফ্রি ট্রায়াল' : 'ফুল অপশন আনলকড'}
+                      </p>
+                    </div>
+
+                    <ul className="space-y-2 text-xs text-slate-300 mb-6 border-t border-slate-800/80 pt-4">
+                      {plan.features.map((feat, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <span className="text-[11px] leading-tight">{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Ideal for local contractors & small logistics teams.
-                  </p>
+
+                  <button
+                    onClick={() => handleOpenRegister(plan.id)}
+                    className={`w-full py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer transform active:scale-95 ${
+                      isTrial
+                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                        : isFeatured
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black shadow-md'
+                        : 'bg-slate-800 hover:bg-slate-700 text-white'
+                    }`}
+                  >
+                    <span>{isTrial ? 'ফ্রি ট্রায়াল শুরু করুন' : 'প্ল্যান সিলেক্ট করুন'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-
-                <ul className="space-y-3.5 text-xs text-slate-300 mb-8 border-t border-slate-800/80 pt-6">
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Up to <strong>5 Vehicles / Heavy Machines</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Dual Metric Engine (LPH & KMPL)</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Highway Pump Credit & Balance Ledger</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Up to 3 Users (Super Admin & Operators)</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Fuel Slip Reconciliation & CSV Export</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => handleOpenRegister('starter')}
-                className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-2"
-              >
-                <span>Select Starter Plan</span>
-                <ChevronRight className="w-4 h-4 text-amber-400" />
-              </button>
-            </div>
-
-            {/* PLAN 2: PRO (FEATURED) */}
-            <div className="rounded-3xl bg-slate-900 border-2 border-amber-500/80 p-8 flex flex-col justify-between relative shadow-2xl shadow-amber-500/10">
-              {/* Popular Badge */}
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[11px] shadow-lg uppercase tracking-wider">
-                Most Popular for Construction
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Professional Plan</h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    Full Features
-                  </span>
-                </div>
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">3,500</span>
-                    <span className="text-base font-bold text-slate-400">BDT</span>
-                    <span className="text-xs text-slate-400">/ month</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-2">
-                    For construction sites, mega projects, and haulage fleets.
-                  </p>
-                </div>
-
-                <ul className="space-y-3.5 text-xs text-slate-300 mb-8 border-t border-slate-800/80 pt-6">
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Up to <strong>20 Vehicles / Excavators / Generators</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Mobile Bowzer Tanker Depot Module</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Physical Dip Stick & Dispense Reconciliation</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>AI Theft & Siphoning Variance Alerts</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Up to 10 Users with Role-Based Permissions</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Full Reports & Monthly Audit Logs</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => handleOpenRegister('pro')}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 transform active:scale-95"
-              >
-                <span>Select Pro Plan</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* PLAN 3: ENTERPRISE */}
-            <div className="rounded-3xl bg-slate-900/80 border border-slate-800 p-8 flex flex-col justify-between hover:border-slate-700 transition-all relative">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Enterprise Plan</h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                    Custom Scale
-                  </span>
-                </div>
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">Custom</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-2">
-                    For multi-site infrastructure groups with 50+ machines.
-                  </p>
-                </div>
-
-                <ul className="space-y-3.5 text-xs text-slate-300 mb-8 border-t border-slate-800/80 pt-6">
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Unlimited Machinery & Trucks</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Multi-Depot & Bowzer Network Integration</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Custom ERP / Accounting API Integration</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Dedicated Account Manager & Training</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>SLA 99.9% High Availability</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => {
-                  setEntSuccess(false);
-                  setIsEnterpriseModalOpen(true);
-                }}
-                className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-2"
-              >
-                <span>Contact Enterprise Team</span>
-                <ChevronRight className="w-4 h-4 text-amber-400" />
-              </button>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -731,13 +598,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </footer>
 
-      {/* REGISTRATION & BANIQ PAY MODAL */}
+      {/* REGISTRATION MODAL */}
       {isRegisterOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setIsRegisterOpen(false)}
-              className="absolute top-6 right-6 text-slate-400 hover:text-white"
+              className="absolute top-6 right-6 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -747,13 +614,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="mb-6">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-2">
                     <Building2 className="w-3.5 h-3.5" />
-                    <span>Instant Commercial Workspace Setup</span>
+                    <span>নতুন গ্রাহক নিবন্ধন &bull; New Workspace Registration</span>
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    Register for {selectedPlan === 'starter' ? 'Starter Plan' : 'Pro Plan'}
+                    নিবন্ধন ও প্ল্যান নির্বাচন
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Your company fleet workspace and Super Admin account will be automatically generated upon payment.
+                    কোম্পানির তথ্য প্রদান করুন এবং আপনার সুবিধাজনক প্ল্যান নির্বাচন করুন।
                   </p>
                 </div>
 
@@ -764,16 +631,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 )}
 
-                <form onSubmit={e => handleRegisterSubmit(e, false)} className="space-y-4">
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Company / Fleet Name *
+                      কোম্পানি / ফ্লিটের নাম (Company Name) *
                     </label>
                     <input
                       type="text"
                       value={regCompanyName}
                       onChange={e => setRegCompanyName(e.target.value)}
-                      placeholder="e.g., Padma Multipurpose Fleet"
+                      placeholder="e.g., Padma Multipurpose Fleet Ltd."
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
                       required
                     />
@@ -782,7 +649,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Admin Full Name *
+                        অ্যাডমিনের পুরো নাম (Admin Full Name) *
                       </label>
                       <input
                         type="text"
@@ -796,7 +663,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Email Address *
+                        ইমেইল ঠিকানা (Login credentials will be sent here) *
                       </label>
                       <input
                         type="email"
@@ -811,7 +678,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Phone Number (for bKash / Nagad / Rocket) *
+                      মোবাইল নম্বর (Phone Number) *
                     </label>
                     <input
                       type="tel"
@@ -819,90 +686,147 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       onChange={e => setRegPhone(e.target.value)}
                       placeholder="+880 1700-000000"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                      required
                     />
                   </div>
 
-                  {/* Plan Price Summary */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="text-slate-400 block">Total Due Today:</span>
-                      <span className="text-base font-black text-amber-400">
-                        {selectedPlan === 'starter' ? '1,500 BDT' : '3,500 BDT'}
-                      </span>
-                    </div>
-                    <div className="text-right text-[10px] text-slate-400">
-                      <span>Gateway: Baniq Pay</span>
-                      <span className="block text-emerald-400 font-semibold">
-                        Automated bKash, Nagad, Rocket
-                      </span>
+                  {/* Plan Selector inside Modal */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-2">
+                      সাবস্ক্রিপশন প্ল্যান নির্বাচন করুন:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {OFFICIAL_SUBSCRIPTION_PLANS.map(p => {
+                        const isSelected = selectedPlanId === p.id;
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => setSelectedPlanId(p.id)}
+                            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-amber-500/10 border-amber-500 text-white shadow-xs ring-1 ring-amber-500/30'
+                                : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                  isSelected ? 'border-amber-400 bg-amber-400' : 'border-slate-500'
+                                }`}
+                              >
+                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                              </div>
+                              <span className="font-bold">{p.name_bn}</span>
+                            </div>
+                            <span className="font-black text-amber-400">
+                              {p.price_bdt === 0 ? 'Free' : `${p.price_bdt} BDT`}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Submit Actions */}
-                  <div className="pt-2 space-y-2">
-                    <button
-                      type="submit"
-                      disabled={regLoading}
-                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      <span>
-                        {regLoading ? 'Initiating Gateway...' : 'Proceed to Baniq Pay Gateway'}
-                      </span>
-                    </button>
+                  {/* Selected Plan Summary */}
+                  {(() => {
+                    const currentPlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[0];
+                    return (
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-slate-400 block">প্রদেয় ফি (Payable Amount):</span>
+                          <span className="text-base font-black text-amber-400">
+                            {currentPlan.price_bdt === 0 ? '০ টাকা (Free Trial)' : `${currentPlan.price_bdt.toLocaleString()} BDT`}
+                          </span>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-400">
+                          <span className="block font-bold text-slate-200">{currentPlan.name_bn}</span>
+                          <span className="text-emerald-400">ফুল অপশন ও ফিচার আনলকড</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                    <button
-                      type="button"
-                      disabled={regLoading}
-                      onClick={e => handleRegisterSubmit(e, true)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all flex items-center justify-center gap-2"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Instant Simulation (Test Mode Credentials)</span>
-                    </button>
+                  {/* Submit Actions */}
+                  <div className="pt-2">
+                    {(() => {
+                      const currentPlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[0];
+                      return (
+                        <button
+                          type="submit"
+                          disabled={regLoading}
+                          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>
+                            {regLoading
+                              ? 'প্রক্রিয়াকরণ হচ্ছে...'
+                              : currentPlan.is_trial
+                              ? '৩ দিনের ফ্রি ট্রায়াল শুরু করুন (Start Free Trial)'
+                              : 'পেমেন্টে এগিয়ে যান (Proceed to Payment)'}
+                          </span>
+                        </button>
+                      );
+                    })()}
                   </div>
                 </form>
               </>
             ) : (
-              /* Success Result Card */
-              <div className="text-center py-4">
-                <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8" />
+              /* Thank You Popup ONLY (NO username or password shown!) */
+              <div className="text-center py-6">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4">
+                  <CheckCircle2 className="w-9 h-9" />
                 </div>
-                <h3 className="text-xl font-black text-white">
-                  Workspace Provisioned Successfully!
+
+                <h3 className="text-2xl font-black text-white tracking-tight mb-2">
+                  {regSuccessResult.isTrial ? 'অভিনন্দন! ট্রায়াল সক্রিয় হয়েছে' : 'ধন্যবাদ! আপনার রিকোয়েস্ট সফলভাবে জমা হয়েছে'}
                 </h3>
-                <p className="text-xs text-slate-300 mt-1 mb-6">
-                  Your dedicated fleet database has been created for{' '}
-                  <strong>{regSuccessResult.companyName}</strong>.
+
+                <p className="text-xs font-semibold text-amber-400 mb-4">
+                  {regSuccessResult.companyName} &bull; {regSuccessResult.planName}
                 </p>
 
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-left text-xs mb-6 space-y-2">
-                  <div className="flex justify-between py-1 border-b border-slate-900">
-                    <span className="text-slate-400">Super Admin Username:</span>
-                    <span className="font-mono font-bold text-amber-400">
-                      {regSuccessResult.username}
-                    </span>
+                {regSuccessResult.isTrial ? (
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-left text-xs mb-6 space-y-3">
+                    <p className="text-slate-300 leading-relaxed">
+                      আপনার ৩ দিনের ফ্রি ট্রায়াল সফলভাবে সক্রিয় করা হয়েছে। ট্রায়াল মেয়াদে সব মডিউল ও ফিচার আনলক থাকবে।
+                    </p>
+                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                      সুপার অ্যাডমিন লগইন আইডি ও বিস্তারিত নির্দেশনা আপনার দেওয়া ইমেইল <strong>{regSuccessResult.email}</strong> এ পাঠানো হয়েছে।
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-900">
-                    <span className="text-slate-400">Temporary Password:</span>
-                    <span className="font-mono font-bold text-amber-400">
-                      {regSuccessResult.tempPassword}
-                    </span>
+                ) : (
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-left text-xs mb-6 space-y-3">
+                    <p className="text-slate-200 leading-relaxed font-medium">
+                      পেমেন্ট গেটওয়ে উইন্ডোটি ওপেন করা হয়েছে। আপনার পেমেন্ট সম্পন্ন হওয়ার পর আমাদের টিম দ্রুত ভেরিফাই করবে।
+                    </p>
+                    <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                      <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>পেমেন্ট যাচাই পরবর্তী পদক্ষেপ:</span>
+                      </div>
+                      <p className="text-slate-300">
+                        আমরা ব্যক্তিগতভাবে আপনার পেমেন্ট চেক করে অবিলম্বে আপনার দেওয়া ইমেইল (<span className="text-amber-400 font-mono">{regSuccessResult.email}</span>)-এ লগইন আইডি ও পাসওয়ার্ড পাঠিয়ে দিব।
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      জরুরি সহায়তা বা প্রশ্নের জন্য আমাদের হেল্পলাইনে যোগাযোগ করুন: <strong className="text-slate-200">+880 1700-000000</strong>
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-400 pt-1">
-                    * A welcome email with these credentials has been dispatched. You will be prompted to change your temporary password upon first login.
-                  </p>
-                </div>
+                )}
 
                 <button
                   onClick={() => {
                     setIsRegisterOpen(false);
-                    onNavigateToLogin();
+                    const trialNav = regSuccessResult.isTrial;
+                    setRegSuccessResult(null);
+                    if (trialNav) {
+                      onNavigateToLogin();
+                    }
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Sign In with New Credentials &rarr;</span>
+                  <span>{regSuccessResult.isTrial ? 'লগইন পেজে যান (Go to Sign In)' : 'ঠিক আছে (Close)'}</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}

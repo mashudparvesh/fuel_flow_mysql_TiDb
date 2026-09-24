@@ -1650,14 +1650,23 @@ export const PumpCreditView: React.FC = () => {
               {/* PRINTABLE HEADER WITH COMPANY LETTERHEAD */}
               <div className="border-b-4 border-double border-slate-900 pb-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div>
-                    <h2 className="text-xl font-bold uppercase tracking-tight text-black">
-                      {currentTenant.name}
-                    </h2>
-                    <p className="text-xs text-slate-800">{currentTenant.address}</p>
-                    <p className="text-xs text-slate-700">
-                      Phone: {currentTenant.phone} &nbsp;|&nbsp; Reg Code: {currentTenant.code} &nbsp;|&nbsp; In-charge: {currentTenant.contact_person}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {currentTenant?.logo && (
+                      <img
+                        src={currentTenant.logo}
+                        alt={`${currentTenant.name} Logo`}
+                        className="h-10 sm:h-12 w-auto max-w-[120px] object-contain rounded-md border border-slate-300 p-1 bg-white shrink-0 shadow-xs"
+                      />
+                    )}
+                    <div>
+                      <h2 className="text-xl font-bold uppercase tracking-tight text-black">
+                        {currentTenant.name}
+                      </h2>
+                      <p className="text-xs text-slate-800">{currentTenant.address}</p>
+                      <p className="text-xs text-slate-700">
+                        Phone: {currentTenant.phone} &nbsp;|&nbsp; Reg Code: {currentTenant.code} &nbsp;|&nbsp; In-charge: {currentTenant.contact_person}
+                      </p>
+                    </div>
                   </div>
                   <div className="sm:text-right text-xs bg-slate-50 border border-slate-300 p-2.5 rounded-lg">
                     <span className="inline-block px-2.5 py-0.5 rounded bg-slate-900 text-white font-bold uppercase text-[10px] mb-1">

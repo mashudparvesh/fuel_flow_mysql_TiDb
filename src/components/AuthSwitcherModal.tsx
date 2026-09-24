@@ -86,15 +86,19 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
   };
 
   // Handle Company User Login
-  const handleCompanySubmit = (e: React.FormEvent) => {
+  const handleCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCompanyError('');
-    const res = loginAsCompanyUser(selectedTenantId, companyUsername, companyPassword);
-    if (res.success) {
-      setIsSaasControlOpen(false);
-      onClose();
-    } else {
-      setCompanyError(res.message);
+    try {
+      const res = await loginAsCompanyUser(selectedTenantId, companyUsername, companyPassword);
+      if (res.success) {
+        setIsSaasControlOpen(false);
+        onClose();
+      } else {
+        setCompanyError(res.message);
+      }
+    } catch (err: any) {
+      setCompanyError(err?.message || 'Login failed');
     }
   };
 

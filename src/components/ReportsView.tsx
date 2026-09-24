@@ -539,6 +539,7 @@ export const ReportsView: React.FC = () => {
       tenantPhone: currentTenant?.phone || '+880 1711-892341',
       tenantEmail: currentTenant?.email || 'admin@padmafleet.com',
       tenantContactPerson: currentTenant?.contact_person || 'M. A. Rahman',
+      tenantLogo: currentTenant?.logo || null,
       clientCompany: selectedTargetCompany ? {
         name: selectedTargetCompany.name,
         code: selectedTargetCompany.code,
@@ -649,7 +650,8 @@ export const ReportsView: React.FC = () => {
         address: letterheadInfo.tenantAddress,
         phone: letterheadInfo.tenantPhone,
         email: letterheadInfo.tenantEmail,
-        contactPerson: letterheadInfo.tenantContactPerson
+        contactPerson: letterheadInfo.tenantContactPerson,
+        logo: letterheadInfo.tenantLogo || undefined
       },
       clientInfo: selectedTargetCompany ? {
         name: selectedTargetCompany.name,
@@ -935,8 +937,8 @@ export const ReportsView: React.FC = () => {
               className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-medium"
             >
               <option value="all">{t.allVehicles}</option>
-              {availableVehiclesForFilter.map(v => (
-                <option key={v.id} value={v.id}>
+              {availableVehiclesForFilter.map((v, idx) => (
+                <option key={v.id ? `${v.id}_${idx}` : `v_${idx}`} value={v.id}>
                   {v.vehicle_number} ({v.driver_name})
                 </option>
               ))}
@@ -1009,10 +1011,18 @@ export const ReportsView: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             {/* Primary Issuer / Fleet Operator Company Details */}
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-9 h-9 rounded-lg bg-slate-900 dark:bg-amber-400 text-amber-400 dark:text-slate-950 flex items-center justify-center font-serif font-black text-lg shadow-sm">
-                  {letterheadInfo.tenantCode.slice(0, 2)}
-                </div>
+              <div className="flex items-center gap-3 mb-1.5">
+                {letterheadInfo.tenantLogo ? (
+                  <img
+                    src={letterheadInfo.tenantLogo}
+                    alt={`${letterheadInfo.tenantName} Logo`}
+                    className="h-10 sm:h-12 w-auto max-w-[120px] object-contain rounded-md border border-slate-200 dark:border-slate-700 bg-white p-1 shrink-0 shadow-xs"
+                  />
+                ) : (
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-slate-900 dark:bg-amber-400 text-amber-400 dark:text-slate-950 flex items-center justify-center font-serif font-black text-lg shadow-sm shrink-0">
+                    {letterheadInfo.tenantCode.slice(0, 2)}
+                  </div>
+                )}
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-amber-300 leading-tight">
                     {letterheadInfo.tenantName}
@@ -1144,13 +1154,13 @@ export const ReportsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  vehicleReportData.map(veh => {
+                  vehicleReportData.map((veh, idx) => {
                     const isGood = veh.isLph
                       ? veh.actualAvgMileage <= veh.benchmark
                       : veh.actualAvgMileage >= veh.benchmark;
 
                     return (
-                      <tr key={veh.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <tr key={veh.id ? `${veh.id}_${idx}` : `veh_rep_${idx}`} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
                         <td className="py-2.5 px-3 font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
                           {veh.vehicleNumber}
                         </td>
@@ -1307,8 +1317,8 @@ export const ReportsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  daysWiseReportData.map(day => (
-                    <tr key={day.date} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                  daysWiseReportData.map((day, idx) => (
+                    <tr key={day.date ? `${day.date}_${idx}` : `day_${idx}`} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
                       <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                         {day.date}
                       </td>
@@ -1388,8 +1398,8 @@ export const ReportsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  pumpReconciliationData.map(pump => (
-                    <tr key={pump.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                  pumpReconciliationData.map((pump, idx) => (
+                    <tr key={pump.id ? `${pump.id}_${idx}` : `pump_rec_${idx}`} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
                       <td className="py-2.5 px-3 font-black text-slate-950 dark:text-amber-300 whitespace-nowrap">
                         {pump.pumpName}
                       </td>
@@ -1444,12 +1454,12 @@ export const ReportsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  scopedEntries.map(e => {
+                  scopedEntries.map((e, idx) => {
                     const veh = vehicles.find(v => v.id === e.vehicle_id);
                     const comp = companies.find(c => c.id === e.company_id);
 
                     return (
-                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
+                      <tr key={e.id ? `${e.id}_${idx}` : `entry_${idx}`} className="hover:bg-slate-50 dark:hover:bg-blue-950/40">
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="font-mono font-bold text-slate-950 dark:text-white">{e.entry_date}</div>
                           <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{e.slip_no}</div>

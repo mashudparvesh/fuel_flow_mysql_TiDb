@@ -141,15 +141,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
     }
 
     setIsSubscriberLoading(true);
-    setTimeout(() => {
-      const res = loginAsCompanyUser(selectedTenant.id, subscriberUsername.trim(), subscriberPassword.trim());
-      setIsSubscriberLoading(false);
-      if (!res.success) {
-        setSubscriberError(res.message);
-      } else {
-        setSubscriberSuccess(res.message);
+    (async () => {
+      try {
+        const res = await loginAsCompanyUser(selectedTenant.id, subscriberUsername.trim(), subscriberPassword.trim());
+        setIsSubscriberLoading(false);
+        if (!res.success) {
+          setSubscriberError(res.message);
+        } else {
+          setSubscriberSuccess(res.message);
+        }
+      } catch (err: any) {
+        setIsSubscriberLoading(false);
+        setSubscriberError(err?.message || 'Login failed');
       }
-    }, 200);
+    })();
   };
 
   // Submit Control Login (SaaS Owner & Moderator)
@@ -568,60 +573,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-amber-400/60 hover:text-amber-400"
                     >
                       {showControlPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Role Fill Pills for Easy Testing */}
-                <div className="pt-1">
-                  <div className="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
-                    <span>Quick Role Demo Logins:</span>
-                    <span className="text-[10px] text-amber-400/80">Click to fill</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setControlUsername('mashudalone');
-                        setControlPassword('00000');
-                      }}
-                      className="p-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-left transition-all"
-                    >
-                      <div className="font-bold text-[11px]">👑 Owner Admin</div>
-                      <div className="text-[9px] font-mono opacity-70">mashudalone / 00000</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setControlUsername('coowner_kamrul');
-                        setControlPassword('coowner12345');
-                      }}
-                      className="p-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-left transition-all"
-                    >
-                      <div className="font-bold text-[11px]">🤝 Co-Owner Admin</div>
-                      <div className="text-[9px] font-mono opacity-70">coowner_kamrul</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setControlUsername('admin_shafiq');
-                        setControlPassword('admin12345');
-                      }}
-                      className="p-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-left transition-all"
-                    >
-                      <div className="font-bold text-[11px]">🛡️ Admin</div>
-                      <div className="text-[9px] font-mono opacity-70">admin_shafiq</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setControlUsername('tanvir_ops');
-                        setControlPassword('mod12345');
-                      }}
-                      className="p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-left transition-all"
-                    >
-                      <div className="font-bold text-[11px]">👮 Moderator</div>
-                      <div className="text-[9px] font-mono opacity-70">tanvir_ops</div>
                     </button>
                   </div>
                 </div>

@@ -18,6 +18,10 @@ import { LoginPage } from './components/LoginPage';
 import { LandingPage } from './components/LandingPage';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { DatabaseStatusModal } from './components/DatabaseStatusModal';
+import { BulkDataImportModal, BulkEntityType } from './components/BulkDataImportModal';
+import { SubscriptionNotificationBanner } from './components/SubscriptionNotificationBanner';
+import { SubscriptionRenewModal } from './components/SubscriptionRenewModal';
+import { DocumentationModal } from './components/DocumentationModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Footer } from './components/Footer';
 import { Fuel, QrCode, PanelLeftOpen } from 'lucide-react';
@@ -67,7 +71,16 @@ const AppContent: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAuthSwitcherOpen, setIsAuthSwitcherOpen] = useState(false);
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
+  const [bulkImportEntity, setBulkImportEntity] = useState<BulkEntityType>('vehicles');
   const [selectedVehicleForEntry, setSelectedVehicleForEntry] = useState<string | undefined>(undefined);
+
+  const handleOpenBulkImport = (entity: BulkEntityType = 'vehicles') => {
+    setBulkImportEntity(entity);
+    setIsBulkImportOpen(true);
+  };
 
   const [publicRoute, setPublicRoute] = useState<'landing' | 'login'>(() => {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
@@ -112,7 +125,15 @@ const AppContent: React.FC = () => {
         onNavigateToAnomalies={() => setCurrentView('anomalies')}
         onOpenAuthSwitcher={() => setIsAuthSwitcherOpen(true)}
         onOpenDatabase={() => setIsDbModalOpen(true)}
+        onOpenDocumentation={() => setIsDocsModalOpen(true)}
       />
+
+      {/* Subscription Alert Banner (Trial Status & Renewal Reminders) */}
+      <div className="px-2.5 sm:px-4 lg:px-6 pt-2">
+        <SubscriptionNotificationBanner
+          onOpenRenewModal={() => setIsRenewModalOpen(true)}
+        />
+      </div>
 
       {/* Main Layout Body */}
       <div className="flex-1 flex w-full px-2.5 sm:px-4 lg:px-6 py-3 sm:py-4 gap-3 sm:gap-5 relative">
@@ -127,6 +148,7 @@ const AppContent: React.FC = () => {
           }}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          onOpenBulkImport={() => handleOpenBulkImport('vehicles')}
         />
 
         {/* Desktop Quick Reopen Floating Tab when Sidebar is Hidden */}
@@ -186,6 +208,7 @@ const AppContent: React.FC = () => {
                 {currentView === 'vehicles' && (
                   <VehiclesView
                     onSelectVehicleForEntry={handleOpenFuelEntryWithVehicle}
+                    onOpenBulkImport={() => handleOpenBulkImport('vehicles')}
                   />
                 )}
 
@@ -195,7 +218,11 @@ const AppContent: React.FC = () => {
 
                 {currentView === 'anomalies' && <AnomaliesView />}
 
-                {currentView === 'master_data' && <MasterDataView />}
+                {currentView === 'master_data' && (
+                  <MasterDataView
+                    onOpenBulkImport={(entity) => handleOpenBulkImport(entity || 'companies')}
+                  />
+                )}
 
                 {currentView === 'reports' && <ReportsView />}
               </>
@@ -248,6 +275,25 @@ const AppContent: React.FC = () => {
 
       {/* Force Password Change Modal for Users with Temporary Passwords */}
       <ForcePasswordChangeModal />
+
+      {/* Bulk Data Ingestion Modal (Excel & CSV) with Sample Downloads */}
+      <BulkDataImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        defaultEntity={bulkImportEntity}
+      />
+
+      {/* Subscription Plan Renewal Modal */}
+      <SubscriptionRenewModal
+        isOpen={isRenewModalOpen}
+        onClose={() => setIsRenewModalOpen(false)}
+      />
+
+      {/* Comprehensive System Documentation & User Guide Modal */}
+      <DocumentationModal
+        isOpen={isDocsModalOpen}
+        onClose={() => setIsDocsModalOpen(false)}
+      />
     </div>
   );
 };

@@ -121,9 +121,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     closeBtn: 'Close'
   };
 
-  // Filtered entries
+  // Filtered entries with ID deduplication
   const filteredEntries = useMemo(() => {
+    const seenIds = new Set<string>();
     return fuelEntries.filter(entry => {
+      if (!entry || !entry.id) return false;
+      if (seenIds.has(entry.id)) return false;
+      seenIds.add(entry.id);
+
       if (filterCompany !== 'all' && entry.company_id !== filterCompany) return false;
       
       const vehicle = vehicles.find(v => v.id === entry.vehicle_id);
@@ -614,7 +619,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                paginatedEntries.map(entry => {
+                paginatedEntries.map((entry, idx) => {
                   const vehicle = vehicles.find(v => v.id === entry.vehicle_id);
                   const company = companies.find(c => c.id === entry.company_id);
                   const pump = pumps.find(p => p.id === entry.pump_id);
@@ -622,7 +627,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                   return (
                     <tr
-                      key={entry.id}
+                      key={entry.id ? `${entry.id}_${idx}` : `dash_entry_${idx}`}
                       className={`hover:bg-slate-50/80 dark:hover:bg-blue-950/40 transition-colors ${
                         entry.is_anomaly ? 'bg-red-50/40 dark:bg-red-950/20' : ''
                       }`}

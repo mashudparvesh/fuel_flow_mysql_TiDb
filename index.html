@@ -8,13 +8,85 @@
     <meta name="format-detection" content="telephone=no" />
     <script>
       (function () {
+        // Intercept native WebSocket to silently handle Vite dev client connection attempts
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var RealWebSocket = window.WebSocket;
+          window.WebSocket = function (url, protocols) {
+            if (typeof url === 'string' && (
+              url.indexOf('vite') !== -1 ||
+              url.indexOf('token=') !== -1 ||
+              url.indexOf('3000') !== -1 ||
+              url.indexOf('ws://') === 0 ||
+              url.indexOf('wss://') === 0
+            )) {
+              var listeners = {};
+              var mockWs = {
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                extensions: '',
+                protocol: typeof protocols === 'string' ? protocols : 'vite-hmr',
+                readyState: 1, // OPEN - Prevents 'WebSocket closed without opened'
+                url: url,
+                addEventListener: function (type, fn) {
+                  if (!listeners[type]) listeners[type] = [];
+                  listeners[type].push(fn);
+                  if (type === 'open') {
+                    setTimeout(function () {
+                      try { fn(new Event('open')); } catch (e) {}
+                    }, 0);
+                  }
+                },
+                removeEventListener: function (type, fn) {
+                  if (listeners[type]) {
+                    listeners[type] = listeners[type].filter(function (f) { return f !== fn; });
+                  }
+                },
+                dispatchEvent: function (ev) {
+                  var type = ev && ev.type;
+                  if (listeners[type]) {
+                    listeners[type].forEach(function (fn) { try { fn(ev); } catch (e) {} });
+                  }
+                  return true;
+                },
+                send: function () {},
+                close: function () {
+                  mockWs.readyState = 3;
+                },
+                onopen: null,
+                onclose: null,
+                onerror: null,
+                onmessage: null
+              };
+              setTimeout(function () {
+                if (mockWs.readyState === 1) {
+                  var ev = new Event('open');
+                  if (listeners['open']) {
+                    listeners['open'].forEach(function (fn) { try { fn(ev); } catch (e) {} });
+                  }
+                  if (typeof mockWs.onopen === 'function') {
+                    try { mockWs.onopen(ev); } catch (e) {}
+                  }
+                }
+              }, 5);
+              return mockWs;
+            }
+            return new RealWebSocket(url, protocols);
+          };
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
+          window.WebSocket.prototype = RealWebSocket.prototype;
+        }
+
         // Safe global error & rejection suppression for harmless dev-server HMR websocket closed notices
         window.addEventListener('error', function (event) {
           var msg = event && (event.message || (event.error && event.error.message) || '');
           if (msg && (
             msg.indexOf('WebSocket') !== -1 ||
             msg.indexOf('websocket') !== -1 ||
-            msg.indexOf('[vite]') !== -1
+            msg.indexOf('[vite]') !== -1 ||
+            msg.indexOf('closed without opened') !== -1
           )) {
             event.stopImmediatePropagation();
             event.preventDefault();

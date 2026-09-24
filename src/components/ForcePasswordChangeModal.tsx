@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Lock, ShieldAlert, CheckCircle2, Eye, EyeOff, KeyRound, AlertTriangle } from 'lucide-react';
 
 export const ForcePasswordChangeModal: React.FC = () => {
-  const { currentUser, changeUserPassword } = useApp();
+  const { currentUser, activeAuthRole, activeModerator, changeUserPassword } = useApp();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -12,7 +12,9 @@ export const ForcePasswordChangeModal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
 
-  if (!currentUser || !currentUser.must_change_password) {
+  const targetAccount = activeAuthRole === 'saas_moderator' ? activeModerator : currentUser;
+
+  if (!targetAccount || !targetAccount.must_change_password) {
     return null;
   }
 
@@ -44,13 +46,13 @@ export const ForcePasswordChangeModal: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    const res = await changeUserPassword(currentUser.id, newPassword.trim());
+    const res = await changeUserPassword(targetAccount.id, newPassword.trim());
     setIsSubmitting(false);
 
     if (!res.success) {
       setError(res.message || 'Failed to update password.');
     } else {
-      setSuccess('Password updated successfully! Redirecting to dashboard...');
+      setSuccess('Password updated successfully! Welcome to your dashboard...');
       setTimeout(() => {
         // State update in AppContext will close the modal automatically
       }, 800);
@@ -80,9 +82,9 @@ export const ForcePasswordChangeModal: React.FC = () => {
 
         <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300 mb-5 leading-relaxed">
           <p className="font-semibold text-white mb-1">
-            Welcome, <span className="text-amber-400">{currentUser.name}</span> (@{currentUser.username})
+            Welcome, <span className="text-amber-400">{targetAccount.name}</span> (@{targetAccount.username})
           </p>
-          You have signed in using an automatically generated temporary password. To safeguard your fleet workspace, please set a permanent, private password before proceeding.
+          You have signed in with a temporary or default password. To safeguard the workspace and maintain security, please set a permanent, private password before proceeding.
         </div>
 
         {error && (

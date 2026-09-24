@@ -108,10 +108,15 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
     successNormalMsg: 'Fuel entry recorded successfully!'
   };
 
-  // Filter vehicles by selected company
+  // Filter vehicles by selected company with ID deduplication
   const availableVehicles = React.useMemo(() => {
-    if (!companyId) return vehicles;
-    return vehicles.filter(v => v.company_id === companyId);
+    const seen = new Set<string>();
+    const list = companyId ? vehicles.filter(v => v.company_id === companyId) : vehicles;
+    return list.filter(v => {
+      if (!v || !v.id || seen.has(v.id)) return false;
+      seen.add(v.id);
+      return true;
+    });
   }, [vehicles, companyId]);
 
   // Selected vehicle details
@@ -326,8 +331,8 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white font-semibold text-slate-800"
             >
               <option value="">{t.allVehicles}</option>
-              {availableVehicles.map(v => (
-                <option key={v.id} value={v.id}>
+              {availableVehicles.map((v, idx) => (
+                <option key={v.id ? `${v.id}_${idx}` : `v_${idx}`} value={v.id}>
                   {v.vehicle_number} — {v.driver_name} ({v.ownership.toUpperCase()})
                 </option>
               ))}

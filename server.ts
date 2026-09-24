@@ -24,220 +24,15 @@ import {
 } from "./server/mysql.ts";
 import { verifyPassword, hashPassword } from "./src/utils/authSecurity.ts";
 
-// Initial fallback tenant data
-const DEFAULT_TENANTS = [
-  {
-    id: 'tenant_1',
-    name: 'Padma Multipurpose Fleet Services Ltd',
-    code: 'PMFS',
-    currency: 'BDT',
-    phone: '+880 1711-892341',
-    address: 'Plot 14, Commercial Area, Ishwardi, Pabna',
-    contact_person: 'M. A. Rahman',
-    email: 'admin@padmafleet.com',
-    status: 'active',
-    deleted_at: null,
-    created_at: '2026-08-01',
-    subscription: {
-      plan: 'enterprise',
-      plan_name_bn: 'এন্টারপ্রাইজ প্ল্যান (Enterprise)',
-      status: 'active',
-      start_date: '2026-08-01',
-      end_date: '2026-11-01',
-      duration_type: 'months',
-      duration_val: 3,
-      price_bdt: 25000,
-      payment_status: 'paid',
-      max_vehicles: 100,
-      max_users: 25,
-      max_pumps: 15,
-      super_admin_username: 'padma_admin',
-      super_admin_password: 'padma#pass123',
-      features: {
-        tanker_bowzer: true,
-        anomaly_ai: true,
-        reports_export: true,
-        qr_scanner: true,
-        custom_categories: true
-      },
-      notes: 'Ruppur Mega Project Fleet Vendor - Paid via Bank Cheque'
-    }
-  },
-  {
-    id: 'tenant_2',
-    name: 'Bengal Infra Logistics & Transport',
-    code: 'BILT',
-    currency: 'BDT',
-    phone: '+880 1819-445566',
-    address: 'Tejgaon Industrial Area, Dhaka',
-    contact_person: 'Shafiqul Alam',
-    email: 'shafiq@bengalinfra.com',
-    status: 'active',
-    deleted_at: null,
-    created_at: '2026-08-15',
-    subscription: {
-      plan: 'professional',
-      plan_name_bn: 'প্রফেশনাল প্ল্যান (Professional)',
-      status: 'active',
-      start_date: '2026-08-15',
-      end_date: '2026-09-30',
-      duration_type: 'months',
-      duration_val: 1,
-      price_bdt: 12000,
-      payment_status: 'paid',
-      max_vehicles: 40,
-      max_users: 10,
-      max_pumps: 5,
-      super_admin_username: 'bengal_admin',
-      super_admin_password: 'bengal#2026',
-      features: {
-        tanker_bowzer: true,
-        anomaly_ai: true,
-        reports_export: true,
-        qr_scanner: true,
-        custom_categories: false
-      },
-      notes: 'Dhaka - Chittagong Highway Logistics Division'
-    }
-  },
-  {
-    id: 'tenant_3',
-    name: 'Jamuna Mega Cargo & Haulage Ltd',
-    code: 'JMCH',
-    currency: 'BDT',
-    phone: '+880 1712-998877',
-    address: 'Bangabandhu Bridge West Link, Sirajganj',
-    contact_person: 'Md. Tariqul Islam',
-    email: 'info@jamunacargo.com',
-    status: 'active',
-    deleted_at: null,
-    created_at: '2026-09-01',
-    subscription: {
-      plan: 'enterprise',
-      plan_name_bn: 'এন্টারপ্রাইজ প্ল্যান (Enterprise)',
-      status: 'active',
-      start_date: '2026-09-01',
-      end_date: '2027-09-01',
-      duration_type: 'years',
-      duration_val: 1,
-      price_bdt: 90000,
-      payment_status: 'paid',
-      max_vehicles: 80,
-      max_users: 20,
-      max_pumps: 10,
-      super_admin_username: 'jamuna_admin',
-      super_admin_password: 'jamuna#pass2026',
-      features: {
-        tanker_bowzer: true,
-        anomaly_ai: true,
-        reports_export: true,
-        qr_scanner: true,
-        custom_categories: true
-      },
-      notes: 'National Highway Fuel Network Client'
-    }
-  }
-];
+// Initial fallback tenant data (empty - clean production state)
+const DEFAULT_TENANTS: any[] = [];
 
 // Persistent File Path for Tenants & Users
 const DATA_DIR = path.join(process.cwd(), 'data');
 const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-const DEFAULT_USERS = [
-  {
-    id: 'usr_super_admin',
-    tenant_id: 'tenant_1',
-    name: 'M. A. Rahman (Super Admin)',
-    email: 'admin@padma-fleet.com',
-    username: 'padma_admin',
-    password: 'padma#pass123',
-    phone: '+880 1711-001122',
-    role: 'super_admin',
-    role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
-    status: 'active',
-    allowed_category_ids: ['all'],
-    allowed_pump_ids: ['all'],
-    permissions: {
-      can_add_fuel: true,
-      can_manage_vehicles: true,
-      can_manage_pumps: true,
-      can_view_reports: true,
-      can_manage_users: true,
-      can_edit_settings: true
-    },
-    created_at: '2026-08-01'
-  },
-  {
-    id: 'usr_supervisor',
-    tenant_id: 'tenant_1',
-    name: 'Kamal Hossain (Fuel In-charge)',
-    email: 'kamal.entry@padma-fleet.com',
-    username: 'kamal_entry',
-    password: 'user1234',
-    phone: '+880 1712-334455',
-    role: 'data_entry',
-    role_title_bn: 'ডাটা এন্ট্রি অপারেটর (Fuel Operator)',
-    status: 'active',
-    allowed_category_ids: ['all'],
-    allowed_pump_ids: ['all'],
-    permissions: {
-      can_add_fuel: true,
-      can_manage_vehicles: false,
-      can_manage_pumps: false,
-      can_view_reports: true,
-      can_manage_users: false,
-      can_edit_settings: false
-    },
-    created_at: '2026-08-05'
-  },
-  {
-    id: 'usr_bengal_admin',
-    tenant_id: 'tenant_2',
-    name: 'Shafiqul Alam (Admin)',
-    email: 'shafiq@bengalinfra.com',
-    username: 'bengal_admin',
-    password: 'bengal#2026',
-    phone: '+880 1819-445566',
-    role: 'super_admin',
-    role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
-    status: 'active',
-    allowed_category_ids: ['all'],
-    allowed_pump_ids: ['all'],
-    permissions: {
-      can_add_fuel: true,
-      can_manage_vehicles: true,
-      can_manage_pumps: true,
-      can_view_reports: true,
-      can_manage_users: true,
-      can_edit_settings: true
-    },
-    created_at: '2026-08-15'
-  },
-  {
-    id: 'usr_jamuna_admin',
-    tenant_id: 'tenant_3',
-    name: 'Kabir Chowdhury (Admin)',
-    email: 'kabir@jamunapower.com',
-    username: 'jamuna_admin',
-    password: 'jamuna#pass2026',
-    phone: '+880 1912-887766',
-    role: 'super_admin',
-    role_title_bn: 'কোম্পানি সুপার অ্যাডমিন (Super Admin)',
-    status: 'active',
-    allowed_category_ids: ['all'],
-    allowed_pump_ids: ['all'],
-    permissions: {
-      can_add_fuel: true,
-      can_manage_vehicles: true,
-      can_manage_pumps: true,
-      can_view_reports: true,
-      can_manage_users: true,
-      can_edit_settings: true
-    },
-    created_at: '2026-09-01'
-  }
-];
+const DEFAULT_USERS: any[] = [];
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -256,7 +51,7 @@ function loadTenants(): any[] {
     ensureDataDir();
     const raw = fs.readFileSync(TENANTS_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed)) {
       return parsed;
     }
   } catch (err) {
@@ -279,7 +74,7 @@ function loadUsers(): any[] {
     ensureDataDir();
     const raw = fs.readFileSync(USERS_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed)) {
       return parsed;
     }
   } catch (err) {
@@ -350,21 +145,36 @@ function loadFleetData(): FleetStore {
   };
 }
 
+function dedupeAndMergeById<T extends { id: string }>(existing: T[] = [], incoming?: T[]): T[] {
+  const map = new Map<string, T>();
+  (existing || []).forEach(item => {
+    if (item && item.id) map.set(item.id, item);
+  });
+  if (Array.isArray(incoming)) {
+    incoming.forEach(item => {
+      if (item && item.id) {
+        map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+      }
+    });
+  }
+  return Array.from(map.values());
+}
+
 function saveFleetData(data: Partial<FleetStore>) {
   try {
     ensureDataDir();
     const current = loadFleetData();
     const merged: FleetStore = {
-      vehicles: data.vehicles !== undefined ? data.vehicles : current.vehicles,
-      fuelEntries: data.fuelEntries !== undefined ? data.fuelEntries : current.fuelEntries,
-      pumps: data.pumps !== undefined ? data.pumps : current.pumps,
-      payments: data.payments !== undefined ? data.payments : current.payments,
-      categories: data.categories !== undefined ? data.categories : current.categories,
-      companies: data.companies !== undefined ? data.companies : current.companies,
-      vendors: data.vendors !== undefined ? data.vendors : current.vendors,
-      fuelTypes: data.fuelTypes !== undefined ? data.fuelTypes : current.fuelTypes,
-      tankers: data.tankers !== undefined ? data.tankers : current.tankers,
-      tankerLogs: data.tankerLogs !== undefined ? data.tankerLogs : current.tankerLogs
+      vehicles: data.vehicles !== undefined ? dedupeAndMergeById(current.vehicles, data.vehicles) : dedupeAndMergeById(current.vehicles),
+      fuelEntries: data.fuelEntries !== undefined ? dedupeAndMergeById(current.fuelEntries, data.fuelEntries) : dedupeAndMergeById(current.fuelEntries),
+      pumps: data.pumps !== undefined ? dedupeAndMergeById(current.pumps, data.pumps) : dedupeAndMergeById(current.pumps),
+      payments: data.payments !== undefined ? dedupeAndMergeById(current.payments, data.payments) : dedupeAndMergeById(current.payments),
+      categories: data.categories !== undefined ? dedupeAndMergeById(current.categories, data.categories) : dedupeAndMergeById(current.categories),
+      companies: data.companies !== undefined ? dedupeAndMergeById(current.companies, data.companies) : dedupeAndMergeById(current.companies),
+      vendors: data.vendors !== undefined ? dedupeAndMergeById(current.vendors, data.vendors) : dedupeAndMergeById(current.vendors),
+      fuelTypes: data.fuelTypes !== undefined ? dedupeAndMergeById(current.fuelTypes, data.fuelTypes) : dedupeAndMergeById(current.fuelTypes),
+      tankers: data.tankers !== undefined ? dedupeAndMergeById(current.tankers, data.tankers) : dedupeAndMergeById(current.tankers),
+      tankerLogs: data.tankerLogs !== undefined ? dedupeAndMergeById(current.tankerLogs, data.tankerLogs) : dedupeAndMergeById(current.tankerLogs)
     };
     fs.writeFileSync(FLEET_FILE, JSON.stringify(merged, null, 2), 'utf-8');
   } catch (err) {
@@ -510,15 +320,61 @@ async function provisionNewTenant(payload: {
 
   const today = new Date();
   const startDate = today.toISOString().split('T')[0];
-  const nextMonth = new Date(today);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  const endDate = nextMonth.toISOString().split('T')[0];
+  const planId = (payload.plan_id || 'trial_3days').toLowerCase();
 
-  const planId = (payload.plan_id || 'starter').toLowerCase();
-  const isStarter = planId === 'starter';
-  const isPro = planId === 'pro';
-  const priceBdt = payload.custom_price || (isStarter ? 1500 : isPro ? 3500 : 5000);
-  const maxVehicles = payload.max_vehicles || (isStarter ? 5 : isPro ? 20 : 100);
+  let endDateObj = new Date(today);
+  let durationType: 'days' | 'months' | 'years' = 'months';
+  let durationVal = 1;
+  let priceBdt = 749;
+  let planNameBn = '১ মাস প্ল্যান (749 BDT)';
+  let isTrial = false;
+  let isPaidPlan = true;
+
+  if (planId === 'trial_3days' || planId === 'trial') {
+    endDateObj.setDate(endDateObj.getDate() + 3);
+    durationType = 'days';
+    durationVal = 3;
+    priceBdt = 0;
+    planNameBn = '৩ দিনের ফ্রি ট্রায়াল (3-Day Free Trial)';
+    isTrial = true;
+    isPaidPlan = false;
+  } else if (planId === 'plan_1month' || planId === 'starter') {
+    endDateObj.setMonth(endDateObj.getMonth() + 1);
+    durationType = 'months';
+    durationVal = 1;
+    priceBdt = 749;
+    planNameBn = '১ মাস প্ল্যান (749 BDT - Full Options)';
+  } else if (planId === 'plan_3months' || planId === 'pro') {
+    endDateObj.setMonth(endDateObj.getMonth() + 3);
+    durationType = 'months';
+    durationVal = 3;
+    priceBdt = 2199;
+    planNameBn = '৩ মাস প্ল্যান (2,199 BDT - Full Options)';
+  } else if (planId === 'plan_6months') {
+    endDateObj.setMonth(endDateObj.getMonth() + 6);
+    durationType = 'months';
+    durationVal = 6;
+    priceBdt = 3999;
+    planNameBn = '৬ মাস প্ল্যান (3,999 BDT - Full Options)';
+  } else if (planId === 'plan_12months' || planId === 'enterprise') {
+    endDateObj.setFullYear(endDateObj.getFullYear() + 1);
+    durationType = 'years';
+    durationVal = 1;
+    priceBdt = 7999;
+    planNameBn = '১২ মাস প্ল্যান (7,999 BDT - Full Options)';
+  }
+
+  if (payload.custom_price !== undefined && payload.custom_price !== null && !isNaN(Number(payload.custom_price))) {
+    priceBdt = Number(payload.custom_price);
+  }
+
+  const endDate = endDateObj.toISOString().split('T')[0];
+  const maxVehicles = payload.max_vehicles || 100;
+  const maxUsers = 25;
+  const maxPumps = 15;
+
+  const initialStatus = isTrial ? 'active' : 'pending_payment';
+  const initialPaymentStatus = isTrial ? 'paid' : 'due';
 
   const newTenant: any = {
     id: tenantId,
@@ -529,32 +385,32 @@ async function provisionNewTenant(payload: {
     address: payload.address || 'Dhaka, Bangladesh',
     contact_person: payload.admin_name || `${companyName} Admin`,
     email: payload.email,
-    status: 'active',
+    status: initialStatus,
     deleted_at: null,
     created_at: startDate,
     subscription: {
-      plan: isStarter ? 'starter' : isPro ? 'professional' : 'enterprise',
-      plan_name_bn: isStarter ? 'Starter Plan (1,500 BDT)' : isPro ? 'Pro Plan (3,500 BDT)' : 'Enterprise Custom Plan',
-      status: 'active',
+      plan: planId as any,
+      plan_name_bn: planNameBn,
+      status: initialStatus,
       start_date: startDate,
       end_date: endDate,
-      duration_type: 'months',
-      duration_val: 1,
+      duration_type: durationType,
+      duration_val: durationVal,
       price_bdt: priceBdt,
-      payment_status: 'paid',
+      payment_status: initialPaymentStatus,
       max_vehicles: maxVehicles,
-      max_users: isStarter ? 3 : 10,
-      max_pumps: isStarter ? 3 : 10,
+      max_users: maxUsers,
+      max_pumps: maxPumps,
       super_admin_username: superAdminUsername,
       super_admin_password: temporaryPassword,
       features: {
-        tanker_bowzer: !isStarter,
+        tanker_bowzer: true,
         anomaly_ai: true,
         reports_export: true,
         qr_scanner: true,
         custom_categories: true
       },
-      notes: `Automated Baniq Pay Provisioning - Plan: ${planId.toUpperCase()}`
+      notes: isTrial ? '3-Day Free Trial Provisioning' : `Direct Gateway Subscription - Plan: ${planId.toUpperCase()}`
     }
   };
 
@@ -1277,6 +1133,27 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     });
   });
 
+  // Dedicated subscriber registration endpoint for Landing Page (Trial & Premium Plans)
+  app.post('/api/subscribers/register', async (req: Request, res: Response) => {
+    try {
+      const { company_name, admin_name, email, phone, plan_id } = req.body;
+      const origin = req.protocol + '://' + req.get('host');
+
+      const result = await provisionNewTenant({
+        company_name,
+        admin_name,
+        email,
+        phone,
+        plan_id: plan_id || 'trial_3days',
+        origin
+      });
+
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Registration error' });
+    }
+  });
+
   // Instant one-click simulation endpoint for Sandbox preview
   app.post('/api/payment/simulate-success', async (req: Request, res: Response) => {
     try {
@@ -1624,180 +1501,301 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
       const fleet = loadFleetData();
       let importedCount = 0;
+      let newCount = 0;
+      let updatedCount = 0;
       const addedItems: any[] = [];
+      const todayStr = new Date().toISOString().split('T')[0];
 
       if (entity_type === 'vehicles') {
-        fleet.vehicles = fleet.vehicles || [];
+        fleet.vehicles = Array.isArray(fleet.vehicles) ? fleet.vehicles : [];
         for (const r of rows) {
-          if (!r.plate_number && !r.registration_number) continue;
-          const plate = String(r.plate_number || r.registration_number).trim();
-          const existingIdx = fleet.vehicles.findIndex(v => v.tenant_id === tenant_id && v.plate_number.toLowerCase() === plate.toLowerCase());
-          const vehicleItem = {
+          const rawNum = r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
+          if (!rawNum) continue;
+          const plate = String(rawNum).trim();
+          if (!plate) continue;
+
+          const targetPlate = plate.toLowerCase();
+          const existingIdx = fleet.vehicles.findIndex(v =>
+            v && v.tenant_id === tenant_id &&
+            (((v.vehicle_number || v.plate_number || '') + '').toLowerCase() === targetPlate)
+          );
+
+          const vehicleItem: any = {
             id: r.id || 'veh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
+            vehicle_number: plate,
             plate_number: plate,
             model: r.model || 'Commercial Vehicle',
-            category_id: r.category_id || 'cat_1',
-            company_id: r.company_id || 'comp_1',
-            vendor_id: r.vendor_id || undefined,
+            category_id: r.category_id || r.category || 'cat_1',
+            company_id: r.company_id || r.company || 'comp_1',
+            vendor_id: r.vendor_id || r.vendor || undefined,
+            ownership: (r.ownership || (r.vendor_id || r.vendor ? 'rented' : 'owned')) as 'owned' | 'rented',
+            fuel_type_id: r.fuel_type_id || r.fuel_type || 'Diesel',
+            expected_benchmark: Number(r.expected_benchmark || r.benchmark || r.mileage_benchmark) || 8.0,
+            current_odometer: Number(r.current_odometer || r.initial_odometer || r.odometer) || 0,
             driver_name: r.driver_name || 'Assigned Driver',
-            driver_phone: r.driver_phone || '',
-            fuel_type: r.fuel_type || 'Diesel',
-            fuel_tank_capacity: Number(r.fuel_tank_capacity) || 100,
-            initial_odometer: Number(r.initial_odometer) || 0,
-            status: r.status || 'active',
+            driver_phone: r.driver_phone || r.phone || '',
+            fuel_tank_capacity: Number(r.fuel_tank_capacity || r.capacity) || 100,
+            status: (r.status === 'maintenance' || r.status === 'idle') ? r.status : 'active',
             notes: r.notes || 'Bulk imported via Excel/CSV',
-            created_at: new Date().toISOString().split('T')[0]
+            created_at: r.created_at || todayStr
           };
+
           if (existingIdx >= 0) {
-            fleet.vehicles[existingIdx] = { ...fleet.vehicles[existingIdx], ...vehicleItem };
+            fleet.vehicles[existingIdx] = { ...fleet.vehicles[existingIdx], ...vehicleItem, id: fleet.vehicles[existingIdx].id };
+            addedItems.push(fleet.vehicles[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.vehicles = fleet.vehicles.filter(v => v.id !== vehicleItem.id);
             fleet.vehicles.unshift(vehicleItem);
+            addedItems.push(vehicleItem);
+            newCount++;
           }
-          addedItems.push(vehicleItem);
           importedCount++;
         }
       } else if (entity_type === 'companies') {
-        fleet.companies = fleet.companies || [];
+        fleet.companies = Array.isArray(fleet.companies) ? fleet.companies : [];
         for (const r of rows) {
-          if (!r.name) continue;
-          const name = String(r.name).trim();
-          const compItem = {
+          const rawName = r.name || r.company_name || r.title;
+          if (!rawName) continue;
+          const name = String(rawName).trim();
+          if (!name) continue;
+
+          const targetName = name.toLowerCase();
+          const compItem: any = {
             id: r.id || 'comp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
             name,
             code: r.code || name.substring(0, 4).toUpperCase(),
-            contact_person: r.contact_person || '',
-            phone: r.phone || '',
+            contact_person: r.contact_person || r.contact || '',
+            phone: r.phone || r.mobile || '',
             email: r.email || '',
             address: r.address || '',
-            status: r.status || 'active'
+            status: r.status || 'active',
+            created_at: r.created_at || todayStr
           };
-          const existingIdx = fleet.companies.findIndex(c => c.tenant_id === tenant_id && c.name.toLowerCase() === name.toLowerCase());
+
+          const existingIdx = fleet.companies.findIndex(c =>
+            c && c.tenant_id === tenant_id &&
+            (((c.name || '') + '').toLowerCase() === targetName)
+          );
+
           if (existingIdx >= 0) {
-            fleet.companies[existingIdx] = { ...fleet.companies[existingIdx], ...compItem };
+            fleet.companies[existingIdx] = { ...fleet.companies[existingIdx], ...compItem, id: fleet.companies[existingIdx].id };
+            addedItems.push(fleet.companies[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.companies = fleet.companies.filter(c => c.id !== compItem.id);
             fleet.companies.unshift(compItem);
+            addedItems.push(compItem);
+            newCount++;
           }
-          addedItems.push(compItem);
           importedCount++;
         }
       } else if (entity_type === 'vendors') {
-        fleet.vendors = fleet.vendors || [];
+        fleet.vendors = Array.isArray(fleet.vendors) ? fleet.vendors : [];
         for (const r of rows) {
-          if (!r.name) continue;
-          const name = String(r.name).trim();
-          const venItem = {
+          const rawName = r.name || r.vendor_name || r.supplier;
+          if (!rawName) continue;
+          const name = String(rawName).trim();
+          if (!name) continue;
+
+          const targetName = name.toLowerCase();
+          const venItem: any = {
             id: r.id || 'ven_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
             name,
-            phone: r.phone || '',
-            contact_person: r.contact_person || '',
+            phone: r.phone || r.mobile || '',
+            contact_person: r.contact_person || r.contact || '',
+            email: r.email || '',
             type: r.type || 'fuel',
             address: r.address || '',
-            status: r.status || 'active'
+            status: r.status || 'active',
+            created_at: r.created_at || todayStr
           };
-          const existingIdx = fleet.vendors.findIndex(v => v.tenant_id === tenant_id && v.name.toLowerCase() === name.toLowerCase());
+
+          const existingIdx = fleet.vendors.findIndex(v =>
+            v && v.tenant_id === tenant_id &&
+            (((v.name || '') + '').toLowerCase() === targetName)
+          );
+
           if (existingIdx >= 0) {
-            fleet.vendors[existingIdx] = { ...fleet.vendors[existingIdx], ...venItem };
+            fleet.vendors[existingIdx] = { ...fleet.vendors[existingIdx], ...venItem, id: fleet.vendors[existingIdx].id };
+            addedItems.push(fleet.vendors[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.vendors = fleet.vendors.filter(v => v.id !== venItem.id);
             fleet.vendors.unshift(venItem);
+            addedItems.push(venItem);
+            newCount++;
           }
-          addedItems.push(venItem);
           importedCount++;
         }
       } else if (entity_type === 'pumps') {
-        fleet.pumps = fleet.pumps || [];
+        fleet.pumps = Array.isArray(fleet.pumps) ? fleet.pumps : [];
         for (const r of rows) {
-          if (!r.name) continue;
-          const name = String(r.name).trim();
-          const pumpItem = {
+          const rawName = r.name || r.pump_name || r.station_name;
+          if (!rawName) continue;
+          const name = String(rawName).trim();
+          if (!name) continue;
+
+          const targetName = name.toLowerCase();
+          const pumpItem: any = {
             id: r.id || 'pump_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
             name,
-            location: r.location || '',
-            contact_number: r.contact_number || r.phone || '',
+            location: r.location || r.address || '',
+            contact_person: r.contact_person || r.contact || '',
+            phone: r.phone || r.contact_number || r.mobile || '',
+            credit_limit: Number(r.credit_limit) || 500000,
+            opening_balance: Number(r.opening_balance) || 0,
+            current_balance: Number(r.current_balance) || 0,
             fuel_types: Array.isArray(r.fuel_types) ? r.fuel_types : ['Diesel', 'Octane'],
             payment_terms: r.payment_terms || 'Credit',
-            current_balance: Number(r.current_balance) || 0,
-            status: r.status || 'active'
+            status: r.status || 'active',
+            created_at: r.created_at || todayStr
           };
-          const existingIdx = fleet.pumps.findIndex(p => p.tenant_id === tenant_id && p.name.toLowerCase() === name.toLowerCase());
+
+          const existingIdx = fleet.pumps.findIndex(p =>
+            p && p.tenant_id === tenant_id &&
+            (((p.name || '') + '').toLowerCase() === targetName)
+          );
+
           if (existingIdx >= 0) {
-            fleet.pumps[existingIdx] = { ...fleet.pumps[existingIdx], ...pumpItem };
+            fleet.pumps[existingIdx] = { ...fleet.pumps[existingIdx], ...pumpItem, id: fleet.pumps[existingIdx].id };
+            addedItems.push(fleet.pumps[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.pumps = fleet.pumps.filter(p => p.id !== pumpItem.id);
             fleet.pumps.unshift(pumpItem);
+            addedItems.push(pumpItem);
+            newCount++;
           }
-          addedItems.push(pumpItem);
           importedCount++;
         }
       } else if (entity_type === 'fuel_types') {
-        fleet.fuelTypes = fleet.fuelTypes || [];
+        fleet.fuelTypes = Array.isArray(fleet.fuelTypes) ? fleet.fuelTypes : [];
         for (const r of rows) {
-          if (!r.name) continue;
-          const name = String(r.name).trim();
-          const fuelItem = {
+          const rawName = r.name || r.fuel_name || r.type;
+          if (!rawName) continue;
+          const name = String(rawName).trim();
+          if (!name) continue;
+
+          const targetName = name.toLowerCase();
+          const price = Number(r.current_price || r.price) || 105;
+          const fuelItem: any = {
             id: r.id || 'ft_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
             name,
-            code: r.code || name.toUpperCase().replace(/\s+/g, '_'),
+            code: (r.code || name.replace(/\s+/g, '_')).toLowerCase(),
             unit: r.unit || 'Liter',
-            current_price: Number(r.current_price) || 105,
-            status: r.status || 'active'
+            current_price: price,
+            price_history: [{ date: todayStr, price, changed_by: 'Bulk Import' }],
+            status: r.status || 'active',
+            updated_at: todayStr
           };
-          const existingIdx = fleet.fuelTypes.findIndex(f => f.tenant_id === tenant_id && f.name.toLowerCase() === name.toLowerCase());
+
+          const existingIdx = fleet.fuelTypes.findIndex(f =>
+            f && f.tenant_id === tenant_id &&
+            (((f.name || '') + '').toLowerCase() === targetName)
+          );
+
           if (existingIdx >= 0) {
-            fleet.fuelTypes[existingIdx] = { ...fleet.fuelTypes[existingIdx], ...fuelItem };
+            fleet.fuelTypes[existingIdx] = { ...fleet.fuelTypes[existingIdx], ...fuelItem, id: fleet.fuelTypes[existingIdx].id };
+            addedItems.push(fleet.fuelTypes[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.fuelTypes = fleet.fuelTypes.filter(f => f.id !== fuelItem.id);
             fleet.fuelTypes.unshift(fuelItem);
+            addedItems.push(fuelItem);
+            newCount++;
           }
-          addedItems.push(fuelItem);
           importedCount++;
         }
       } else if (entity_type === 'categories') {
-        fleet.categories = fleet.categories || [];
+        fleet.categories = Array.isArray(fleet.categories) ? fleet.categories : [];
         for (const r of rows) {
-          if (!r.name) continue;
-          const name = String(r.name).trim();
-          const catItem = {
+          const rawName = r.name || r.category_name;
+          if (!rawName) continue;
+          const name = String(rawName).trim();
+          if (!name) continue;
+
+          const targetName = name.toLowerCase();
+          const catItem: any = {
             id: r.id || 'cat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
             name,
-            name_bn: r.name_bn || name,
-            description: r.description || ''
+            metric_type: (r.metric_type || 'kmpl').toLowerCase() === 'lph' ? 'lph' : 'kmpl',
+            default_benchmark: Number(r.default_benchmark || r.benchmark) || 8.0,
+            tolerance_percentage: Number(r.tolerance_percentage) || 15,
+            icon_name: r.icon_name || 'Truck',
+            description: r.description || r.name_bn || ''
           };
-          const existingIdx = fleet.categories.findIndex(c => c.tenant_id === tenant_id && c.name.toLowerCase() === name.toLowerCase());
+
+          const existingIdx = fleet.categories.findIndex(c =>
+            c && c.tenant_id === tenant_id &&
+            (((c.name || '') + '').toLowerCase() === targetName)
+          );
+
           if (existingIdx >= 0) {
-            fleet.categories[existingIdx] = { ...fleet.categories[existingIdx], ...catItem };
+            fleet.categories[existingIdx] = { ...fleet.categories[existingIdx], ...catItem, id: fleet.categories[existingIdx].id };
+            addedItems.push(fleet.categories[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.categories = fleet.categories.filter(c => c.id !== catItem.id);
             fleet.categories.unshift(catItem);
+            addedItems.push(catItem);
+            newCount++;
           }
-          addedItems.push(catItem);
           importedCount++;
         }
       } else if (entity_type === 'tankers') {
-        fleet.tankers = fleet.tankers || [];
+        fleet.tankers = Array.isArray(fleet.tankers) ? fleet.tankers : [];
         for (const r of rows) {
-          if (!r.tanker_number && !r.name) continue;
-          const num = String(r.tanker_number || r.name).trim();
-          const tankerItem = {
+          const rawNum = r.tanker_name || r.tanker_number || r.name || r.tanker_no;
+          if (!rawNum) continue;
+          const num = String(rawNum).trim();
+          if (!num) continue;
+
+          const targetNum = num.toLowerCase();
+          const tankerItem: any = {
             id: r.id || 'tank_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
+            user_id: r.user_id || 'user_1',
+            tanker_name: num,
             tanker_number: num,
-            capacity_liters: Number(r.capacity_liters) || 5000,
-            current_fuel_liters: Number(r.current_fuel_liters) || 0,
-            fuel_type: r.fuel_type || 'Diesel',
-            assigned_driver: r.assigned_driver || '',
+            location: r.location || 'Central Depot',
+            capacity_liters: Number(r.capacity_liters || r.capacity) || 5000,
+            current_stock_liters: Number(r.current_stock_liters || r.current_fuel_liters || r.stock) || 0,
+            fuel_type_id: r.fuel_type_id || r.fuel_type || 'Diesel',
+            min_alert_threshold: Number(r.min_alert_threshold) || 500,
+            last_restocked_at: r.last_restocked_at || todayStr,
+            assigned_driver: r.assigned_driver || r.driver_name || '',
             driver_phone: r.driver_phone || '',
             status: r.status || 'active'
           };
-          const existingIdx = fleet.tankers.findIndex(tk => tk.tenant_id === tenant_id && tk.tanker_number.toLowerCase() === num.toLowerCase());
+
+          const existingIdx = fleet.tankers.findIndex(tk =>
+            tk && tk.tenant_id === tenant_id &&
+            (((tk.tanker_name || tk.tanker_number || '') + '').toLowerCase() === targetNum)
+          );
+
           if (existingIdx >= 0) {
-            fleet.tankers[existingIdx] = { ...fleet.tankers[existingIdx], ...tankerItem };
+            fleet.tankers[existingIdx] = { ...fleet.tankers[existingIdx], ...tankerItem, id: fleet.tankers[existingIdx].id };
+            addedItems.push(fleet.tankers[existingIdx]);
+            updatedCount++;
           } else {
+            fleet.tankers = fleet.tankers.filter(tk => tk.id !== tankerItem.id);
             fleet.tankers.unshift(tankerItem);
+            addedItems.push(tankerItem);
+            newCount++;
           }
-          addedItems.push(tankerItem);
           importedCount++;
         }
       }
@@ -1805,22 +1803,23 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       saveFleetData(fleet);
       await syncAllDataToMySQL({
         vehicles: fleet.vehicles,
-        companies: fleet.companies,
-        vendors: fleet.vendors,
-        fuel_pumps: fleet.pumps,
-        fuel_types: fleet.fuelTypes,
-        vehicle_categories: fleet.categories,
-        tanker_inventories: fleet.tankers
+        pumps: fleet.pumps,
+        fuelEntries: fleet.fuelEntries,
+        payments: fleet.payments
       }).catch(e => console.warn('[MySQL] Bulk sync warning:', e));
 
       res.json({
         success: true,
         imported_count: importedCount,
+        count: importedCount,
+        new_count: newCount,
+        updated_count: updatedCount,
         entity_type,
         items: addedItems,
-        message: `Successfully registered ${importedCount} items from bulk upload.`
+        message: `Successfully registered ${importedCount} items (${newCount} newly created, ${updatedCount} updated). Double-entry protection active.`
       });
     } catch (err: any) {
+      console.error('[Bulk Import Error]', err);
       res.status(500).json({ success: false, message: err?.message || 'Error importing bulk data' });
     }
   });

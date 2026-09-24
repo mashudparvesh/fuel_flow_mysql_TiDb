@@ -15,7 +15,8 @@ import {
   LayoutDashboard,
   LogOut,
   Database,
-  Camera
+  Camera,
+  BookOpen
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -28,6 +29,7 @@ interface HeaderProps {
   onNavigateToAnomalies?: () => void;
   onOpenAuthSwitcher?: () => void;
   onOpenDatabase?: () => void;
+  onOpenDocumentation?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,7 +41,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenQrScanner,
   onNavigateToAnomalies,
   onOpenAuthSwitcher,
-  onOpenDatabase
+  onOpenDatabase,
+  onOpenDocumentation
 }) => {
   const {
     theme,
@@ -418,16 +421,29 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Database Status Button */}
-          {onOpenDatabase && (
+          {/* Database Status Button - ONLY for Control Users (Owner / Moderator), hidden from Subscribers */}
+          {onOpenDatabase && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') && (
             <button
               id="header-database-btn"
               onClick={onOpenDatabase}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
-              title="MySQL Cloud Database & Storage"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-semibold text-amber-600 dark:text-amber-400 transition-colors"
+              title="MySQL Cloud Database & Storage (Control Only)"
             >
               <Database className="w-4 h-4 text-amber-500" />
               <span className="hidden xl:inline">Database</span>
+            </button>
+          )}
+
+          {/* User Documentation Button - Accessible to all Users & Subscribers */}
+          {onOpenDocumentation && (
+            <button
+              id="header-documentation-btn"
+              onClick={onOpenDocumentation}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+              title={language === 'bn' ? 'ব্যবহার নির্দেশিকা (User Documentation)' : 'User Documentation & Guide'}
+            >
+              <BookOpen className="w-4 h-4 text-indigo-500" />
+              <span className="hidden md:inline">{language === 'bn' ? 'নির্দেশিকা' : 'Docs'}</span>
             </button>
           )}
 

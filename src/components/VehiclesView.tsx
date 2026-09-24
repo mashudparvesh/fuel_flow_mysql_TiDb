@@ -18,15 +18,17 @@ import {
   User,
   Phone,
   Building,
-  ShieldAlert
+  ShieldAlert,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface VehiclesViewProps {
   onSelectVehicleForEntry: (vehicleId: string) => void;
+  onOpenBulkImport?: () => void;
 }
 
-export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEntry }) => {
+export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEntry, onOpenBulkImport }) => {
   const {
     language,
     currentTenant,
@@ -129,9 +131,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
     closeBtn: 'Close'
   };
 
-  // Filter vehicles
+  // Filter vehicles with ID deduplication
   const filteredVehicles = useMemo(() => {
+    const seenIds = new Set<string>();
     return vehicles.filter(v => {
+      if (!v || !v.id) return false;
+      if (seenIds.has(v.id)) return false;
+      seenIds.add(v.id);
+
       if (filterCompany !== 'all' && v.company_id !== filterCompany) return false;
       if (filterCategory !== 'all' && v.category_id !== filterCategory) return false;
       if (filterOwnership !== 'all' && v.ownership !== filterOwnership) return false;
@@ -139,9 +146,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         if (
-          !v.vehicle_number.toLowerCase().includes(term) &&
-          !v.driver_name.toLowerCase().includes(term) &&
-          !v.driver_phone.includes(term)
+          !(v.vehicle_number || '').toLowerCase().includes(term) &&
+          !(v.driver_name || '').toLowerCase().includes(term) &&
+          !(v.driver_phone || '').includes(term)
         ) {
           return false;
         }
@@ -318,13 +325,27 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
           />
 
           {!isViewer && (
-            <button
-              onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t.addVehicle}</span>
-            </button>
+            <>
+              {onOpenBulkImport && (
+                <button
+                  type="button"
+                  id="vehicles-bulk-import-btn"
+                  onClick={onOpenBulkImport}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-emerald-600/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-2xs cursor-pointer"
+                  title="Bulk Import Vehicles from Excel or CSV (Download template included)"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Bulk Import (Excel/CSV)</span>
+                </button>
+              )}
+              <button
+                onClick={handleOpenAdd}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t.addVehicle}</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -405,7 +426,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
                   </td>
                 </tr>
               ) : (
-                paginatedVehicles.map(veh => {
+                paginatedVehicles.map((veh, idx) => {
                   const cat = categories.find(c => c.id === veh.category_id);
                   const comp = companies.find(c => c.id === veh.company_id);
                   const vnd = vendors.find(v => v.id === veh.vendor_id);
@@ -413,7 +434,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
                   const isLph = cat?.metric_type === 'lph';
 
                   return (
-                    <tr key={veh.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={veh.id ? `${veh.id}_${idx}` : `veh_${idx}`} className="hover:bg-slate-50 transition-colors">
                       {/* Vehicle Number */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
                         <div className="font-extrabold text-slate-900">{veh.vehicle_number}</div>

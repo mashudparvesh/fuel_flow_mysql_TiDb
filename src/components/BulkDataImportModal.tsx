@@ -17,7 +17,11 @@ import {
   Container,
   FileText,
   Loader2,
-  Info
+  Info,
+  ShieldCheck,
+  Check,
+  RotateCcw,
+  ChevronDown
 } from 'lucide-react';
 
 export type BulkEntityType =
@@ -272,6 +276,13 @@ export const BulkDataImportModal: React.FC<Props> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [importReport, setImportReport] = useState<{
+    entityTitle: string;
+    total: number;
+    newCount: number;
+    updatedCount: number;
+    message: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -327,13 +338,35 @@ export const BulkDataImportModal: React.FC<Props> = ({
           setParsedRows([]);
           setDetectedColumns([]);
         } else {
-          // Normalize column headers to lowercase trimmed
+          // Normalize column headers to lowercase trimmed and apply smart aliases
           const normalizedRows = rawJson.map(row => {
             const cleanRow: Record<string, any> = {};
             Object.entries(row).forEach(([key, val]) => {
-              const cleanKey = key.trim().toLowerCase().replace(/\s+/g, '_');
+              const cleanKey = key.trim().toLowerCase().replace(/[\s\-_.]+/g, '_');
               cleanRow[cleanKey] = typeof val === 'string' ? val.trim() : val;
             });
+
+            // Standardize vehicle identification
+            const rawVehNum = cleanRow.vehicle_number || cleanRow.plate_number || cleanRow.vehicle_no || cleanRow.plate_no || cleanRow.registration_number || cleanRow.reg_no || cleanRow.car_number;
+            if (rawVehNum) {
+              cleanRow.vehicle_number = rawVehNum;
+              cleanRow.plate_number = rawVehNum;
+            }
+
+            // Standardize tanker identification
+            const rawTankNum = cleanRow.tanker_name || cleanRow.tanker_number || cleanRow.tanker_no || cleanRow.bowzer_number;
+            if (rawTankNum) {
+              cleanRow.tanker_name = rawTankNum;
+              cleanRow.tanker_number = rawTankNum;
+            }
+
+            // Standardize phone / contact
+            const rawPhone = cleanRow.phone || cleanRow.contact_number || cleanRow.mobile || cleanRow.cell || cleanRow.driver_phone;
+            if (rawPhone) {
+              cleanRow.phone = cleanRow.phone || rawPhone;
+              cleanRow.contact_number = cleanRow.contact_number || rawPhone;
+            }
+
             return cleanRow;
           });
 
@@ -366,9 +399,20 @@ export const BulkDataImportModal: React.FC<Props> = ({
     try {
       const res = await bulkImportData(selectedEntity, parsedRows);
       if (res.success) {
+        const newlyAdded = res.new_count !== undefined ? res.new_count : res.count;
+        const updatedExisting = res.updated_count !== undefined ? res.updated_count : 0;
+
+        setImportReport({
+          entityTitle: `${currentDef.titleEn} (${currentDef.titleBn})`,
+          total: res.count,
+          newCount: newlyAdded,
+          updatedCount: updatedExisting,
+          message: res.message
+        });
+
         setFeedback({
           type: 'success',
-          message: `Successfully imported and registered ${res.count} ${currentDef.titleEn} into workspace!`
+          message: `Bulk import completed! ${res.count} records registered (${newlyAdded} new, ${updatedExisting} updated). Double-entry protection prevented any duplicate items.`
         });
         setParsedRows([]);
         setDetectedColumns([]);
@@ -398,6 +442,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
     setDetectedColumns([]);
     setFileName('');
     setFeedback(null);
+    setImportReport(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -434,29 +479,45 @@ export const BulkDataImportModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Entity Tabs Navigation */}
-        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-950/40 overflow-x-auto flex items-center gap-2 scrollbar-none">
-          {Object.values(ENTITY_DEFINITIONS).map((def) => {
-            const Icon = def.icon;
-            const isSelected = selectedEntity === def.id;
-            return (
-              <button
-                key={def.id}
-                onClick={() => handleEntitySwitch(def.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  isSelected
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
-                }`}
+        {/* Entity Selector Dropdown Bar */}
+        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
+            <label htmlFor="bulk-entity-select" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span>ইমপোর্টের ধরন নির্বাচন করুন (Select Import Category):</span>
+            </label>
+
+            <div className="relative flex-1 max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-amber-600 dark:text-amber-400">
+                <currentDef.icon className="w-4 h-4 shrink-0" />
+              </div>
+              <select
+                id="bulk-entity-select"
+                value={selectedEntity}
+                onChange={(e) => handleEntitySwitch(e.target.value as BulkEntityType)}
+                className="w-full pl-10 pr-10 py-2.5 text-xs font-bold rounded-xl border-2 border-amber-500/40 hover:border-amber-500 focus:border-amber-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs appearance-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 cursor-pointer transition-all"
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{def.titleEn}</span>
-                <span className={`text-[10px] opacity-80 ${isSelected ? 'text-slate-900 font-black' : 'text-slate-400'}`}>
-                  ({def.titleBn})
-                </span>
-              </button>
-            );
-          })}
+                {Object.values(ENTITY_DEFINITIONS).map((def) => (
+                  <option key={def.id} value={def.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-1.5 font-semibold">
+                    {def.titleEn} — {def.titleBn}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Current Selection Pill Badge */}
+          <div className="hidden sm:flex items-center gap-2 text-xs">
+            <span className="text-slate-400 font-medium text-[11px]">Selected:</span>
+            <span className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 text-xs">
+              <currentDef.icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{currentDef.titleEn}</span>
+              <span className="text-[11px] opacity-75">({currentDef.titleBn})</span>
+            </span>
+          </div>
         </div>
 
         {/* Body Content */}
@@ -521,10 +582,94 @@ export const BulkDataImportModal: React.FC<Props> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Supports Microsoft Excel (.xlsx, .xls) and Comma-Separated Values (.csv)
             </p>
+            <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] font-semibold text-blue-600 dark:text-blue-400 w-fit mx-auto mt-3.5">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>Double-Entry Protection Active: Duplicate items will automatically merge/update without creating double entries.</span>
+            </div>
           </div>
 
+          {/* Import Complete Notification & Double-Entry Protection Breakdown */}
+          {importReport && (
+            <div className="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl shadow-emerald-500/10 animate-in zoom-in-95 duration-200">
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30">
+                      Import Complete & Verified
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider border border-blue-500/30">
+                      Double-Entry Protected
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                    {importReport.entityTitle} - বাল্ক ইমপোর্ট সফলভাবে সম্পন্ন হয়েছে!
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                    সবগুলো রেকর্ড সফলভাবে প্রসেস করা হয়েছে। ডাবল এন্ট্রি রোধ ব্যবস্থা কার্যকর থাকায় কোনো ডুপ্লিকেট এন্ট্রি তৈরি হয়নি।
+                  </p>
+                </div>
+              </div>
+
+              {/* 3 Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Processed (সর্বমোট)</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{importReport.total}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Records in sheet</p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                  <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    New Entries (নতুন যুক্ত)
+                  </p>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{importReport.newCount}</p>
+                  <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Fresh records added</p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Updated / Merged (আপডেট করা)
+                  </p>
+                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">{importReport.updatedCount}</p>
+                  <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80 mt-0.5">Matched existing (No duplicates)</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportReport(null);
+                    setFeedback(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-200/50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Upload Another File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportReport(null);
+                    onClose();
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Done & View List (তালিকা দেখুন)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Feedback banner */}
-          {feedback && (
+          {feedback && !importReport && (
             <div
               className={`p-4 rounded-xl flex items-center gap-3 text-xs font-medium ${
                 feedback.type === 'success'

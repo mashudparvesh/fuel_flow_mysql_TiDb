@@ -39,6 +39,7 @@ interface SidebarProps {
   isOpen?: boolean;
   onCloseMobile?: () => void;
   onClose?: () => void;
+  onOpenBulkImport?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -49,7 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   isOpen,
   onCloseMobile,
-  onClose
+  onClose,
+  onOpenBulkImport
 }) => {
   // Normalize currentView if it was 'pumps' or 'tankers'
   const normalizedView = currentView === 'pumps' ? 'pump_credit' : currentView === 'tankers' ? 'tanker_bowzer' : currentView;
@@ -272,6 +274,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
           </nav>
+
+          {/* Bulk Import Shortcut for Subscribers */}
+          {onOpenBulkImport && !isViewer && (
+            <div className="pt-3 px-1">
+              <button
+                type="button"
+                id="sidebar-bulk-import-btn"
+                onClick={() => {
+                  onOpenBulkImport();
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    handleClose();
+                  }
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-blue-500/10 hover:from-emerald-500/20 hover:to-blue-500/20 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 transition-all cursor-pointer shadow-2xs group"
+                title="Bulk Data Ingestion (Vehicles, Companies, Pumps, Vendors, Fuel Types)"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="p-1 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </span>
+                  <span className="text-left font-extrabold text-slate-800 dark:text-slate-200">Bulk Data Import</span>
+                </div>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                  Excel / CSV
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Footer Info */}

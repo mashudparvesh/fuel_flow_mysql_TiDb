@@ -66,9 +66,9 @@ export const QuickScannerModal: React.FC<QuickScannerModalProps> = ({
             {t.simulateLabel}
           </label>
           <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-            {vehicles.map(veh => (
+            {vehicles.map((veh, idx) => (
               <button
-                key={veh.id}
+                key={veh.id ? `${veh.id}_${idx}` : `scan_veh_${idx}`}
                 onClick={() => {
                   onSelectVehicle(veh.id);
                   onClose();

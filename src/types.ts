@@ -1,7 +1,188 @@
 export type UserRole = 'super_admin' | 'company_owner' | 'supervisor' | 'operator' | 'accountant' | 'client_viewer';
 
-export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise' | 'custom';
-export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial' | 'inactive';
+export type SubscriptionPlan =
+  | 'trial_3days'
+  | 'plan_1month'
+  | 'plan_3months'
+  | 'plan_6months'
+  | 'plan_12months'
+  | 'starter'
+  | 'professional'
+  | 'enterprise'
+  | 'custom';
+export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial' | 'inactive' | 'pending_payment';
+
+export type SubscriptionPlanId = SubscriptionPlan;
+
+export interface SubscriptionPlanConfig {
+  id: SubscriptionPlan;
+  name_en: string;
+  name_bn: string;
+  nameEn?: string;
+  nameBn?: string;
+  duration_days: number;
+  durationDays?: number;
+  duration_type: 'days' | 'months' | 'years';
+  durationType?: 'days' | 'months' | 'years';
+  duration_val: number;
+  durationVal?: number;
+  duration_label: string;
+  durationLabel?: string;
+  price_bdt: number;
+  priceBdt?: number;
+  is_trial?: boolean;
+  isTrial?: boolean;
+  badge?: string;
+  payment_url?: string;
+  paymentUrl?: string;
+  features: string[];
+}
+
+export const OFFICIAL_SUBSCRIPTION_PLANS: SubscriptionPlanConfig[] = [
+  {
+    id: 'trial_3days',
+    name_en: '3 Days Free Trial',
+    name_bn: '৩ দিনের ফ্রি ট্রায়াল (3 Days Trial)',
+    nameEn: '3 Days Free Trial',
+    nameBn: '৩ দিনের ফ্রি ট্রায়াল (3 Days Trial)',
+    duration_days: 3,
+    durationDays: 3,
+    duration_type: 'days',
+    durationType: 'days',
+    duration_val: 3,
+    durationVal: 3,
+    duration_label: '3 Days (৩ দিন)',
+    durationLabel: '3 Days (৩ দিন)',
+    price_bdt: 0,
+    priceBdt: 0,
+    is_trial: true,
+    isTrial: true,
+    badge: 'ফ্রি ট্রায়াল',
+    features: [
+      'Full options & all features unlocked',
+      'Dual Metric Tracking (LPH & KMPL)',
+      'Bowzer Depot & Highway Pump Ledgers',
+      'Bulk Data Import (Excel & CSV)',
+      'A4 Official PDF Reports & Analytics'
+    ]
+  },
+  {
+    id: 'plan_1month',
+    name_en: '1 Month Plan',
+    name_bn: '১ মাস প্ল্যান (1 Month Plan)',
+    nameEn: '1 Month Plan',
+    nameBn: '১ মাস প্ল্যান (1 Month Plan)',
+    duration_days: 30,
+    durationDays: 30,
+    duration_type: 'months',
+    durationType: 'months',
+    duration_val: 1,
+    durationVal: 1,
+    duration_label: '1 Month (১ মাস)',
+    durationLabel: '1 Month (১ মাস)',
+    price_bdt: 749,
+    priceBdt: 749,
+    badge: 'সবচেয়ে জনপ্রিয়',
+    payment_url: 'https://baniq.app/link/b2c3e4d825',
+    paymentUrl: 'https://baniq.app/link/b2c3e4d825',
+    features: [
+      'Full options & all modules unlocked',
+      'Dual Metric (LPH & KMPL) Analytics',
+      'Physical Dip Stick & Dispense Reconciliation',
+      'Unlimited Vehicle & Fuel Entries',
+      'Highway Pump Balance & Credit Ledgers'
+    ]
+  },
+  {
+    id: 'plan_3months',
+    name_en: '3 Months Plan',
+    name_bn: '৩ মাস প্ল্যান (3 Months Plan)',
+    nameEn: '3 Months Plan',
+    nameBn: '৩ মাস প্ল্যান (3 Months Plan)',
+    duration_days: 90,
+    durationDays: 90,
+    duration_type: 'months',
+    durationType: 'months',
+    duration_val: 3,
+    durationVal: 3,
+    duration_label: '3 Months (৩ মাস)',
+    durationLabel: '3 Months (৩ মাস)',
+    price_bdt: 2199,
+    priceBdt: 2199,
+    badge: 'জনপ্রিয় কোয়ার্টারলি',
+    payment_url: 'https://baniq.app/link/551a5611cc',
+    paymentUrl: 'https://baniq.app/link/551a5611cc',
+    features: [
+      'Full options & all modules unlocked',
+      'Dual Metric (LPH & KMPL) Engine',
+      'Role-based Multi User Access',
+      'Audit Logs & Anomaly Detection',
+      'Cost Savings Package'
+    ]
+  },
+  {
+    id: 'plan_6months',
+    name_en: '6 Months Plan',
+    name_bn: '৬ মাস প্ল্যান (6 Months Plan)',
+    nameEn: '6 Months Plan',
+    nameBn: '৬ মাস প্ল্যান (6 Months Plan)',
+    duration_days: 180,
+    durationDays: 180,
+    duration_type: 'months',
+    durationType: 'months',
+    duration_val: 6,
+    durationVal: 6,
+    duration_label: '6 Months (৬ মাস)',
+    durationLabel: '6 Months (৬ মাস)',
+    price_bdt: 3999,
+    priceBdt: 3999,
+    badge: 'সেরা ডিল (Save More)',
+    payment_url: 'https://baniq.app/link/f08fdcda12',
+    paymentUrl: 'https://baniq.app/link/f08fdcda12',
+    features: [
+      'Full options & all modules unlocked',
+      'Multi-site Fleet & Bowzer Logistics',
+      'AI Fuel Theft & Siphoning Alerts',
+      'Company Logo on All Printable Reports',
+      'High Cost Savings (Semi-Annual Discount)'
+    ]
+  },
+  {
+    id: 'plan_12months',
+    name_en: '12 Months Plan (1 Year)',
+    name_bn: '১২ মাস প্ল্যান (1 Year Annual Plan)',
+    nameEn: '12 Months Plan (1 Year)',
+    nameBn: '১২ মাস প্ল্যান (1 Year Annual Plan)',
+    duration_days: 365,
+    durationDays: 365,
+    duration_type: 'years',
+    durationType: 'years',
+    duration_val: 1,
+    durationVal: 1,
+    duration_label: '12 Months / 1 Year (১ বছর)',
+    durationLabel: '12 Months / 1 Year (১ বছর)',
+    price_bdt: 7999,
+    priceBdt: 7999,
+    badge: 'অ্যানুয়াল ভিআইপি প্ল্যান',
+    payment_url: 'https://baniq.app/link/4827e7deb9',
+    paymentUrl: 'https://baniq.app/link/4827e7deb9',
+    features: [
+      'Full options & all modules unlocked',
+      'Maximum Commercial Savings',
+      'Unlimited Machinery, Bowzers & Pumps',
+      'Dedicated SLA Guarantee & Data Protection',
+      'Priority Customer & Migration Support'
+    ]
+  }
+];
+
+export const OFFICIAL_SUBSCRIPTION_PLANS_MAP: Record<string, SubscriptionPlanConfig> = OFFICIAL_SUBSCRIPTION_PLANS.reduce(
+  (acc, plan) => {
+    acc[plan.id] = plan;
+    return acc;
+  },
+  {} as Record<string, SubscriptionPlanConfig>
+);
 
 export interface TenantSubscription {
   plan: SubscriptionPlan;
@@ -120,6 +301,7 @@ export interface SaasModerator {
   name: string;
   username: string;
   password: string;
+  must_change_password?: boolean;
   email: string;
   phone: string;
   role: 'saas_moderator';
