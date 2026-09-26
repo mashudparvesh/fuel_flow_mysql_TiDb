@@ -35,6 +35,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
   private handleClearCache = () => {
     try {
       this.setState({ hasError: false, error: null });
+      const keysToRemove = [
+        'fuelflow_v1_active_user_id',
+        'fuelflow_v1_tenant_id',
+        'fuelflow_v1_user_id',
+        'fuelflow_v1_auth_role'
+      ];
+      keysToRemove.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+        try { sessionStorage.removeItem(k); } catch (e) {}
+      });
       window.location.href = window.location.pathname;
     } catch (e) {
       window.location.reload();

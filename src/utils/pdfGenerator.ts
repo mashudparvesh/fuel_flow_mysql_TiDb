@@ -78,7 +78,7 @@ export async function generateCleanVectorPdf(
 
     // 1. Company Letterhead (Left) and Document Ref (Right)
     let companyNameStartX = margin;
-    if (data.tenantInfo.logo && typeof data.tenantInfo.logo === 'string' && data.tenantInfo.logo.startsWith('data:image')) {
+    if (data.tenantInfo?.logo && typeof data.tenantInfo.logo === 'string' && data.tenantInfo.logo.startsWith('data:image')) {
       try {
         pdf.addImage(data.tenantInfo.logo, 'PNG', margin, currentY - 2.5, 14, 10, undefined, 'FAST');
         companyNameStartX = margin + 17;
@@ -90,7 +90,7 @@ export async function generateCleanVectorPdf(
     pdf.setFont('times', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(15, 23, 42); // #0f172a
-    pdf.text(data.tenantInfo.name.toUpperCase(), companyNameStartX, currentY + 3);
+    pdf.text((data.tenantInfo?.name || 'COMPANY').toUpperCase(), companyNameStartX, currentY + 3);
 
     pdf.setFont('times', 'bold');
     pdf.setFontSize(8.5);

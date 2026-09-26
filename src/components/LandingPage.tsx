@@ -96,7 +96,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setRegError('');
 
     if (!regCompanyName.trim() || !regAdminName.trim() || !regEmail.trim() || !regPhone.trim()) {
-      setRegError('অনুগ্রহ করে কোম্পানির নাম, অ্যাডমিনের নাম, ইমেইল ও ফোন নম্বর সঠিকভাবে পূরণ করুন।');
+      setRegError('Please complete all required fields: Company Name, Admin Full Name, Email, and Phone Number.');
       return;
     }
 
@@ -122,7 +122,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       setRegLoading(false);
 
       if (!data.success && !data.tenant) {
-        setRegError(data.message || 'নিবন্ধন প্রক্রিয়া সম্পন্ন করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।');
+        setRegError(data.message || 'Unable to complete workspace registration. Please try again.');
         return;
       }
 
@@ -136,12 +136,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         companyName: regCompanyName.trim(),
         email: regEmail.trim(),
         isTrial: activePlan.is_trial,
-        planName: activePlan.name_bn
+        planName: activePlan.name_en || activePlan.nameEn || activePlan.name_bn
       });
 
     } catch (err: any) {
       setRegLoading(false);
-      setRegError(err?.message || 'নেটওয়ার্ক সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      setRegError(err?.message || 'Network connectivity error occurred. Please try again.');
     }
   };
 
@@ -168,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xl font-black tracking-tight text-white">FuelNest</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
-                  fuelnest.xyz
+                  Enterprise Fleet
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
@@ -506,10 +506,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Official Fleet Subscriptions & Plans
             </h2>
             <p className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              অফিসিয়াল সাবস্ক্রিপশন প্ল্যান ও স্বচ্ছ মূল্যতালিকা
+              Transparent Subscription Plans for Heavy Fleets
             </p>
-            <p className="text-sm text-slate-400 mt-3">
-              প্রতিটি প্ল্যানে সব অপশন ও ফিচার আনলকড। ট্রায়াল প্ল্যানে কার্ড ছাড়াই ৩ দিন বিনামূল্যে ব্যবহার করুন।
+            <p className="text-sm text-slate-400 mt-3 leading-relaxed">
+              Every plan includes 100% unlocked modules, dual-metric tracking (LPH & KMPL), site bowzer management, and AI theft anomaly detection. Start with a 3-day unrestricted free trial without a card.
             </p>
           </div>
 
@@ -523,22 +523,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   key={plan.id}
                   className={`rounded-3xl p-6 flex flex-col justify-between transition-all relative ${
                     isFeatured
-                      ? 'bg-slate-900 border-2 border-amber-500/80 shadow-2xl shadow-amber-500/10'
+                      ? 'bg-slate-900 border-2 border-amber-500/80 shadow-2xl shadow-amber-500/10 ring-1 ring-amber-500/20'
                       : 'bg-slate-900/80 border border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-md">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-md whitespace-nowrap z-10">
                       {plan.badge}
                     </div>
                   )}
 
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-bold text-white">
-                        {plan.name_bn}
+                    <div className="flex items-center justify-between gap-1.5 mb-3">
+                      <h3 className="text-sm sm:text-base font-bold text-white whitespace-nowrap truncate">
+                        {plan.name_en || plan.nameEn || plan.name_bn}
                       </h3>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-amber-300">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-amber-300 whitespace-nowrap shrink-0">
                         {plan.duration_days} Days
                       </span>
                     </div>
@@ -552,8 +552,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           <span className="text-xs font-bold text-slate-400">BDT</span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        {isTrial ? '৩ দিনের ফ্রি ট্রায়াল' : 'ফুল অপশন আনলকড'}
+                      <p className="text-[11px] text-slate-400 mt-1 whitespace-nowrap">
+                        {isTrial ? '3-Day Unrestricted Trial' : 'All Modules Unlocked'}
                       </p>
                     </div>
 
@@ -577,7 +577,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         : 'bg-slate-800 hover:bg-slate-700 text-white'
                     }`}
                   >
-                    <span>{isTrial ? 'ফ্রি ট্রায়াল শুরু করুন' : 'প্ল্যান সিলেক্ট করুন'}</span>
+                    <span className="whitespace-nowrap">{isTrial ? 'Start Free Trial' : 'Select Plan'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -592,7 +592,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <Fuel className="w-4 h-4 text-amber-400" />
-            <span className="font-bold text-slate-200">FuelNest SaaS Platform &bull; fuelnest.xyz</span>
+            <span className="font-bold text-slate-200">FuelNest Fleet Intelligence Platform</span>
           </div>
           <p>&copy; {new Date().getFullYear()} FuelNest Technologies. All rights reserved.</p>
         </div>
@@ -614,13 +614,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="mb-6">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-2">
                     <Building2 className="w-3.5 h-3.5" />
-                    <span>নতুন গ্রাহক নিবন্ধন &bull; New Workspace Registration</span>
+                    <span>New Workspace Registration</span>
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    নিবন্ধন ও প্ল্যান নির্বাচন
+                    Workspace & Plan Setup
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    কোম্পানির তথ্য প্রদান করুন এবং আপনার সুবিধাজনক প্ল্যান নির্বাচন করুন।
+                    Provide organization details to instantly provision your private tenant workspace.
                   </p>
                 </div>
 
@@ -634,13 +634,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <form onSubmit={handleRegisterSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-1">
-                      কোম্পানি / ফ্লিটের নাম (Company Name) *
+                      Company / Fleet Name *
                     </label>
                     <input
                       type="text"
                       value={regCompanyName}
                       onChange={e => setRegCompanyName(e.target.value)}
-                      placeholder="e.g., Padma Multipurpose Fleet Ltd."
+                      placeholder="e.g., Summit Logistics & Infrastructure Ltd."
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
                       required
                     />
@@ -649,7 +649,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-300 mb-1">
-                        অ্যাডমিনের পুরো নাম (Admin Full Name) *
+                        Admin Full Name *
                       </label>
                       <input
                         type="text"
@@ -663,7 +663,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-slate-300 mb-1">
-                        ইমেইল ঠিকানা (Login credentials will be sent here) *
+                        Work Email (Credentials will be sent here) *
                       </label>
                       <input
                         type="email"
@@ -678,7 +678,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-1">
-                      মোবাইল নম্বর (Phone Number) *
+                      Phone Number *
                     </label>
                     <input
                       type="tel"
@@ -693,7 +693,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   {/* Plan Selector inside Modal */}
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-2">
-                      সাবস্ক্রিপশন প্ল্যান নির্বাচন করুন:
+                      Select Subscription Tier:
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {OFFICIAL_SUBSCRIPTION_PLANS.map(p => {
@@ -716,7 +716,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                               >
                                 {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
                               </div>
-                              <span className="font-bold">{p.name_bn}</span>
+                              <span className="font-bold">{p.name_en || p.nameEn || p.name_bn}</span>
                             </div>
                             <span className="font-black text-amber-400">
                               {p.price_bdt === 0 ? 'Free' : `${p.price_bdt} BDT`}
@@ -733,14 +733,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     return (
                       <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
                         <div>
-                          <span className="text-slate-400 block">প্রদেয় ফি (Payable Amount):</span>
+                          <span className="text-slate-400 block text-[11px]">Payable Amount:</span>
                           <span className="text-base font-black text-amber-400">
-                            {currentPlan.price_bdt === 0 ? '০ টাকা (Free Trial)' : `${currentPlan.price_bdt.toLocaleString()} BDT`}
+                            {currentPlan.price_bdt === 0 ? '0 BDT (Free Trial)' : `${currentPlan.price_bdt.toLocaleString()} BDT`}
                           </span>
                         </div>
                         <div className="text-right text-[11px] text-slate-400">
-                          <span className="block font-bold text-slate-200">{currentPlan.name_bn}</span>
-                          <span className="text-emerald-400">ফুল অপশন ও ফিচার আনলকড</span>
+                          <span className="block font-bold text-slate-200">{currentPlan.name_en || currentPlan.nameEn || currentPlan.name_bn}</span>
+                          <span className="text-emerald-400">All Modules & Analytics Unlocked</span>
                         </div>
                       </div>
                     );
@@ -759,10 +759,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           <CreditCard className="w-4 h-4" />
                           <span>
                             {regLoading
-                              ? 'প্রক্রিয়াকরণ হচ্ছে...'
+                              ? 'Provisioning Workspace...'
                               : currentPlan.is_trial
-                              ? '৩ দিনের ফ্রি ট্রায়াল শুরু করুন (Start Free Trial)'
-                              : 'পেমেন্টে এগিয়ে যান (Proceed to Payment)'}
+                              ? 'Start 3-Day Free Trial'
+                              : 'Proceed to Secure Payment'}
                           </span>
                         </button>
                       );
@@ -778,7 +778,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 <h3 className="text-2xl font-black text-white tracking-tight mb-2">
-                  {regSuccessResult.isTrial ? 'অভিনন্দন! ট্রায়াল সক্রিয় হয়েছে' : 'ধন্যবাদ! আপনার রিকোয়েস্ট সফলভাবে জমা হয়েছে'}
+                  {regSuccessResult.isTrial ? 'Welcome! Your Free Trial is Active' : 'Thank You! Subscription Request Submitted'}
                 </h3>
 
                 <p className="text-xs font-semibold text-amber-400 mb-4">
@@ -788,28 +788,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {regSuccessResult.isTrial ? (
                   <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-left text-xs mb-6 space-y-3">
                     <p className="text-slate-300 leading-relaxed">
-                      আপনার ৩ দিনের ফ্রি ট্রায়াল সফলভাবে সক্রিয় করা হয়েছে। ট্রায়াল মেয়াদে সব মডিউল ও ফিচার আনলক থাকবে।
+                      Your 3-day unrestricted free trial has been provisioned. All fuel intelligence, bowzer tracking, and anomaly detection modules are fully active.
                     </p>
                     <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-                      সুপার অ্যাডমিন লগইন আইডি ও বিস্তারিত নির্দেশনা আপনার দেওয়া ইমেইল <strong>{regSuccessResult.email}</strong> এ পাঠানো হয়েছে।
+                      Super Admin login credentials and getting-started guide have been dispatched to <strong>{regSuccessResult.email}</strong>.
                     </div>
                   </div>
                 ) : (
                   <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-left text-xs mb-6 space-y-3">
                     <p className="text-slate-200 leading-relaxed font-medium">
-                      পেমেন্ট গেটওয়ে উইন্ডোটি ওপেন করা হয়েছে। আপনার পেমেন্ট সম্পন্ন হওয়ার পর আমাদের টিম দ্রুত ভেরিফাই করবে।
+                      The official payment gateway window has opened. Once payment is completed, your workspace activation will be verified automatically.
                     </p>
                     <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                       <div className="flex items-center gap-2 text-emerald-400 font-bold">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>পেমেন্ট যাচাই পরবর্তী পদক্ষেপ:</span>
+                        <span>Next Steps for Verification:</span>
                       </div>
                       <p className="text-slate-300">
-                        আমরা ব্যক্তিগতভাবে আপনার পেমেন্ট চেক করে অবিলম্বে আপনার দেওয়া ইমেইল (<span className="text-amber-400 font-mono">{regSuccessResult.email}</span>)-এ লগইন আইডি ও পাসওয়ার্ড পাঠিয়ে দিব।
+                        Our administrative desk will verify your transaction and issue your Super Admin credentials directly to <span className="text-amber-400 font-mono">{regSuccessResult.email}</span>.
                       </p>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      জরুরি সহায়তা বা প্রশ্নের জন্য আমাদের হেল্পলাইনে যোগাযোগ করুন: <strong className="text-slate-200">+880 1700-000000</strong>
+                      For urgent inquiries or priority activation, contact our 24/7 hotline: <strong className="text-slate-200">+880 1700-000000</strong>
                     </p>
                   </div>
                 )}
@@ -825,7 +825,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>{regSuccessResult.isTrial ? 'লগইন পেজে যান (Go to Sign In)' : 'ঠিক আছে (Close)'}</span>
+                  <span>{regSuccessResult.isTrial ? 'Go to Sign In' : 'Close Window'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

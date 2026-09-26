@@ -631,7 +631,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 </div>
                 <select
                   id="saas-owner-tenant-select"
-                  value={currentTenant.id}
+                  value={currentTenant?.id || ''}
                   onChange={(e) => setCurrentTenantId(e.target.value)}
                   className="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2 py-1 outline-hidden focus:border-amber-400 cursor-pointer mt-0.5"
                 >
@@ -1755,7 +1755,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  Currency: BDT (৳)
+                  Currency: BDT
                 </span>
               </div>
             </div>
@@ -1851,20 +1851,20 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="mt-6 p-5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
               <h4 className="text-xs font-black text-blue-900 dark:text-blue-200 uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-500" />
-                <span>How Baniq Pay Works with FuelNest (সহজ ব্যবহারের নির্দেশিকা)</span>
+                <span>How Baniq Pay Works with FuelNest (Setup Guide)</span>
               </h4>
               <ol className="list-decimal list-inside space-y-2 text-xs text-slate-700 dark:text-slate-300">
                 <li>
-                  <strong>Baniq Pay মার্চেন্ট প্যানেলে লগইন করুন:</strong> Baniq Pay একাউন্টে ঢুকে Developer / API Settings সেকশনে যান।
+                  <strong>Log in to Baniq Pay Merchant Dashboard:</strong> Navigate to your Baniq Pay account and open Developer / API Settings.
                 </li>
                 <li>
-                  <strong>Webhook URL সেট করুন:</strong> উপরের বক্সে থাকা <code>/api/baniq-pay/webhook</code> URL টি কপি করে Baniq Pay-এর Webhook ফিল্ডে পেস্ট করুন।
+                  <strong>Configure Webhook URL:</strong> Copy the <code>/api/baniq-pay/webhook</code> URL from the box above and paste it into the Webhook Endpoint URL field in Baniq Pay.
                 </li>
                 <li>
-                  <strong>API Key ও API Secret সংগ্রহ করুন:</strong> Baniq Pay ড্যাশবোর্ড থেকে API Key ও API Secret নিয়ে আপনার সার্ভারের <code>.env</code> ফাইলে (<code>BANIQ_PAY_API_KEY</code> ও <code>BANIQ_PAY_API_SECRET</code>) সেট করুন।
+                  <strong>Set API Credentials:</strong> Obtain your API Key and Secret from Baniq Pay and ensure they are populated in your server environment (<code>BANIQ_PAY_API_KEY</code> & <code>BANIQ_PAY_API_SECRET</code>).
                 </li>
                 <li>
-                  <strong>স্বয়ংক্রিয় প্রোভিশনিং:</strong> যেকোনো গ্রাহক বিকাশ, নগদ, রকেট বা ব্যাংকে পেমেন্ট সফল করার সাথে সাথে Baniq Pay এর Webhook স্বয়ংক্রিয়ভাবে নতুন টেন্যান্ট ডেটাবেস, সুপার অ্যাডমিন ইউজারনেম (<code>FirstWord_admin</code>) ও পাসওয়ার্ড (<code>FirstWord@12345</code>) তৈরি করে কনফার্মেশন ইমেইল পাঠিয়ে দেবে!
+                  <strong>Automated Provisioning:</strong> When a subscriber completes payment via bKash, Nagad, Rocket, or Bank Transfer, the webhook immediately activates their workspace, creates the Super Admin credentials, and sends confirmation notifications automatically!
                 </li>
               </ol>
             </div>
@@ -2140,7 +2140,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         onChange={e => setNewSubForm(prev => ({ ...prev, must_change_password: e.target.checked }))}
                         className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 border-slate-300 dark:border-slate-600"
                       />
-                      <span>Force password change on first login (বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                      <span>Force password change on first login</span>
                     </label>
                   </div>
                 </div>
@@ -2392,7 +2392,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     onChange={e => setNewModForm(prev => ({ ...prev, must_change_password: e.target.checked }))}
                     className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 border-slate-300 dark:border-slate-600"
                   />
-                  <span>Force password change on first login (প্রথমবার লগইনে বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                  <span>Force password change on first login</span>
                 </label>
               </div>
 

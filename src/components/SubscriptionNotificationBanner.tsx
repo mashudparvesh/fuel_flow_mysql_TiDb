@@ -49,28 +49,13 @@ export const SubscriptionNotificationBanner: React.FC<SubscriptionNotificationBa
             <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
             <span>
-              {language === 'bn' ? (
-                <>
-                  <strong className="font-bold">ট্রায়াল প্ল্যান সক্রিয়:</strong> আপনি বর্তমানে ৩ দিনের ফ্রি ট্রায়াল ব্যবহার করছেন।
-                  {isExpired ? (
-                    <span className="text-red-500 dark:text-red-400 font-bold ml-1"> (মেয়াদ উত্তীর্ণ হয়েছে)</span>
-                  ) : (
-                    <span className="text-amber-700 dark:text-amber-400 ml-1">
-                      (মেয়াদ আর মাত্র <strong className="font-bold">{daysRemaining}</strong> দিন)
-                    </span>
-                  )}
-                </>
+              <strong className="font-bold">Trial Plan Active:</strong> You are currently on a 3-Day Free Trial.
+              {isExpired ? (
+                <span className="text-red-500 dark:text-red-400 font-bold ml-1"> (Trial Expired)</span>
               ) : (
-                <>
-                  <strong className="font-bold">Trial Plan Active:</strong> You are currently on a 3-Day Free Trial.
-                  {isExpired ? (
-                    <span className="text-red-500 dark:text-red-400 font-bold ml-1"> (Trial Expired)</span>
-                  ) : (
-                    <span className="text-amber-700 dark:text-amber-400 ml-1">
-                      (<strong className="font-bold">{daysRemaining}</strong> days left)
-                    </span>
-                  )}
-                </>
+                <span className="text-amber-700 dark:text-amber-400 ml-1">
+                  (<strong className="font-bold">{daysRemaining}</strong> days left)
+                </span>
               )}
             </span>
           </div>
@@ -78,9 +63,9 @@ export const SubscriptionNotificationBanner: React.FC<SubscriptionNotificationBa
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenRenewModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs transition-all transform active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs transition-all transform active:scale-95 cursor-pointer"
             >
-              <span>{language === 'bn' ? 'প্রিমিয়াম প্ল্যানে আপগ্রেড করুন' : 'Upgrade to Premium'}</span>
+              <span>Upgrade to Premium</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -106,40 +91,24 @@ export const SubscriptionNotificationBanner: React.FC<SubscriptionNotificationBa
         <div className="flex items-center gap-2 text-slate-900 dark:text-amber-200 font-medium">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 animate-bounce" />
           <span>
-            {language === 'bn' ? (
-              <>
-                <strong className="font-bold text-red-600 dark:text-red-400">সাবস্ক্রিপশন সতর্কতা:</strong> আপনার সাবস্ক্রিপশন প্ল্যানের মেয়াদ{' '}
-                {isExpired ? (
-                  <strong className="text-red-600 dark:text-red-400">ইতিমধ্যে শেষ হয়ে গেছে!</strong>
-                ) : (
-                  <>
-                    আর মাত্র <strong className="text-amber-600 dark:text-amber-400 font-bold text-sm underline">{daysRemaining} দিন</strong> বাকি আছে।
-                  </>
-                )}{' '}
-                নিরবচ্ছিন্ন ফ্লিট সেবার জন্য প্ল্যানটি আপডেট বা নবায়ন করুন।
-              </>
+            <strong className="font-bold text-red-600 dark:text-red-400">Subscription Notice:</strong> Your subscription plan{' '}
+            {isExpired ? (
+              <strong className="text-red-600 dark:text-red-400">has expired!</strong>
             ) : (
               <>
-                <strong className="font-bold text-red-600 dark:text-red-400">Subscription Notice:</strong> Your subscription plan{' '}
-                {isExpired ? (
-                  <strong className="text-red-600 dark:text-red-400">has expired!</strong>
-                ) : (
-                  <>
-                    has only <strong className="text-amber-600 dark:text-amber-400 font-bold text-sm underline">{daysRemaining} days</strong> remaining.
-                  </>
-                )}{' '}
-                Please update or renew your plan to avoid disruption.
+                has only <strong className="text-amber-600 dark:text-amber-400 font-bold text-sm underline">{daysRemaining} days</strong> remaining.
               </>
-            )}
+            )}{' '}
+            Please update or renew your plan to avoid disruption.
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenRenewModal}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-xs transition-all transform active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-xs transition-all transform active:scale-95 cursor-pointer"
           >
-            <span>{language === 'bn' ? 'প্ল্যান নবায়ন করুন' : 'Renew Subscription'}</span>
+            <span>Renew Subscription</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           {!isExpired && (

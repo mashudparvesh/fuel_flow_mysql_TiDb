@@ -1521,11 +1521,11 @@ export const PumpCreditView: React.FC = () => {
                           generatedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                           dateRange: `${statementDateFrom || 'All Previous'} to ${statementDateTo || 'Present'}`,
                           tenantInfo: {
-                            name: currentTenant.name,
-                            code: currentTenant.code,
-                            address: currentTenant.address,
-                            phone: currentTenant.phone,
-                            contactPerson: currentTenant.contact_person
+                            name: currentTenant?.name || '',
+                            code: currentTenant?.code || '',
+                            address: currentTenant?.address || '',
+                            phone: currentTenant?.phone || '',
+                            contactPerson: currentTenant?.contact_person || ''
                           },
                           pumpInfo: {
                             name: currentStatementData.pump.name,
@@ -1654,17 +1654,17 @@ export const PumpCreditView: React.FC = () => {
                     {currentTenant?.logo && (
                       <img
                         src={currentTenant.logo}
-                        alt={`${currentTenant.name} Logo`}
+                        alt={`${currentTenant?.name || ''} Logo`}
                         className="h-10 sm:h-12 w-auto max-w-[120px] object-contain rounded-md border border-slate-300 p-1 bg-white shrink-0 shadow-xs"
                       />
                     )}
                     <div>
                       <h2 className="text-xl font-bold uppercase tracking-tight text-black">
-                        {currentTenant.name}
+                        {currentTenant?.name || ''}
                       </h2>
-                      <p className="text-xs text-slate-800">{currentTenant.address}</p>
+                      <p className="text-xs text-slate-800">{currentTenant?.address || ''}</p>
                       <p className="text-xs text-slate-700">
-                        Phone: {currentTenant.phone} &nbsp;|&nbsp; Reg Code: {currentTenant.code} &nbsp;|&nbsp; In-charge: {currentTenant.contact_person}
+                        Phone: {currentTenant?.phone || ''} &nbsp;|&nbsp; Reg Code: {currentTenant?.code || ''} &nbsp;|&nbsp; In-charge: {currentTenant?.contact_person || ''}
                       </p>
                     </div>
                   </div>
@@ -1690,10 +1690,10 @@ export const PumpCreditView: React.FC = () => {
                       {'Client Organization:'}
                     </span>
                     <h4 className="font-bold text-black text-sm">
-                      {currentTenant.name}
+                      {currentTenant?.name || ''}
                     </h4>
-                    <p className="text-slate-700 text-xs">{currentTenant.address}</p>
-                    <p className="font-mono text-slate-600 text-xs">{currentTenant.phone}</p>
+                    <p className="text-slate-700 text-xs">{currentTenant?.address || ''}</p>
+                    <p className="font-mono text-slate-600 text-xs">{currentTenant?.phone || ''}</p>
                   </div>
 
                   <div>

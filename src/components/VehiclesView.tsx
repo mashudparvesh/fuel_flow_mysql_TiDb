@@ -219,7 +219,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
     const dateStr = new Date().toISOString().split('T')[0];
     const isFiltered = filteredVehicles.length !== vehicles.length;
     const filterTag = isFiltered ? `Filtered_${filteredVehicles.length}_of_${vehicles.length}` : `All_${filteredVehicles.length}`;
-    exportToCsv(`Vehicles_${filterTag}_records_${currentTenant.code}_${dateStr}`, headers, rows);
+    exportToCsv(`Vehicles_${filterTag}_records_${currentTenant?.code || 'DEFAULT'}_${dateStr}`, headers, rows);
   };
 
   const handleOpenAdd = () => {

@@ -77,11 +77,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     tanker_bowzer: 'Internal Bowzer Stock',
     anomalies: 'Fuel Loss & Anomalies',
     reports: 'Reports & Export (PDF/Excel)',
-    blueprint: 'Laravel Migration Schema',
-    saas_panel: 'SaaS Control Panel (Owner)',
+    blueprint: 'Database Migration Schema',
+    saas_panel: 'Master Control Console',
     company_users: 'Users & Category Access',
     systemActive: 'System Active',
-    currentTenant: 'Current Tenant',
+    currentTenant: 'Current Organization',
     role: 'User Role',
     navigationMenu: 'Menu Navigation',
     hideSidebar: 'Hide Sidebar'
@@ -209,13 +209,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-2 truncate">
                 <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <div className="text-xs font-bold text-slate-800 dark:text-white truncate" title={currentTenant.name}>
-                  {currentTenant.name}
+                <div className="text-xs font-bold text-slate-800 dark:text-white truncate" title={currentTenant?.name || 'FuelNest'}>
+                  {currentTenant?.name || 'FuelNest'}
                 </div>
               </div>
               {activeAuthRole === 'saas_owner' && (
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500 text-slate-950 shrink-0">
-                  Owner
+                  Admin
                 </span>
               )}
             </div>
@@ -223,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span className="capitalize font-semibold text-slate-700 dark:text-slate-300">
-                  {currentUser.role.replace('_', ' ')}
+                  {currentUser?.role ? currentUser.role.replace('_', ' ') : 'User'}
                 </span>
               </span>
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
@@ -308,7 +308,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3 border-t border-slate-200 dark:border-blue-900/60 bg-slate-50/50 dark:bg-[#080e1e]/60 space-y-2">
           <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
             <span className="font-bold text-amber-500">FuelNest Engine</span>
-            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">fuelnest.xyz</span>
+            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">v2.5.0</span>
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 leading-snug">
             All DB models include <code className="text-slate-600 dark:text-slate-300 font-semibold">user_id</code> & <code className="text-slate-600 dark:text-slate-300 font-semibold">tenant_id</code>

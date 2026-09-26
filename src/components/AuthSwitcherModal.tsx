@@ -52,7 +52,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
   const [modError, setModError] = useState('');
 
   // Company Login State
-  const [selectedTenantId, setSelectedTenantId] = useState(currentTenant.id);
+  const [selectedTenantId, setSelectedTenantId] = useState(currentTenant?.id || '');
   const [companyUsername, setCompanyUsername] = useState('');
   const [companyPassword, setCompanyPassword] = useState('');
   const [companyError, setCompanyError] = useState('');
@@ -134,7 +134,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
               {activeAuthRole === 'saas_owner' && <Crown className="w-3.5 h-3.5 text-amber-500" />}
               {activeAuthRole === 'saas_moderator' && <Shield className="w-3.5 h-3.5 text-indigo-500" />}
               {activeAuthRole === 'company_user' && <Building2 className="w-3.5 h-3.5 text-blue-500" />}
-              <span>{activeAuthRole === 'saas_owner' ? saasOwner.name : activeAuthRole === 'saas_moderator' ? activeModerator?.name : currentUser.name}</span>
+              <span>{activeAuthRole === 'saas_owner' ? (saasOwner?.name || 'SaaS Owner') : activeAuthRole === 'saas_moderator' ? (activeModerator?.name || 'Moderator') : (currentUser?.name || 'User')}</span>
             </span>
           </div>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">

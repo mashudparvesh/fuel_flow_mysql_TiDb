@@ -46,18 +46,16 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
               </div>
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                  {language === 'bn' ? 'সাবস্ক্রিপশন প্ল্যান নবায়ন ও আপগ্রেড' : 'Renew or Upgrade Subscription'}
+                  Renew or Upgrade Subscription
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {currentTenant?.name} &bull; {language === 'bn' ? 'সকল অপশন ও ফিচার আনলকড' : 'Full Options & Features Unlocked'}
+                  {currentTenant?.name} &bull; Full Options & Features Unlocked
                 </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-3 mb-5">
-              {language === 'bn'
-                ? 'আপনার চাহিদামতো যেকোনো প্ল্যান সিলেক্ট করে পেমেন্ট সম্পন্ন করুন। পেমেন্ট সম্পন্ন হলে অ্যাডমিন ভেরিফিকেশন সাপেক্ষে আপনার মেয়াদ অবিলম্বে বৃদ্ধি পাবে।'
-                : 'Select your preferred subscription plan and proceed to secure payment. Your workspace validity will be updated immediately upon confirmation.'}
+              Select your preferred subscription plan and proceed to secure payment. Your workspace validity will be updated immediately upon confirmation.
             </p>
 
             {/* Plans Grid */}
@@ -75,7 +73,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
                     }`}
                   >
                     {plan.badge && (
-                      <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950">
+                      <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 whitespace-nowrap shadow-xs">
                         {plan.badge}
                       </span>
                     )}
@@ -89,7 +87,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        {language === 'bn' ? plan.name_bn : (plan.name_en || plan.name_bn)}
+                        {plan.name_en || plan.nameEn || plan.id}
                       </h4>
                     </div>
 
@@ -101,7 +99,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
                         BDT
                       </span>
                       <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                        / {plan.duration_days} {language === 'bn' ? 'দিন' : 'days'}
+                        / {plan.duration_days} days
                       </span>
                     </div>
 
@@ -122,13 +120,13 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
             <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                  {language === 'bn' ? 'নির্বাচিত প্ল্যানের মোট প্রদেয়:' : 'Total Amount Due:'}
+                  Total Amount Due:
                 </span>
                 <span className="text-lg font-black text-slate-900 dark:text-amber-400">
                   {currentPlan.price_bdt.toLocaleString()} BDT
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400 ml-1.5">
-                  ({language === 'bn' ? currentPlan.name_bn : (currentPlan.name_en || currentPlan.name_bn)})
+                  ({currentPlan.name_en || currentPlan.nameEn || 'Subscription Plan'})
                 </span>
               </div>
 
@@ -137,7 +135,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
                 className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CreditCard className="w-4 h-4" />
-                <span>{language === 'bn' ? 'পেমেন্টে এগিয়ে যান (Proceed to Payment)' : 'Proceed to Payment'}</span>
+                <span>Proceed to Payment</span>
                 <ExternalLink className="w-3.5 h-3.5 ml-1" />
               </button>
             </div>
@@ -150,26 +148,24 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
             </div>
 
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">
-              {language === 'bn' ? 'ধন্যবাদ! আপনার রিকোয়েস্ট সফলভাবে জমা হয়েছে' : 'Thank You! Request Received'}
+              Thank You! Request Received
             </h3>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto mb-6 leading-relaxed">
-              {language === 'bn'
-                ? 'পেমেন্ট গেটওয়ে উইন্ডোটি ওপেন করা হয়েছে। আপনার পেমেন্ট সম্পন্ন হওয়ার পর আমাদের অ্যাডমিন ব্যক্তিগতভাবে যাচাই করে আপনার একাউন্টের মেয়াদ হালনাগাদ করে দিবেন।'
-                : 'The secure payment link has been opened. Once your payment is complete, our team will verify and update your subscription validity.'}
+              The secure payment link has been opened. Once your payment is complete, our team will verify and update your subscription validity.
             </p>
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left text-xs space-y-2 mb-6 max-w-md mx-auto">
               <div className="flex justify-between">
-                <span className="text-slate-500">{language === 'bn' ? 'কোম্পানি:' : 'Company:'}</span>
+                <span className="text-slate-500">Company:</span>
                 <span className="font-bold text-slate-900 dark:text-white">{currentTenant?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{language === 'bn' ? 'প্ল্যান:' : 'Plan:'}</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400">{currentPlan.name_bn}</span>
+                <span className="text-slate-500">Plan:</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{currentPlan.name_en || currentPlan.nameEn}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{language === 'bn' ? 'পরিমাণ:' : 'Amount:'}</span>
+                <span className="text-slate-500">Amount:</span>
                 <span className="font-bold text-slate-900 dark:text-white">{currentPlan.price_bdt} BDT</span>
               </div>
             </div>
@@ -181,7 +177,7 @@ export const SubscriptionRenewModal: React.FC<SubscriptionRenewModalProps> = ({
               }}
               className="px-6 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-xs hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
             >
-              {language === 'bn' ? 'ঠিক আছে (Close)' : 'Close Window'}
+              Close Window
             </button>
           </div>
         )}

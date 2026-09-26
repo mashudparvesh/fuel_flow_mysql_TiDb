@@ -29,6 +29,31 @@ export const DEFAULT_SAAS_OWNER: SaasOwnerProfile = {
 
 export const INITIAL_MODERATORS: SaasModerator[] = [];
 
+export const DEFAULT_FALLBACK_TENANT: Tenant = {
+  id: 'tenant_default',
+  name: 'FuelNest Fleet',
+  code: 'FUELNEST',
+  currency: 'BDT',
+  status: 'active',
+  created_at: '2025-01-01',
+  address: 'Dhaka, Bangladesh',
+  phone: '+880 1700-000000',
+  contact_person: 'Operations Manager',
+  logo: ''
+};
+
+export const DEFAULT_FALLBACK_USER: User = {
+  id: 'u_default_admin',
+  tenant_id: 'tenant_default',
+  name: 'System Administrator',
+  username: 'admin',
+  role: 'super_admin',
+  role_title_bn: 'System Administrator',
+  email: 'admin@fuelnest.local',
+  status: 'active',
+  created_at: '2025-01-01'
+};
+
 export const INITIAL_TENANTS: Tenant[] = [];
 
 export const INITIAL_USERS: User[] = [];

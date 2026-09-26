@@ -1,6 +1,6 @@
 {
   "name": "FuelNest",
-  "description": "Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system for fuelnest.xyz.",
+  "description": "Enterprise fleet fuel tracking, pump credit ledger, internal bowzer inventory, mileage anomaly detection, and analytical reporting system for modern fleet logistics.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

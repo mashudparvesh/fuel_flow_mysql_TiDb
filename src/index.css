@@ -4,17 +4,20 @@
 
 /* ============================================================
    FuelNest Typography & Theming (fuelnest.xyz)
-   Professional English & Bengali Typography
-   Deep Blue & Yellow High-Contrast Aesthetic
+   High-Contrast Executive Modern Fleet Aesthetic
+   Plus Jakarta Sans & Inter Sans-Serif Typography
    ============================================================ */
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Times New Roman", Times, "Tiro Bangla", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Times New Roman", Times, Georgia, serif;
 }
 
 html {
-  font-family: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html.dark {
@@ -23,26 +26,20 @@ html.dark {
 
 /* Light mode defaults */
 body {
-  font-family: "Plus Jakarta Sans", "Hind Siliguri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
   transition: background-color 0.2s ease, color 0.2s ease;
-  letter-spacing: -0.01em;
-}
-
-/* Professional Bengali typography */
-:lang(bn),
-[lang="bn"],
-.font-bangla {
-  font-family: "Hind Siliguri", "Anek Bangla", "Noto Sans Bengali", sans-serif;
-  letter-spacing: 0;
-  line-height: 1.55;
+  letter-spacing: -0.012em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Dedicated Times New Roman A4 Document & Print Styling */
 .font-times-new-roman,
 .a4-document-container {
-  font-family: "Times New Roman", Times, "Tiro Bangla", serif !important;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
 }
 
 .a4-document-container * {

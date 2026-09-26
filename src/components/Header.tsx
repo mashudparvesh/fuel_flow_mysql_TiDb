@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      if (result) {
+      if (result && currentTenant?.id) {
         updateTenantLogo(currentTenant.id, result);
       }
     };
@@ -94,18 +94,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   const t = {
     appName: 'FuelNest',
-    tagline: 'Fleet & Fuel Intelligence • fuelnest.xyz',
+    tagline: 'Fleet & Fuel Intelligence',
     quickEntry: 'New Fuel Entry',
     scanQr: 'QR Scan',
-    schemaBtn: 'Laravel Schema',
+    schemaBtn: 'Database Schema',
     resetData: 'Reset Demo Data',
-    switchTenant: 'Switch Tenant (SaaS)',
+    switchTenant: 'Switch Workspace',
     switchUser: 'Switch User',
-    switchAuth: 'Switch Role / Login',
-    tenantBadge: 'Tenant',
+    switchAuth: 'Switch Account / Role',
+    tenantBadge: 'Workspace',
     roleBadge: 'Role',
     anomalies: 'Anomaly Alerts',
-    saasControlBtn: 'SaaS Control Panel',
+    saasControlBtn: 'Master Control Panel',
     fleetViewBtn: 'Go to Fleet View'
   };
 
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {t.appName}
                 </h1>
                 <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                  SaaS
+                  Enterprise
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -146,10 +146,10 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {/* Logo Container - Sized harmoniously to match the company name font size */}
             <div className="relative shrink-0 flex items-center justify-center">
-              {currentTenant.logo ? (
+              {currentTenant?.logo ? (
                 <img
                   src={currentTenant.logo}
-                  alt={currentTenant.name}
+                  alt={currentTenant?.name || 'Company Logo'}
                   className="h-7 w-7 sm:h-8 sm:w-8 max-w-[32px] max-h-[32px] object-contain rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 p-0.5 shadow-2xs"
                 />
               ) : (
@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex flex-col text-left min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-[280px]">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">
-                  {currentTenant.name}
+                  {currentTenant?.name || 'FuelNest Fleet'}
                 </span>
                 {isSuperAdmin && (
                   <span className="hidden lg:inline-block text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">
@@ -194,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium truncate">
-                ID: {currentTenant.code}
+                ID: {currentTenant?.code || 'DEFAULT'}
               </span>
             </div>
           </div>
@@ -247,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : activeModerator?.name || 'Moderator'}
               </span>
               <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-amber-300 hidden lg:inline">
-                {activeAuthRole === 'saas_owner' ? 'Owner' : 'Mod'}
+                {activeAuthRole === 'saas_owner' ? 'Master' : 'Admin'}
               </span>
             </button>
           )}
@@ -275,10 +275,10 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-amber-300/80 dark:border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors"
                 title={t.switchTenant}
               >
-                {currentTenant.logo ? (
+                {currentTenant?.logo ? (
                   <img
                     src={currentTenant.logo}
-                    alt={currentTenant.name}
+                    alt={currentTenant?.name || 'Company'}
                     className="h-4.5 w-auto max-w-[28px] max-h-[18px] object-contain rounded shrink-0"
                   />
                 ) : (
@@ -289,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({
                     {t.tenantBadge}
                   </span>
                   <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[140px] block">
-                    {currentTenant.code}
+                    {currentTenant?.code || 'DEFAULT'}
                   </span>
                 </div>
               </button>
@@ -301,25 +301,25 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   {allTenants.map(ten => (
                     <button
-                      key={ten.id}
+                      key={ten?.id || Math.random()}
                       onClick={() => {
-                        setCurrentTenantId(ten.id);
+                        if (ten?.id) setCurrentTenantId(ten.id);
                         setShowTenantMenu(false);
                       }}
                       className={`w-full text-left p-2 rounded-lg text-xs transition-colors flex items-center gap-2 mb-1 ${
-                        ten.id === currentTenant.id
+                        ten?.id === currentTenant?.id
                           ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-500/30'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      {ten.logo ? (
-                        <img src={ten.logo} alt={ten.name} className="h-4 w-auto max-w-[24px] object-contain rounded shrink-0" />
+                      {ten?.logo ? (
+                        <img src={ten.logo} alt={ten.name || 'Company'} className="h-4 w-auto max-w-[24px] object-contain rounded shrink-0" />
                       ) : (
                         <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       )}
                       <div className="truncate">
-                        <div className="font-bold text-slate-900 dark:text-white truncate">{ten.name}</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">ID: {ten.id} • {ten.currency}</div>
+                        <div className="font-bold text-slate-900 dark:text-white truncate">{ten?.name || 'Unnamed Company'}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">ID: {ten?.id || ''} • {ten?.currency || 'BDT'}</div>
                       </div>
                     </button>
                   ))}
@@ -330,12 +330,12 @@ export const Header: React.FC<HeaderProps> = ({
             <div
               id="subscriber-company-pill"
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-2xs"
-              title={`${currentTenant.name} (${currentTenant.code})`}
+              title={`${currentTenant?.name || ''} (${currentTenant?.code || ''})`}
             >
-              {currentTenant.logo ? (
+              {currentTenant?.logo ? (
                 <img
                   src={currentTenant.logo}
-                  alt={currentTenant.name}
+                  alt={currentTenant?.name || 'Company'}
                   className="h-4.5 w-auto max-w-[28px] max-h-[18px] object-contain rounded shrink-0"
                 />
               ) : (
@@ -346,7 +346,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {t.tenantBadge}
                 </span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[140px] block">
-                  {currentTenant.name}
+                  {currentTenant?.name || 'FuelNest'}
                 </span>
               </div>
             </div>
@@ -367,10 +367,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                 <div className="text-left hidden lg:block">
                   <span className="text-[10px] text-slate-400 block uppercase font-semibold leading-none">
-                    {currentUser.role.replace('_', ' ')}
+                    {currentUser?.role ? currentUser.role.replace('_', ' ') : 'Super Admin'}
                   </span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[130px] block">
-                    {currentUser.name}
+                    {currentUser?.name || 'Administrator'}
                   </span>
                 </div>
               </button>
@@ -380,24 +380,24 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="px-2 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     {t.switchUser}
                   </div>
-                  {allUsers.map(u => (
+                  {(allUsers || []).filter(Boolean).map(u => (
                     <button
-                      key={u.id}
+                      key={u?.id || Math.random()}
                       onClick={() => {
-                        setCurrentUserId(u.id);
+                        if (u?.id) setCurrentUserId(u.id);
                         setShowUserMenu(false);
                       }}
                       className={`w-full text-left p-2 rounded-lg text-xs transition-colors mb-1 ${
-                        u.id === currentUser.id
+                        u?.id === currentUser?.id
                           ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-800'
                           : 'hover:bg-slate-50 dark:hover:bg-[#142247] text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <div className="font-bold text-slate-900 dark:text-white">{u.name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{u?.name || 'User'}</div>
                       <div className="text-[11px] text-blue-700 dark:text-blue-400 font-medium">
-                        {u.role.replace('_', ' ').toUpperCase()}
+                        {u?.role ? u.role.replace('_', ' ').toUpperCase() : 'USER'}
                       </div>
-                      <div className="text-[10px] text-slate-400">{u.email}</div>
+                      <div className="text-[10px] text-slate-400">{u?.email || ''}</div>
                     </button>
                   ))}
                 </div>
@@ -407,15 +407,15 @@ export const Header: React.FC<HeaderProps> = ({
             <div
               id="subscriber-user-pill"
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-xs font-medium text-slate-700 dark:text-slate-200"
-              title={`${currentUser.name} (${currentUser.role.replace('_', ' ')})`}
+              title={`${currentUser?.name || 'User'} (${currentUser?.role ? currentUser.role.replace('_', ' ') : 'User'})`}
             >
               <UserCheck className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
               <div className="text-left hidden lg:block">
                 <span className="text-[10px] text-slate-400 block uppercase font-semibold leading-none">
-                  {currentUser.role.replace('_', ' ')}
+                  {currentUser?.role ? currentUser.role.replace('_', ' ') : 'User'}
                 </span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[130px] block">
-                  {currentUser.name}
+                  {currentUser?.name || 'User'}
                 </span>
               </div>
             </div>
@@ -440,10 +440,10 @@ export const Header: React.FC<HeaderProps> = ({
               id="header-documentation-btn"
               onClick={onOpenDocumentation}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
-              title={language === 'bn' ? 'ব্যবহার নির্দেশিকা (User Documentation)' : 'User Documentation & Guide'}
+              title="User Documentation & Guide"
             >
               <BookOpen className="w-4 h-4 text-indigo-500" />
-              <span className="hidden md:inline">{language === 'bn' ? 'নির্দেশিকা' : 'Docs'}</span>
+              <span className="hidden md:inline">Docs</span>
             </button>
           )}
 

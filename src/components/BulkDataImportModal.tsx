@@ -47,7 +47,7 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   vehicles: {
     id: 'vehicles',
     titleEn: 'Vehicles',
-    titleBn: 'যানবাহন তালিকা',
+    titleBn: 'Vehicles',
     icon: Truck,
     sampleFileName: 'Vehicle_List_Template',
     fieldsDescription: 'plate_number, model, category, company, vendor, driver_name, driver_phone, fuel_type, fuel_tank_capacity, initial_odometer, status',
@@ -96,7 +96,7 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   companies: {
     id: 'companies',
     titleEn: 'Companies / Concerns',
-    titleBn: 'সিস্টার কনসার্ন / কোম্পানি',
+    titleBn: 'Companies / Concerns',
     icon: Building2,
     sampleFileName: 'Company_Concern_Template',
     fieldsDescription: 'name, code, contact_person, phone, email, address, status',
@@ -124,7 +124,7 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   vendors: {
     id: 'vendors',
     titleEn: 'Vendors / Suppliers',
-    titleBn: 'ভেন্ডর ও সরবরাহকারী',
+    titleBn: 'Vendors / Suppliers',
     icon: Users2,
     sampleFileName: 'Vendor_Supplier_Template',
     fieldsDescription: 'name, contact_person, phone, type, address, status',
@@ -150,7 +150,7 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   pumps: {
     id: 'pumps',
     titleEn: 'Fuel Pumps',
-    titleBn: 'ফুয়েল পাম্প স্টেশন',
+    titleBn: 'Fuel Pumps',
     icon: Fuel,
     sampleFileName: 'Fuel_Pump_Template',
     fieldsDescription: 'name, location, contact_number, fuel_types, payment_terms, current_balance',
@@ -176,27 +176,27 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   fuel_types: {
     id: 'fuel_types',
     titleEn: 'Fuel Types & Pricing',
-    titleBn: 'জ্বালানি ধরন ও লিটার মূল্য',
+    titleBn: 'Fuel Types & Pricing',
     icon: Tags,
     sampleFileName: 'Fuel_Types_Pricing_Template',
     fieldsDescription: 'name, code, unit, current_price, status',
     sampleData: [
       {
-        name: 'Diesel (ডিজেল)',
+        name: 'Diesel',
         code: 'DSL',
         unit: 'Liter',
         current_price: 105.00,
         status: 'active'
       },
       {
-        name: 'Octane (অকটেন)',
+        name: 'Octane',
         code: 'OCT',
         unit: 'Liter',
         current_price: 125.00,
         status: 'active'
       },
       {
-        name: 'Petrol (পেট্রোল)',
+        name: 'Petrol',
         code: 'PET',
         unit: 'Liter',
         current_price: 121.00,
@@ -207,24 +207,24 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   categories: {
     id: 'categories',
     titleEn: 'Vehicle Categories',
-    titleBn: 'যানবাহনের ক্যাটাগরি',
+    titleBn: 'Vehicle Categories',
     icon: Layers,
     sampleFileName: 'Vehicle_Categories_Template',
     fieldsDescription: 'name, name_bn, description',
     sampleData: [
       {
         name: 'Heavy Truck (10 Wheeler)',
-        name_bn: 'ভারী ট্রাক (১০ চাকা)',
+        name_bn: 'Heavy Truck (10 Wheeler)',
         description: 'Long haul logistics and bulk cargo transportation'
       },
       {
         name: 'Medium Hauler (6 Wheeler)',
-        name_bn: 'মাঝারি ট্রাক (৬ চাকা)',
+        name_bn: 'Medium Hauler (6 Wheeler)',
         description: 'Regional distribution and intra-district transit'
       },
       {
         name: 'Pickup & Double Cabin',
-        name_bn: 'পিকআপ ও ডাবল কেবিন',
+        name_bn: 'Pickup & Double Cabin',
         description: 'Site operations, inspections, and express logistics'
       }
     ]
@@ -232,7 +232,7 @@ const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   tankers: {
     id: 'tankers',
     titleEn: 'Fuel Tankers / Bowzers',
-    titleBn: 'ফুয়েল বাউজার / ট্যাংকার',
+    titleBn: 'Fuel Tankers / Bowzers',
     icon: Container,
     sampleFileName: 'Fuel_Tankers_Bowzers_Template',
     fieldsDescription: 'tanker_number, capacity_liters, current_fuel_liters, fuel_type, assigned_driver, driver_phone',
@@ -295,7 +295,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
     const ws = XLSX.utils.json_to_sheet(currentDef.sampleData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, currentDef.titleEn.slice(0, 31));
-    XLSX.writeFile(wb, `${currentDef.sampleFileName}_${currentTenant.code || 'Sample'}.xlsx`);
+    XLSX.writeFile(wb, `${currentDef.sampleFileName}_${currentTenant?.code || 'Sample'}.xlsx`);
   };
 
   // Download Sample CSV (.csv)
@@ -306,7 +306,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${currentDef.sampleFileName}_${currentTenant.code || 'Sample'}.csv`);
+    link.setAttribute('download', `${currentDef.sampleFileName}_${currentTenant?.code || 'Sample'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -403,7 +403,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
         const updatedExisting = res.updated_count !== undefined ? res.updated_count : 0;
 
         setImportReport({
-          entityTitle: `${currentDef.titleEn} (${currentDef.titleBn})`,
+          entityTitle: currentDef.titleEn,
           total: res.count,
           newCount: newlyAdded,
           updatedCount: updatedExisting,
@@ -466,7 +466,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                এক্সেলে বা সিএসভিতে একসঙ্গে যানবাহনের তথ্য, ভেন্ডর, পাম্প, ট্যাংকার ইত্যাদি সরাসরি আপলোড ও যুক্ত করুন।
+                Bulk upload vehicles, vendors, pumps, tankers, and categories directly via Excel (.xlsx) or CSV (.csv).
               </p>
             </div>
           </div>
@@ -484,7 +484,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
             <label htmlFor="bulk-entity-select" className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span>ইমপোর্টের ধরন নির্বাচন করুন (Select Import Category):</span>
+              <span>Select Import Category:</span>
             </label>
 
             <div className="relative flex-1 max-w-md">
@@ -499,7 +499,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
               >
                 {Object.values(ENTITY_DEFINITIONS).map((def) => (
                   <option key={def.id} value={def.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-1.5 font-semibold">
-                    {def.titleEn} — {def.titleBn}
+                    {def.titleEn}
                   </option>
                 ))}
               </select>
@@ -515,7 +515,6 @@ export const BulkDataImportModal: React.FC<Props> = ({
             <span className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 text-xs">
               <currentDef.icon className="w-3.5 h-3.5 shrink-0" />
               <span>{currentDef.titleEn}</span>
-              <span className="text-[11px] opacity-75">({currentDef.titleBn})</span>
             </span>
           </div>
         </div>
@@ -528,7 +527,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
             <div className="space-y-1.5 max-w-2xl">
               <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400">
                 <Info className="w-4 h-4 shrink-0" />
-                <span>Format Guidelines for {currentDef.titleEn} ({currentDef.titleBn})</span>
+                <span>Format Guidelines for {currentDef.titleEn}</span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Download the verified template below to see the required column headers and sample data format before uploading.
@@ -605,10 +604,10 @@ export const BulkDataImportModal: React.FC<Props> = ({
                     </span>
                   </div>
                   <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                    {importReport.entityTitle} - বাল্ক ইমপোর্ট সফলভাবে সম্পন্ন হয়েছে!
+                    {importReport.entityTitle} - Bulk Import Successfully Completed!
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                    সবগুলো রেকর্ড সফলভাবে প্রসেস করা হয়েছে। ডাবল এন্ট্রি রোধ ব্যবস্থা কার্যকর থাকায় কোনো ডুপ্লিকেট এন্ট্রি তৈরি হয়নি।
+                    All records have been processed with automated duplication protection and validated integrity.
                   </p>
                 </div>
               </div>
@@ -616,7 +615,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
               {/* 3 Metric Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
-                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Processed (সর্বমোট)</p>
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Processed</p>
                   <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{importReport.total}</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">Records in sheet</p>
                 </div>
@@ -624,7 +623,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
                 <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                   <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5" />
-                    New Entries (নতুন যুক্ত)
+                    New Entries Added
                   </p>
                   <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{importReport.newCount}</p>
                   <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Fresh records added</p>
@@ -633,7 +632,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
                 <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
                   <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Updated / Merged (আপডেট করা)
+                    Updated / Merged
                   </p>
                   <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">{importReport.updatedCount}</p>
                   <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80 mt-0.5">Matched existing (No duplicates)</p>
@@ -662,7 +661,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Done & View List (তালিকা দেখুন)</span>
+                  <span>Done & View List</span>
                 </button>
               </div>
             </div>
@@ -750,7 +749,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
         {/* Footer Actions */}
         <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
           <div className="text-xs text-slate-500 dark:text-slate-400">
-            Target Subscriber: <strong className="text-slate-800 dark:text-white">{currentTenant.name}</strong> ({currentTenant.code})
+            Target Subscriber: <strong className="text-slate-800 dark:text-white">{currentTenant?.name || 'Default Subscriber'}</strong> ({currentTenant?.code || 'DEFAULT'})
           </div>
 
           <div className="flex items-center gap-3">

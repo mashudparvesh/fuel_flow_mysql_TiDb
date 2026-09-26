@@ -217,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const dateStr = new Date().toISOString().split('T')[0];
     const isFiltered = filteredEntries.length !== fuelEntries.length;
     const filterTag = isFiltered ? `Filtered_${filteredEntries.length}_of_${fuelEntries.length}` : `All_${filteredEntries.length}`;
-    exportToCsv(`Fuel_Ledger_${filterTag}_records_${currentTenant.code}_${dateStr}`, headers, rows);
+    exportToCsv(`Fuel_Ledger_${filterTag}_records_${currentTenant?.code || 'DEFAULT'}_${dateStr}`, headers, rows);
   };
 
   // Company distribution statistics
@@ -256,7 +256,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             Fleet Fuel Overview Dashboard
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            {currentTenant.name} • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
+            {currentTenant?.name || 'FuelNest'} • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
           </p>
         </div>
 

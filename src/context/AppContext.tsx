@@ -38,7 +38,9 @@ import {
   INITIAL_TANKERS,
   INITIAL_TANKER_LOGS,
   DEFAULT_SAAS_OWNER,
-  INITIAL_MODERATORS
+  INITIAL_MODERATORS,
+  DEFAULT_FALLBACK_TENANT,
+  DEFAULT_FALLBACK_USER
 } from '../data/seedData';
 import { hashPassword, verifyPassword, isHashed } from '../utils/authSecurity';
 
@@ -333,7 +335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return INITIAL_TENANTS;
+    return INITIAL_TENANTS.length > 0 ? INITIAL_TENANTS : [DEFAULT_FALLBACK_TENANT];
   });
 
   const [users, setUsers] = useState<User[]>(() => {
@@ -344,7 +346,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return INITIAL_USERS;
+    return INITIAL_USERS.length > 0 ? INITIAL_USERS : [DEFAULT_FALLBACK_USER];
   });
 
   const [currentTenantId, setCurrentTenantIdState] = useState<string>(() => {
@@ -592,14 +594,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? json
           : (json.success && Array.isArray(json.data) ? json.data : []);
 
-        const serverTenants: Tenant[] = serverList.filter(t => !deletedIds.includes(t.id) && !t.deleted_at);
+        const serverTenants: Tenant[] = serverList.filter(t => t && t.id && !deletedIds.includes(t.id) && !t.deleted_at);
 
         if (serverTenants.length > 0) {
           setTenants(prev => {
+            const safePrev = Array.isArray(prev) ? prev.filter(pt => pt && pt.id) : [];
             const merged = [...serverTenants];
             // Retain any locally registered subscribers that are NOT deleted
-            prev.filter(pt => !deletedIds.includes(pt.id) && !pt.deleted_at).forEach(pt => {
-              const existingIdx = merged.findIndex(st => st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase()));
+            safePrev.filter(pt => !deletedIds.includes(pt.id) && !pt.deleted_at).forEach(pt => {
+              const existingIdx = merged.findIndex(st => st && (st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase())));
               if (existingIdx === -1) {
                 merged.push(pt);
                 // Self-healing: sync subscriber present locally to the server backend
@@ -613,15 +616,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               } else {
                 // Merge fields like logo or subscription credentials if missing on server
                 const st = merged[existingIdx];
-                merged[existingIdx] = {
-                  ...pt,
-                  ...st,
-                  logo: st.logo || pt.logo,
-                  subscription: (st.subscription || pt.subscription) ? ({
-                    ...(pt.subscription || {}),
-                    ...(st.subscription || {})
-                  } as TenantSubscription) : undefined
-                };
+                if (st) {
+                  merged[existingIdx] = {
+                    ...pt,
+                    ...st,
+                    logo: st?.logo || pt?.logo || '',
+                    subscription: (st?.subscription || pt?.subscription) ? ({
+                      ...(pt?.subscription || {}),
+                      ...(st?.subscription || {})
+                    } as TenantSubscription) : undefined
+                  };
+                }
               }
             });
             return merged;
@@ -647,11 +652,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setUsers(prev => {
-            // Merge server users with local users, preserving newly created ones and self-healing
-            const serverUsers: User[] = json.data;
+            const safePrev = Array.isArray(prev) ? prev.filter(pu => pu && pu.id) : [];
+            const serverUsers: User[] = (json.data || []).filter((su: any) => su && su.id);
             const merged = [...serverUsers];
-            prev.forEach(pu => {
-              if (!merged.some(su => su.id === pu.id || (su.tenant_id === pu.tenant_id && su.username.toLowerCase() === pu.username.toLowerCase()))) {
+            safePrev.forEach(pu => {
+              if (!merged.some(su => su && (su.id === pu.id || (su.tenant_id === pu.tenant_id && (su.username || '').toLowerCase() === (pu.username || '').toLowerCase())))) {
                 merged.push(pu);
                 // Self-healing: automatically sync locally saved user credentials to the server backend
                 try {
@@ -923,30 +928,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [activeModeratorId]);
 
   const currentTenant = useMemo(() => {
-    return tenants.find(t => t.id === currentTenantId) || tenants[0];
+    const matched = tenants.find(t => t && t.id === currentTenantId);
+    if (matched) return matched;
+    if (tenants.length > 0 && tenants[0]) return tenants[0];
+    return DEFAULT_FALLBACK_TENANT;
   }, [tenants, currentTenantId]);
-
-  const currentUser = useMemo(() => {
-    // 1. Matched user in current tenant with currentUserId
-    const exactMatch = users.find(u => u.tenant_id === currentTenantId && u.id === currentUserId);
-    if (exactMatch) return exactMatch;
-
-    // 2. Any super_admin in current tenant
-    const superAdmin = users.find(u => u.tenant_id === currentTenantId && u.role === 'super_admin');
-    if (superAdmin) return superAdmin;
-
-    // 3. Any user belonging to current tenant
-    const tenantUser = users.find(u => u.tenant_id === currentTenantId);
-    if (tenantUser) return tenantUser;
-
-    // 4. Fallback to currentUserId or first user
-    return users.find(u => u.id === currentUserId) || users[0];
-  }, [users, currentUserId, currentTenantId]);
 
   const activeModerator = useMemo(() => {
     if (!activeModeratorId) return undefined;
     return moderators.find(m => m.id === activeModeratorId);
   }, [moderators, activeModeratorId]);
+
+  const currentUser = useMemo(() => {
+    if (activeAuthRole === 'saas_owner') {
+      return {
+        id: saasOwner?.id || 'saas_owner_1',
+        tenant_id: currentTenantId || 'tenant_default',
+        name: saasOwner?.name || 'Md. Mashud (Platform Owner)',
+        username: saasOwner?.username || 'mashudalone',
+        email: saasOwner?.email || 'mashudrus@gmail.com',
+        role: 'super_admin' as const,
+        role_title_bn: 'Platform Owner',
+        status: 'active' as const
+      };
+    }
+    if (activeAuthRole === 'saas_moderator' && activeModerator) {
+      return {
+        id: activeModerator.id,
+        tenant_id: currentTenantId || 'tenant_default',
+        name: activeModerator.name,
+        username: activeModerator.username,
+        email: activeModerator.email || 'moderator@fuelnest.xyz',
+        role: 'super_admin' as const,
+        role_title_bn: 'Platform Moderator',
+        status: 'active' as const
+      };
+    }
+
+    // 1. Matched user in current tenant with currentUserId
+    const exactMatch = users.find(u => u && u.tenant_id === currentTenantId && u.id === currentUserId);
+    if (exactMatch) return exactMatch;
+
+    // 2. Any super_admin in current tenant
+    const superAdmin = users.find(u => u && u.tenant_id === currentTenantId && u.role === 'super_admin');
+    if (superAdmin) return superAdmin;
+
+    // 3. Any user belonging to current tenant
+    const tenantUser = users.find(u => u && u.tenant_id === currentTenantId);
+    if (tenantUser) return tenantUser;
+
+    // 4. Fallback to currentUserId or first user
+    const fallbackUser = users.find(u => u && u.id === currentUserId) || (users.length > 0 ? users[0] : null);
+    return fallbackUser || DEFAULT_FALLBACK_USER;
+  }, [users, currentUserId, currentTenantId, activeAuthRole, saasOwner, activeModerator]);
 
   // Strict Tenant-scoped records (Zero cross-tenant data leakage)
   const scopedCompanies = useMemo(() => {
@@ -976,12 +1010,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const scopedVehicles = useMemo(() => {
     const list = vehicles.filter(v => v.tenant_id === currentTenantId);
     let effective = list;
-    if (currentUser.role === 'client_viewer' && currentUser.company_id) {
+    if (currentUser?.role === 'client_viewer' && currentUser?.company_id) {
       effective = effective.filter(v => v.company_id === currentUser.company_id);
     }
     // Category-Based Access Control enforced for Subscriber Users
     if (
-      currentUser.allowed_category_ids &&
+      currentUser?.allowed_category_ids &&
       currentUser.allowed_category_ids.length > 0 &&
       !currentUser.allowed_category_ids.includes('all')
     ) {
@@ -993,7 +1027,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const scopedFuelEntries = useMemo(() => {
     const list = fuelEntries.filter(e => e.tenant_id === currentTenantId);
     let effective = list;
-    if (currentUser.role === 'client_viewer' && currentUser.company_id) {
+    if (currentUser?.role === 'client_viewer' && currentUser?.company_id) {
       effective = effective.filter(e => e.company_id === currentUser.company_id);
     }
     return effective;
@@ -1929,11 +1963,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const endDate = endDateObj.toISOString().split('T')[0];
 
     const planNamesBn: Record<SubscriptionPlan, string> = {
-      trial_3days: '৩ দিনের ফ্রি ট্রায়াল (3 Days Trial)',
-      plan_1month: '১ মাস প্ল্যান (1 Month Plan)',
-      plan_3months: '৩ মাস প্ল্যান (3 Months Plan)',
-      plan_6months: '৬ মাস প্ল্যান (6 Months Plan)',
-      plan_12months: '১২ মাস প্ল্যান (1 Year Annual Plan)',
+      trial_3days: '3 Days Free Trial',
+      plan_1month: '1 Month Plan',
+      plan_3months: '3 Months Plan',
+      plan_6months: '6 Months Plan',
+      plan_12months: '12 Months Annual VIP Plan',
       starter: 'Starter Plan',
       professional: 'Professional Plan',
       enterprise: 'Enterprise Plan',

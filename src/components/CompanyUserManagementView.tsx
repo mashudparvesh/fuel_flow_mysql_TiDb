@@ -76,15 +76,16 @@ export const CompanyUserManagementView: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Company's Users
-  const companyUsers = allUsers.filter(u => u.tenant_id === currentTenant.id);
-  const hasExistingSuperAdmin = companyUsers.some(u => u.role === 'super_admin');
+  const companyUsers = (allUsers || []).filter(u => u && u.tenant_id === (currentTenant?.id || ''));
+  const hasExistingSuperAdmin = companyUsers.some(u => u?.role === 'super_admin');
 
   // Filtered
   const filteredUsers = companyUsers.filter(u => {
+    if (!u) return false;
     const matchSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.username || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.phone && u.phone.includes(searchQuery));
 
     const matchRole = roleFilter === 'all' || u.role === roleFilter;
@@ -143,7 +144,7 @@ export const CompanyUserManagementView: React.FC = () => {
     const dateStr = new Date().toISOString().split('T')[0];
     const isFiltered = filteredUsers.length !== companyUsers.length;
     const filterTag = isFiltered ? `Filtered_${filteredUsers.length}_of_${companyUsers.length}` : `All_${filteredUsers.length}`;
-    exportToCsv(`Company_Users_${filterTag}_records_${currentTenant.code}_${dateStr}`, headers, rows);
+    exportToCsv(`Company_Users_${filterTag}_records_${currentTenant?.code || 'DEFAULT'}_${dateStr}`, headers, rows);
   };
 
   const handleCopy = (text: string, id: string) => {
@@ -208,10 +209,10 @@ export const CompanyUserManagementView: React.FC = () => {
     }
 
     const res = addCompanyUser({
-      tenant_id: currentTenant.id,
+      tenant_id: currentTenant?.id || '',
       name: formName.trim(),
       username: formUsername.trim(),
-      email: formEmail.trim() || `${formUsername.trim()}@${currentTenant.code.toLowerCase()}.com`,
+      email: formEmail.trim() || `${formUsername.trim()}@${(currentTenant?.code || 'company').toLowerCase()}.com`,
       password: formPassword.trim(),
       phone: formPhone.trim(),
       role: formRole,
@@ -299,7 +300,7 @@ export const CompanyUserManagementView: React.FC = () => {
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">
             <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{currentTenant.name} ({currentTenant.code})</span>
+            <span>{currentTenant?.name || 'Company'} ({currentTenant?.code || 'DEFAULT'})</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">
             Company Users & Category-Based Access
@@ -395,7 +396,7 @@ export const CompanyUserManagementView: React.FC = () => {
                   <div>
                     <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-1.5">
                       {u.name}
-                      {u.role === 'super_admin' && (
+                      {u?.role === 'super_admin' && (
                         <span title="Primary Company Super Admin">
                           <Crown className="w-4 h-4 text-amber-500 inline" />
                         </span>
@@ -410,12 +411,12 @@ export const CompanyUserManagementView: React.FC = () => {
 
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase flex items-center gap-1 ${
-                      u.role === 'super_admin'
+                      u?.role === 'super_admin'
                         ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300'
                         : 'bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300'
                     }`}
                   >
-                    {u.role === 'super_admin' ? 'Company Super Admin' : (u.role_title_bn || u.role)}
+                    {u?.role === 'super_admin' ? 'Company Super Admin' : (u.role_title_bn || u.role || 'User')}
                   </span>
                 </div>
 
@@ -516,7 +517,7 @@ export const CompanyUserManagementView: React.FC = () => {
                   <span>Edit Access</span>
                 </button>
 
-                {u.role !== 'super_admin' ? (
+                {u?.role !== 'super_admin' ? (
                   <button
                     type="button"
                     onClick={() => setUserToDelete(u)}
@@ -638,7 +639,7 @@ export const CompanyUserManagementView: React.FC = () => {
                         onChange={e => setFormMustChangePassword(e.target.checked)}
                         className="w-3.5 h-3.5 text-amber-500 rounded focus:ring-amber-500"
                       />
-                      <span>Force password reset on first login (বাধ্যতামূলক পাসওয়ার্ড পরিবর্তন)</span>
+                      <span>Force password reset on first login</span>
                     </label>
                   )}
                 </div>
