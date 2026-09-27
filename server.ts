@@ -2490,7 +2490,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   });
 
   // 5.7 Fleet Data - Unified Cross-Browser & Cloud Sync Endpoints
-  app.get('/api/fleet/all', async (req: Request, res: Response) => {
+  app.get(['/api/fleet/all', '/api/fleet'], async (req: Request, res: Response) => {
     try {
       const tenantId = req.query.tenant_id as string | undefined;
       const dbFleet = await fetchFleetDataFromDB(tenantId);
