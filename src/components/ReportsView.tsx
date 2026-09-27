@@ -493,20 +493,20 @@ export const ReportsView: React.FC = () => {
   const downloadingUser = useMemo(() => {
     if (activeAuthRole === 'saas_owner') {
       return {
-        name: saasOwner?.name || 'Md. Mashud (Platform Owner)',
-        roleTitle: 'SaaS Platform Owner & Chief Admin',
-        roleTitleBn: 'SaaS Platform Owner & Chief Admin',
+        name: saasOwner?.name || 'Md. Mashud (Master Admin)',
+        roleTitle: 'Master System Administrator',
+        roleTitleBn: 'Master System Administrator',
         email: saasOwner?.email || 'mashudrus@gmail.com',
         phone: saasOwner?.phone || '+880 1700-000000',
         username: saasOwner?.username || 'mashudalone',
-        designation: 'Platform Owner'
+        designation: 'Master Admin'
       };
     }
     if (activeAuthRole === 'saas_moderator' && activeModerator) {
       return {
         name: activeModerator.name,
-        roleTitle: 'SaaS Operations Moderator',
-        roleTitleBn: 'SaaS Operations Moderator',
+        roleTitle: 'Operations Moderator',
+        roleTitleBn: 'Operations Moderator',
         email: activeModerator.email,
         phone: activeModerator.phone,
         username: activeModerator.username,
@@ -517,7 +517,7 @@ export const ReportsView: React.FC = () => {
       name: currentUser?.name || 'Authorized Fleet In-charge',
       roleTitle: currentUser?.role_title_bn ? `${currentUser.role_title_bn} (${currentUser.role})` : (currentUser?.role || 'Fleet Operator'),
       roleTitleBn: currentUser?.role_title_bn || 'Fleet In-charge',
-      email: currentUser?.email || 'operator@fuelnest.xyz',
+      email: currentUser?.email || 'operator@company.com',
       phone: currentUser?.phone || '',
       username: currentUser?.username || currentUser?.id || 'EMP-001',
       designation: currentUser?.role_title_bn || 'Fleet In-charge'

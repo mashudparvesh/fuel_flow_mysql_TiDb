@@ -56,6 +56,7 @@ interface AppContextType {
   tenantSuspensionNotice: string;
   clearTenantSuspensionNotice: () => void;
   refreshTenantsFromServer: () => Promise<void>;
+  refreshUsersFromServer: () => Promise<void>;
   currentUser: User;
   setCurrentUserId: (userId: string) => void;
   allUsers: User[];
@@ -958,7 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tenant_id: currentTenantId || 'tenant_default',
         name: activeModerator.name,
         username: activeModerator.username,
-        email: activeModerator.email || 'moderator@fuelnest.xyz',
+        email: activeModerator.email || 'moderator@company.com',
         role: 'super_admin' as const,
         role_title_bn: 'Platform Moderator',
         status: 'active' as const
@@ -1685,6 +1686,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveModeratorId(undefined);
       setIsSaasControlOpen(true);
       setIsAuthenticated(true);
+      refreshTenantsFromServer();
+      refreshUsersFromServer();
       try {
         sessionStorage.setItem(STORAGE_KEY_PREFIX + 'is_auth', 'true');
         localStorage.setItem(STORAGE_KEY_PREFIX + 'is_auth', 'true');
@@ -3132,6 +3135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tenantSuspensionNotice,
         clearTenantSuspensionNotice,
         refreshTenantsFromServer,
+        refreshUsersFromServer,
         currentUser,
         setCurrentUserId: setCurrentUserIdState,
         allUsers: users,

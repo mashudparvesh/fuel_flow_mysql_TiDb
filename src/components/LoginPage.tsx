@@ -28,9 +28,14 @@ import {
 interface LoginPageProps {
   initialTab?: 'subscriber' | 'control';
   onBackToLanding?: () => void;
+  mode?: 'subscriber_only' | 'master_control_only' | 'combined';
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber', onBackToLanding }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+  initialTab = 'subscriber',
+  onBackToLanding,
+  mode = 'subscriber_only'
+}) => {
   const {
     language,
     setLanguage,
@@ -48,7 +53,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
     loginAsModerator
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'subscriber' | 'control'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'subscriber' | 'control'>(() => {
+    if (mode === 'master_control_only') return 'control';
+    if (mode === 'subscriber_only') return 'subscriber';
+    return initialTab;
+  });
 
   // Subscriber Login State
   const [selectedTenantId, setSelectedTenantId] = useState<string>(() => {
@@ -158,7 +167,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
   };
 
   // Submit Control Login (SaaS Owner & Moderator)
-  const handleControlSubmit = (e: React.FormEvent) => {
+  const handleControlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setControlError('');
     setControlSuccess('');
@@ -169,6 +178,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
     }
 
     setIsControlLoading(true);
+    try {
+      await refreshTenantsFromServer?.();
+    } catch {}
+
     setTimeout(() => {
       // First test SaaS Owner
       const ownerRes = loginAsSaasOwner(controlUsername.trim(), controlPassword.trim());
@@ -186,7 +199,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
       } else {
         setControlError('Invalid Master Credentials! Please provide correct username and password.');
       }
-    }, 200);
+    }, 150);
   };
 
   return (
@@ -206,7 +219,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
             <div className="flex items-center gap-2">
               <span className="font-black text-lg tracking-tight text-white">FuelNest</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
-                fuelnest.xyz
+                Enterprise
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
@@ -245,50 +258,52 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
       {/* Main Content Area */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10 my-4">
         <div className="w-full max-w-xl">
-          {/* Dual Tab Header Bar */}
-          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 mb-6 shadow-2xl backdrop-blur-md">
-            {/* Tab 1: Subscriber Login */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('subscriber')}
-              className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all ${
-                activeTab === 'subscriber'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Subscriber Login</span>
-            </button>
+          {/* Dual Tab Header Bar - ONLY visible in combined mode */}
+          {mode === 'combined' && (
+            <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 mb-6 shadow-2xl backdrop-blur-md">
+              {/* Tab 1: Subscriber Login */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('subscriber')}
+                className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                  activeTab === 'subscriber'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Subscriber Login</span>
+              </button>
 
-            {/* Tab 2: Control Login */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('control')}
-              className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all ${
-                activeTab === 'control'
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
-                  : 'text-slate-400 hover:text-amber-400 hover:bg-slate-900/60'
-              }`}
-            >
-              <Crown className="w-4 h-4" />
-              <span>Control Login (SaaS)</span>
-            </button>
-          </div>
+              {/* Tab 2: Control Login */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('control')}
+                className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                  activeTab === 'control'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
+                    : 'text-slate-400 hover:text-amber-400 hover:bg-slate-900/60'
+                }`}
+              >
+                <Crown className="w-4 h-4" />
+                <span>Master Admin Login</span>
+              </button>
+            </div>
+          )}
 
-          {/* TAB 1: SUBSCRIBER FLEET LOGIN */}
+          {/* TAB 1: SUBSCRIBER FLEET LOGIN (Dedicated Subscriber Login) */}
           {activeTab === 'subscriber' && (
             <div className="rounded-3xl bg-slate-950/90 border border-slate-800/80 p-6 sm:p-8 shadow-2xl backdrop-blur-xl transition-opacity duration-150">
               <div className="mb-6">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>Company Fleet Portal</span>
+                  <span>Subscriber Fleet Portal</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Subscriber Company Login
+                  Subscriber Portal Sign-in
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Sign in with your company Super Admin, Supervisor, or Operator credentials.
+                  Sign in with your organization Super Admin, Supervisor, or Operator credentials.
                 </p>
               </div>
 
@@ -509,13 +524,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
               <div className="mb-6">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold mb-2">
                   <Crown className="w-3.5 h-3.5 text-amber-400" />
-                  <span>SaaS Owner & Moderator Control</span>
+                  <span>Master Administrative Console</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                   Master Control Login
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Exclusively for Platform Owner and authorized moderators. Subscribers do not have access here.
+                  Exclusively for Master Administrator and authorized system officers. Regular users sign in via Company Fleet Portal.
                 </p>
               </div>
 
@@ -600,7 +615,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ initialTab = 'subscriber',
 
       {/* Footer */}
       <footer className="w-full px-4 py-4 text-center text-xs text-slate-500 border-t border-slate-800/60 z-10">
-        <span>FuelNest SaaS Multi-Tenant Cloud Architecture • fuelnest.xyz • 100% Isolated Databases & RBAC</span>
+        <span>FuelNest Multi-Tenant Cloud Architecture • Enterprise Security & RBAC</span>
       </footer>
     </div>
   );

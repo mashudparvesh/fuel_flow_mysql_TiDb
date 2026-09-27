@@ -82,12 +82,41 @@ const AppContent: React.FC = () => {
     setIsBulkImportOpen(true);
   };
 
-  const [publicRoute, setPublicRoute] = useState<'landing' | 'login'>(() => {
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
-      return 'login';
+  const [publicRoute, setPublicRoute] = useState<'landing' | 'login' | 'master_control'>(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.toLowerCase();
+      if (p.startsWith('/master-control') || p.startsWith('/master_control') || p.startsWith('/master')) {
+        return 'master_control';
+      }
+      if (p.startsWith('/login')) {
+        return 'login';
+      }
     }
     return 'landing';
   });
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname.toLowerCase();
+      if (p.startsWith('/master-control') || p.startsWith('/master_control') || p.startsWith('/master')) {
+        setPublicRoute('master_control');
+      } else if (p.startsWith('/login')) {
+        setPublicRoute('login');
+      } else {
+        setPublicRoute('landing');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (route: 'landing' | 'login' | 'master_control') => {
+    setPublicRoute(route);
+    if (typeof window !== 'undefined') {
+      const targetUrl = route === 'landing' ? '/' : route === 'login' ? '/login' : '/master-control';
+      window.history.pushState(null, '', targetUrl);
+    }
+  };
 
   const handleOpenFuelEntryWithVehicle = (vehicleId?: string) => {
     if (isViewer) return;
@@ -101,15 +130,28 @@ const AppContent: React.FC = () => {
     setCurrentView('fuel_entry');
   };
 
-  // If user is not authenticated, render Public Landing Page or LoginPage based on route
+  // If user is not authenticated, render Public Landing Page, Dedicated Subscriber Login, or Hidden Master Control Login
   if (!isAuthenticated) {
+    if (publicRoute === 'master_control') {
+      return (
+        <LoginPage
+          mode="master_control_only"
+          onBackToLanding={() => navigateTo('landing')}
+        />
+      );
+    }
     if (publicRoute === 'login') {
-      return <LoginPage onBackToLanding={() => setPublicRoute('landing')} />;
+      return (
+        <LoginPage
+          mode="subscriber_only"
+          onBackToLanding={() => navigateTo('landing')}
+        />
+      );
     }
     return (
       <LandingPage
-        onNavigateToLogin={() => setPublicRoute('login')}
-        onNavigateToDashboard={() => setPublicRoute('login')}
+        onNavigateToLogin={() => navigateTo('login')}
+        onNavigateToDashboard={() => navigateTo('login')}
       />
     );
   }

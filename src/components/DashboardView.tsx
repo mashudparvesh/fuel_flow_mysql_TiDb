@@ -62,31 +62,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedEntrySlip, setSelectedEntrySlip] = useState<FuelEntry | null>(null);
 
   const t = {
-    kpiTodayLiters: "Today's Fuel Consumed",
-    kpiTodayCost: "Today's Total Cost",
-    kpiPumpDue: 'Total Pump Outstanding',
-    kpiMonthFuel: 'This Month Fuel Usage',
-    kpiActiveFleet: 'Active Fleet & Bowzer Stock',
+    kpiTodayLiters: "Today's Fuel",
+    kpiTodayCost: "Today's Cost",
+    kpiPumpDue: 'Pump Outstanding',
+    kpiMonthFuel: 'Monthly Usage',
+    kpiActiveFleet: 'Fleet & Bowzers',
     litersLabel: 'Liters',
     activeVehiclesLabel: 'Active Vehicles',
     todayLabel: 'Today',
     thisMonthLabel: 'This Month',
-    totalDueLabel: 'Total Outstanding',
+    totalDueLabel: 'Total Due',
     totalCostLabel: 'Total',
     bowzerStockLabel: 'Bowzer Stock',
     anomaliesBannerTitle: 'Fuel Anomaly & Theft Warnings!',
-    anomaliesBannerDesc: 'vehicles have recorded suspicious low mileage below standard benchmark.',
+    anomaliesBannerDesc: 'vehicles recorded suspicious consumption below benchmark.',
     viewAnomaliesBtn: 'Inspect Anomalies',
-    quickFilters: 'Interactive Filters',
+    quickFilters: 'Filters',
     allCompanies: 'All Companies',
     allCategories: 'All Categories',
     allPumps: 'All Sources / Pumps',
-    internalBowzerOption: 'Internal Diesel Bowzer (Tanker)',
+    internalBowzerOption: 'Internal Diesel Bowzer',
     searchPlaceholder: 'Search vehicle number or slip...',
-    recentEntries: 'Recent Fuel Consumption Ledger',
-    companyDistribution: 'Fuel Expense by Company',
-    categoryBreakdown: 'Category Consumption Breakdown',
-    bowzerStatus: 'Internal Bowzer Inventory Status',
+    recentEntries: 'Recent Fuel Entries',
+    companyDistribution: 'Expense by Company',
+    categoryBreakdown: 'Category Breakdown',
+    bowzerStatus: 'Internal Bowzer Inventory',
     date: 'Date',
     vehicle: 'Vehicle & Driver',
     company: 'Company',
@@ -276,10 +276,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* KPI 1: Today's Fuel Consumed & Cost */}
         <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 whitespace-nowrap truncate">
               {t.kpiTodayLiters}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-amber-500 dark:bg-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-500/20 ring-4 ring-amber-500/10 dark:ring-amber-400/20">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 dark:bg-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-500/20 ring-4 ring-amber-500/10 dark:ring-amber-400/20 shrink-0">
               <Fuel className="w-5 h-5 text-white dark:text-slate-950" />
             </div>
           </div>
@@ -301,10 +301,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 whitespace-nowrap truncate">
               {t.kpiPumpDue}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-600/20 ring-4 ring-rose-500/10 dark:ring-rose-400/20 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-600/20 ring-4 ring-rose-500/10 dark:ring-rose-400/20 group-hover:scale-105 transition-transform shrink-0">
               <CreditCard className="w-5 h-5 text-white" />
             </div>
           </div>
@@ -322,10 +322,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* KPI 3: This Month Fuel Usage */}
         <div className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all">
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 whitespace-nowrap truncate">
               {t.kpiMonthFuel}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-sky-600 dark:bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-600/20 ring-4 ring-sky-500/10 dark:ring-sky-400/20">
+            <div className="w-10 h-10 rounded-xl bg-sky-600 dark:bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-600/20 ring-4 ring-sky-500/10 dark:ring-sky-400/20 shrink-0">
               <Calendar className="w-5 h-5 text-white" />
             </div>
           </div>
@@ -347,10 +347,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="p-4 rounded-2xl bg-white dark:bg-[#0f1a36] border border-slate-200/90 dark:border-blue-900/60 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between text-slate-500 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 whitespace-nowrap truncate">
               {t.kpiActiveFleet}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 ring-4 ring-emerald-500/10 dark:ring-emerald-400/20 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 ring-4 ring-emerald-500/10 dark:ring-emerald-400/20 group-hover:scale-105 transition-transform shrink-0">
               <Truck className="w-5 h-5 text-white" />
             </div>
           </div>

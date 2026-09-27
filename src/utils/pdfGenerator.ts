@@ -196,7 +196,7 @@ export async function generateCleanVectorPdf(
         pdf.setFontSize(8);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 6, { align: 'center' });
-        pdf.text('FuelNest Cloud Audit & Fleet Intelligence System • fuelnest.xyz', margin, pageHeight - 6);
+        pdf.text('FuelNest Cloud Audit & Fleet Intelligence System', margin, pageHeight - 6);
       }
     });
 
@@ -495,7 +495,7 @@ export async function generateCleanPumpStatementPdf(
         pdf.setFontSize(7.5);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 5, { align: 'center' });
-        pdf.text('FuelNest Fleet Audit & Reconciliation System • fuelnest.xyz', margin, pageHeight - 5);
+        pdf.text('FuelNest Fleet Audit & Reconciliation System', margin, pageHeight - 5);
       }
     });
 
@@ -561,7 +561,7 @@ export async function generateCleanPumpStatementPdf(
         pdf.setFontSize(7.5);
         pdf.setTextColor(148, 163, 184);
         pdf.text(str, pageWidth / 2, pageHeight - 5, { align: 'center' });
-        pdf.text('FuelNest Fleet Audit & Reconciliation System • fuelnest.xyz', margin, pageHeight - 5);
+        pdf.text('FuelNest Fleet Audit & Reconciliation System', margin, pageHeight - 5);
       }
     });
 

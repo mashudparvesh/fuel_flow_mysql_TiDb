@@ -79,8 +79,26 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     approvals,
     requestApprovalAction,
     approveAction,
-    rejectAction
+    rejectAction,
+    refreshTenantsFromServer,
+    refreshUsersFromServer
   } = useApp();
+
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshTenantsFromServer?.();
+    refreshUsersFromServer?.();
+  }, []);
+
+  const handleManualRefresh = async () => {
+    setIsManualRefreshing(true);
+    await Promise.all([
+      refreshTenantsFromServer?.(),
+      refreshUsersFromServer?.()
+    ]);
+    setTimeout(() => setIsManualRefreshing(false), 400);
+  };
 
   // Role Calculation & Permissions
   const effectiveRole: OwnerRole = useMemo(() => {
@@ -244,14 +262,18 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   // Filtered Subscribers
   const filteredSubscribers = useMemo(() => {
     return allTenants.filter(t => {
+      if (!t) return false;
+      const q = searchQuery.toLowerCase().trim();
       const matchSearch =
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.contact_person.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (t.subscription?.super_admin_username && t.subscription.super_admin_username.toLowerCase().includes(searchQuery.toLowerCase()));
+        !q ||
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.code || '').toLowerCase().includes(q) ||
+        (t.email || '').toLowerCase().includes(q) ||
+        (t.contact_person || '').toLowerCase().includes(q) ||
+        (t.phone || '').toLowerCase().includes(q) ||
+        ((t.subscription?.super_admin_username || '').toLowerCase().includes(q));
 
-      const subStatus = t.subscription?.status || 'active';
+      const subStatus = t.subscription?.status || t.status || 'active';
       const matchStatus = statusFilter === 'all' || subStatus === statusFilter;
       const matchPlan = planFilter === 'all' || t.subscription?.plan === planFilter;
 
@@ -508,7 +530,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       });
 
       if (res.success) {
-        setApprovalFeedback('Action request submitted! Awaiting review from Admin, Co-Owner Admin, or Owner Admin.');
+        setApprovalFeedback('Action request submitted! Awaiting review from Executive Administration.');
         setModRequestModal(null);
         setModRequestReason('');
         setModRequestDays(30);
@@ -610,24 +632,24 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
               <Crown className="w-4 h-4 text-amber-400" />
-              <span>SaaS Master Control Panel (Platform Owner)</span>
+              <span>Central Master Control Panel</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              {'FuelNest SaaS Platform Master Control • fuelnest.xyz'}
+              {'FuelNest Central Governance & Fleet Console'}
             </h1>
             <p className="text-slate-300 text-sm leading-relaxed">
-              {'Manage subscriber companies, control access validity (days/months), configure Super Admin credentials, and assign moderators on your behalf.'}
+              {'Manage subscriber companies, control access validity (days/months), configure Super Admin credentials, and assign administrative officers.'}
             </p>
           </div>
 
-          {/* Owner Switch Tenant Control, Credentials Badge & Workspace Return Button */}
+          {/* Switch Active Organization, Credentials Badge & Workspace Return Button */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            {/* Switch Active Tenant Selector for Owner */}
+            {/* Switch Active Organization Selector */}
             <div className="px-3.5 py-2 rounded-xl bg-slate-800/90 border border-amber-500/40 backdrop-blur-xs flex items-center gap-2.5 text-xs shadow-md">
               <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
               <div>
                 <div className="text-amber-400/80 text-[10px] font-bold uppercase tracking-wider">
-                  {'Switch Active Tenant'}
+                  {'Switch Active Organization'}
                 </div>
                 <select
                   id="saas-owner-tenant-select"
@@ -651,12 +673,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div>
                 <div className="text-slate-400 text-[10px] font-bold uppercase">
                   {effectiveRole === 'OWNER_ADMIN'
-                    ? 'Owner Admin'
+                    ? 'Executive Admin'
                     : effectiveRole === 'CO_OWNER_ADMIN'
-                    ? 'Co-Owner Admin'
+                    ? 'Deputy Admin'
                     : effectiveRole === 'ADMIN'
                     ? 'Control Admin'
-                    : 'Moderator'}
+                    : 'System Moderator'}
                 </div>
                 <div className="text-amber-300 font-mono font-bold text-sm">
                   {activeAuthRole === 'saas_owner' ? saasOwner.username : activeModerator?.username || 'moderator'}
@@ -814,7 +836,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             )}
           </button>
 
-          {/* Tab 4: Owner Security - Only visible to Owner Admin & Co-Owner Admin */}
+          {/* Tab 4: Security & Credentials - Only visible to Owner Admin & Co-Owner Admin */}
           {canAccessOwnerSecurity && (
             <button
               onClick={() => setActiveTab('owner_profile')}
@@ -825,7 +847,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               }`}
             >
               <Key className="w-4 h-4" />
-              <span>{'Owner Security'}</span>
+              <span>{'Security & Credentials'}</span>
             </button>
           )}
 
@@ -847,6 +869,17 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         <div className="flex items-center gap-2">
           {activeTab === 'subscribers' && (
             <>
+              {/* Refresh Subscribers from Server Button */}
+              <button
+                onClick={handleManualRefresh}
+                disabled={isManualRefreshing}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0c162d] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer"
+                title="Sync with cloud database to refresh latest subscribers"
+              >
+                <RefreshCw className={`w-4 h-4 text-amber-500 ${isManualRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isManualRefreshing ? 'Refreshing...' : 'Refresh List'}</span>
+              </button>
+
               {/* Requirement 4: Download / Export Subscriber List */}
               <button
                 onClick={handleDownloadSubscribersCsv}
@@ -913,9 +946,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 className="px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
               >
                 <option value="all">{'All Plans'}</option>
-                <option value="starter">Starter</option>
-                <option value="professional">Professional</option>
-                <option value="enterprise">Enterprise</option>
+                <option value="trial_3days">3 Days Free Trial</option>
+                <option value="plan_1month">1 Month Plan</option>
+                <option value="plan_3months">3 Months Plan</option>
+                <option value="plan_6months">6 Months Plan</option>
+                <option value="plan_12months">VIP Plan</option>
+                <option value="starter">Starter (Legacy)</option>
+                <option value="professional">Professional (Legacy)</option>
+                <option value="enterprise">Enterprise (Legacy)</option>
                 <option value="custom">Custom</option>
               </select>
             </div>
@@ -1219,10 +1257,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
                 <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
                   <div className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-                    <span>👑 Owner Admin & 🤝 Co-Owner Admin</span>
+                    <span>👑 Executive Admin & 🤝 Deputy Admin</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                    {'Full master access, direct execution, user creation & management, and Owner Security access.'}
+                    {'Full master access, direct execution, user creation & management, and Security & Credentials access.'}
                   </p>
                 </div>
 
@@ -1231,16 +1269,16 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     <span>🛡️ Control Admin</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                    {'Full subscriber management & approval authority over moderator requests (no Owner Security access).'}
+                    {'Full subscriber management & approval authority over operational requests.'}
                   </p>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
                   <div className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                    <span>👮 SaaS Moderator</span>
+                    <span>👮 Operations Officer</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                    {'Can view and request subscriber deletion, duration extension, and suspension (requires Admin/Owner approval).'}
+                    {'Can view and submit requests for tenant lifecycle adjustments (requires Executive Administrator approval).'}
                   </p>
                 </div>
               </div>
@@ -1257,11 +1295,11 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <span>👑 {saasOwner.name}</span>
                     </h4>
                     <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold mt-0.5">
-                      <span>Platform Owner Admin</span>
+                      <span>Chief Executive Administrator</span>
                     </div>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950">
-                    MASTER OWNER
+                    EXECUTIVE MASTER
                   </span>
                 </div>
 
@@ -1298,10 +1336,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             {moderators.map(mod => {
               const roleTitle =
                 mod.owner_role === 'CO_OWNER_ADMIN'
-                  ? 'Co-Owner Admin'
+                  ? 'Deputy Admin'
                   : mod.owner_role === 'ADMIN'
                   ? 'Control Admin'
-                  : 'SaaS Moderator';
+                  : 'Operations Officer';
 
               const roleBadgeColor =
                 mod.owner_role === 'CO_OWNER_ADMIN'
@@ -1379,10 +1417,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <span className="text-[10px] uppercase font-bold text-slate-400">Authority & Scope:</span>
                       <p className="text-[11px] text-slate-600 dark:text-slate-400">
                         {mod.owner_role === 'CO_OWNER_ADMIN'
-                          ? 'Full access, user creation, approves requests, and accesses Owner Security.'
+                          ? 'Full access, user creation, approves requests, and accesses Security & Credentials.'
                           : mod.owner_role === 'ADMIN'
-                          ? 'Full subscriber operations & approves requests. Restricted from Owner Security.'
-                          : 'Subscriber delete, duration extend, and suspend actions require Admin/Owner approval.'}
+                          ? 'Full subscriber operations & approves requests.'
+                          : 'Subscriber delete, duration extend, and suspend actions require Executive Administrator approval.'}
                       </p>
                     </div>
                   </div>
@@ -1425,7 +1463,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       </>
                     ) : (
                       <span className="text-[10px] text-slate-400 italic">
-                        {'Managed by Owner/Co-Owner'}
+                        {'Managed by Executive Admin'}
                       </span>
                     )}
                   </div>
@@ -1446,7 +1484,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 {'Dual-Control Governance & Sensitive Action Approval Queue:'}
               </strong>
               <p>
-                {'Moderators can request critical operations (Subscriber Deletion, Subscription Extension, Suspension/Unsuspension). These actions require explicit approval from an Admin, Co-Owner Admin, or Owner Admin to ensure platform security.'}
+                {'Officers can request critical operations (Subscriber Deletion, Subscription Extension, Suspension/Unsuspension). These actions require explicit approval from an Executive Administrator to ensure system security.'}
               </p>
             </div>
           </div>
@@ -1617,10 +1655,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </div>
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                {'SaaS Owner Profile & Security'}
+                {'Master Profile & Administrative Security'}
               </h3>
               <p className="text-xs text-slate-500">
-                {'Update your SaaS Master credentials anytime from this secure screen.'}
+                {'Update your master system administrator credentials securely.'}
               </p>
             </div>
           </div>
@@ -1636,7 +1674,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {'Owner Username'} *
+                  {'Admin Username'} *
                 </label>
                 <input
                   type="text"
@@ -1653,7 +1691,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {'Owner Password'} *
+                    {'Admin Password'} *
                   </label>
                   <button
                     type="button"
@@ -2327,16 +2365,16 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   onChange={e => setNewModForm(prev => ({ ...prev, owner_role: e.target.value as OwnerRole }))}
                   className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50/50 dark:bg-amber-950/20 text-slate-900 dark:text-white"
                 >
-                  <option value="MODERATOR">👮 SaaS Moderator (Sensitive actions require approval)</option>
+                  <option value="MODERATOR">👮 Operations Officer (Sensitive actions require approval)</option>
                   <option value="ADMIN">🛡️ Control Admin (Full subscriber control & approvals)</option>
-                  <option value="CO_OWNER_ADMIN">🤝 Co-Owner Admin (Full access & user management)</option>
+                  <option value="CO_OWNER_ADMIN">🤝 Deputy Admin (Full access & user management)</option>
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1">
                   {newModForm.owner_role === 'CO_OWNER_ADMIN'
-                    ? 'Co-Owner Admin has equal authority to create users and access Owner Security.'
+                    ? 'Deputy Admin has equal authority to manage users and access Security & Credentials.'
                     : newModForm.owner_role === 'ADMIN'
-                    ? 'Admin has full operations and approval authority, but cannot access Owner Security.'
-                    : 'Moderators can submit action requests for Subscriber deletion, extension, and suspension.'}
+                    ? 'Admin has full operations and approval authority, but cannot access Security & Credentials.'
+                    : 'Operations Officers can submit action requests for Subscriber deletion, extension, and suspension.'}
                 </p>
               </div>
 
@@ -2606,7 +2644,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 Target: {modRequestModal.tenant.name} ({modRequestModal.tenant.code})
               </div>
               <p className="text-[11px] text-amber-700 dark:text-amber-300">
-                {'As a SaaS Moderator, this sensitive action will be forwarded to an Admin, Co-Owner Admin, or Owner Admin for verification & approval.'}
+                {'This sensitive operation will be forwarded to an Executive Administrator for verification & approval.'}
               </p>
             </div>
 

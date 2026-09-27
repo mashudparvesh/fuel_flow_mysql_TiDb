@@ -116,7 +116,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
                 System Authentication
               </h3>
               <p className="text-[11px] text-slate-500">
-                Login as SaaS Owner, Moderator, or Company Admin
+                Login as Master Admin, System Moderator, or Company Admin
               </p>
             </div>
           </div>
@@ -134,11 +134,11 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
               {activeAuthRole === 'saas_owner' && <Crown className="w-3.5 h-3.5 text-amber-500" />}
               {activeAuthRole === 'saas_moderator' && <Shield className="w-3.5 h-3.5 text-indigo-500" />}
               {activeAuthRole === 'company_user' && <Building2 className="w-3.5 h-3.5 text-blue-500" />}
-              <span>{activeAuthRole === 'saas_owner' ? (saasOwner?.name || 'SaaS Owner') : activeAuthRole === 'saas_moderator' ? (activeModerator?.name || 'Moderator') : (currentUser?.name || 'User')}</span>
+              <span>{activeAuthRole === 'saas_owner' ? (saasOwner?.name || 'Master Admin') : activeAuthRole === 'saas_moderator' ? (activeModerator?.name || 'Moderator') : (currentUser?.name || 'User')}</span>
             </span>
           </div>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
-            {activeAuthRole.replace('_', ' ')}
+            {activeAuthRole === 'saas_owner' ? 'Master Admin' : activeAuthRole === 'saas_moderator' ? 'Moderator' : 'Company User'}
           </span>
         </div>
 
@@ -154,7 +154,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
             }`}
           >
             <Crown className="w-3.5 h-3.5" />
-            <span className="text-[10px]">SaaS Owner</span>
+            <span className="text-[10px]">Master Admin</span>
           </button>
 
           <button
@@ -184,11 +184,11 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
           </button>
         </div>
 
-        {/* 1. SAAS OWNER LOGIN */}
+        {/* 1. MASTER ADMIN LOGIN */}
         {authTab === 'owner' && (
           <form onSubmit={handleOwnerSubmit} className="space-y-4">
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-300">
-              <span className="font-bold block mb-0.5">👑 Pre-configured Platform Owner Login:</span>
+              <span className="font-bold block mb-0.5">👑 Master Administrator Login:</span>
               <span>User: <strong>mashudalone</strong> | Pass: <strong>00000</strong></span>
             </div>
 
@@ -202,7 +202,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Owner Username
+                  Admin Username
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -239,7 +239,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
                 className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 hover:scale-[1.01]"
               >
                 <Crown className="w-4 h-4" />
-                <span>Login as Owner & Open Panel</span>
+                <span>Sign In as Master Admin</span>
               </button>
             </div>
           </form>
@@ -250,7 +250,7 @@ export const AuthSwitcherModal: React.FC<AuthSwitcherModalProps> = ({ isOpen, on
           <form onSubmit={handleModSubmit} className="space-y-4">
             <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/40 text-[11px] text-indigo-900 dark:text-indigo-300">
               <span className="font-bold block mb-0.5">Moderator Login:</span>
-              <span>Enter username and password configured from the Owner Panel.</span>
+              <span>Enter username and password configured from the Master Console.</span>
             </div>
 
             {modError && (

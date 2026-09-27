@@ -312,7 +312,7 @@ MYSQL_SSL=true`;
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                TiDB Cloud Serverless (MySQL 8.0) • AWS Singapore • fuelnest.xyz
+                TiDB Cloud Serverless (MySQL 8.0) • AWS Singapore • FuelNest Cloud
               </p>
             </div>
           </div>

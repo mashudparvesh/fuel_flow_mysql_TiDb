@@ -1,0 +1,30 @@
+[
+  {
+    "id": "em_1790485351959_leo7",
+    "timestamp": "2026-09-27T05:02:31.959Z",
+    "recipient": "sadikur@test-domain.com",
+    "relayTo": "mashudrus@gmail.com",
+    "company": "Dhaka Metro Fleet",
+    "username": "dhaka_admin",
+    "status": "relayed_to_owner",
+    "reason": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+  },
+  {
+    "id": "em_1790485344990_15lh",
+    "timestamp": "2026-09-27T05:02:24.990Z",
+    "recipient": "mashudrus@gmail.com",
+    "company": "Surma Logistics & Express",
+    "username": "surma_admin",
+    "status": "delivered",
+    "method": "resend_direct"
+  },
+  {
+    "id": "em_1790485344347_65yp",
+    "timestamp": "2026-09-27T05:02:24.347Z",
+    "recipient": "mashudrus@gmail.com",
+    "company": "Meghna Heavy Freight Ltd",
+    "username": "meghna_admin",
+    "status": "delivered",
+    "method": "resend_direct"
+  }
+]

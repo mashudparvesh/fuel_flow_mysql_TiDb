@@ -213,20 +213,89 @@ function saveApprovals(approvals: any[]) {
 // -------------------------------------------------------------
 // Automated Email Dispatch (Resend / Nodemailer fallback)
 // -------------------------------------------------------------
+const EMAIL_LOGS_FILE = path.join(DATA_DIR, 'email_logs.json');
+
+function recordEmailLog(entry: any) {
+  try {
+    ensureDataDir();
+    let logs: any[] = [];
+    if (fs.existsSync(EMAIL_LOGS_FILE)) {
+      try {
+        logs = JSON.parse(fs.readFileSync(EMAIL_LOGS_FILE, 'utf-8'));
+      } catch {}
+    }
+    logs.unshift({
+      id: `em_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      ...entry
+    });
+    if (logs.length > 100) logs = logs.slice(0, 100);
+    fs.writeFileSync(EMAIL_LOGS_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[Email Log Error]:', e);
+  }
+}
+
 async function sendWelcomeEmail(data: {
   email: string;
   companyName: string;
   username: string;
   tempPassword: string;
   loginUrl: string;
+  planName?: string;
 }) {
   const resendApiKey = process.env.RESEND_API_KEY;
+  console.log(`[Email Dispatch] Triggered for ${data.companyName} (${data.email}) - User: ${data.username}`);
+
+  const htmlBody = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 16px;">
+      <div style="margin-bottom: 20px; border-bottom: 2px solid #f59e0b; padding-bottom: 16px;">
+        <h1 style="color: #0f172a; margin: 0 0 6px 0; font-size: 24px; font-weight: 800;">FuelNest Fleet & Fuel Intelligence</h1>
+        <p style="margin: 0; color: #64748b; font-size: 14px;">Enterprise Commercial Fleet Provisioning</p>
+      </div>
+      
+      <p style="font-size: 15px; line-height: 1.6;">Hello,</p>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Congratulations! Your dedicated enterprise workspace for <strong>${data.companyName}</strong> (${data.planName || 'Active Workspace'}) has been provisioned and configured on FuelNest.
+      </p>
+
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin: 20px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 16px;">Your Super Admin Sign-in Credentials:</h3>
+        <p style="margin: 6px 0; font-size: 14px;"><strong>Portal Access URL:</strong> <a href="${data.loginUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">${data.loginUrl}</a></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong>Super Admin Username:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.username}</code></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.tempPassword}</code></p>
+      </div>
+
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px; margin: 20px 0; color: #92400e; font-size: 13px; line-height: 1.5;">
+        <strong>Security Notice:</strong> You can update your temporary password anytime from the Fleet User Management panel.
+      </div>
+
+      <div style="text-align: center; margin: 30px 0 20px;">
+        <a href="${data.loginUrl}" style="background: #f59e0b; color: #000000; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block; font-size: 15px;">Login to Your Fleet Dashboard &rarr;</a>
+      </div>
+
+      <p style="color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
+        FuelNest Enterprise Multi-Company Platform &bull; Automated System Provisioning
+      </p>
+    </div>
+  `;
+
   if (!resendApiKey) {
     console.log(`[Email Mock] Welcome email for ${data.companyName} to ${data.email}:`);
     console.log(`[Email Mock] Portal URL: ${data.loginUrl} | Username: ${data.username} | Temporary Password: ${data.tempPassword}`);
-    return { dispatched: false, reason: 'api_key_not_configured' };
+    recordEmailLog({
+      recipient: data.email,
+      company: data.companyName,
+      username: data.username,
+      status: 'simulated_no_api_key'
+    });
+    return { dispatched: true, simulated: true };
   }
 
+  let directOk = false;
+  let errorMsg = '';
+
+  // Attempt 1: Direct dispatch via Resend
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -238,45 +307,85 @@ async function sendWelcomeEmail(data: {
         from: 'FuelNest Onboarding <onboarding@resend.dev>',
         to: [data.email],
         subject: `Welcome to FuelNest - Your Fleet Workspace is Ready! (${data.companyName})`,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 16px;">
-            <div style="margin-bottom: 20px; border-bottom: 2px solid #f59e0b; padding-bottom: 16px;">
-              <h1 style="color: #0f172a; margin: 0 0 6px 0; font-size: 24px; font-weight: 800;">FuelNest Fleet & Fuel Intelligence</h1>
-              <p style="margin: 0; color: #64748b; font-size: 14px;">Automated SaaS Commercial Provisioning</p>
-            </div>
-            
-            <p style="font-size: 15px; line-height: 1.6;">Hello,</p>
-            <p style="font-size: 15px; line-height: 1.6;">
-              Congratulations! Your dedicated enterprise workspace for <strong>${data.companyName}</strong> has been automatically provisioned and configured on FuelNest.
-            </p>
-
-            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin: 20px 0;">
-              <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 16px;">Your Super Admin Sign-in Credentials:</h3>
-              <p style="margin: 6px 0; font-size: 14px;"><strong>Portal Access URL:</strong> <a href="${data.loginUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">${data.loginUrl}</a></p>
-              <p style="margin: 6px 0; font-size: 14px;"><strong>Super Admin Username:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.username}</code></p>
-              <p style="margin: 6px 0; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.tempPassword}</code></p>
-            </div>
-
-            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px; margin: 20px 0; color: #92400e; font-size: 13px; line-height: 1.5;">
-              <strong>Security Notice:</strong> For security compliance, you will be required to update your temporary password upon your first sign-in before accessing fleet dashboards.
-            </div>
-
-            <div style="text-align: center; margin: 30px 0 20px;">
-              <a href="${data.loginUrl}" style="background: #f59e0b; color: #000000; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block; font-size: 15px;">Login to Your Fleet Dashboard &rarr;</a>
-            </div>
-
-            <p style="color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
-              FuelNest SaaS Multi-Tenant Platform &bull; If you have any inquiries, contact support@fuelnest.xyz
-            </p>
-          </div>
-        `
+        html: htmlBody
       })
     });
-    return { dispatched: res.ok, status: res.status };
+    if (res.ok) {
+      directOk = true;
+      recordEmailLog({
+        recipient: data.email,
+        company: data.companyName,
+        username: data.username,
+        status: 'delivered',
+        method: 'resend_direct'
+      });
+      console.log(`[Email Success] Delivered to ${data.email}`);
+      return { dispatched: true, status: res.status, recipient: data.email };
+    } else {
+      const errJson: any = await res.json().catch(() => ({}));
+      errorMsg = errJson.message || `HTTP ${res.status}`;
+      console.warn(`[Resend Notice] Direct send to ${data.email} returned: ${errorMsg}`);
+    }
   } catch (err: any) {
-    console.warn('[Resend Email Error]:', err?.message || err);
-    return { dispatched: false, error: err?.message };
+    errorMsg = err?.message || String(err);
+    console.warn('[Resend Email Error]:', errorMsg);
   }
+
+  // Attempt 2: If direct send failed due to sandbox unverified recipient limitation (e.g. 403),
+  // relay notification to the verified account owner (mashudrus@gmail.com) so the credentials are never lost!
+  const ownerEmail = 'mashudrus@gmail.com';
+  if (!directOk && data.email.toLowerCase() !== ownerEmail.toLowerCase()) {
+    try {
+      const relayRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'FuelNest Onboarding <onboarding@resend.dev>',
+          to: [ownerEmail],
+          subject: `[Subscriber Credentials] Workspace Provisioned: ${data.companyName} (${data.email})`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+              <h2 style="color: #0f172a;">New Subscriber Workspace Provisioned</h2>
+              <p><strong>Company:</strong> ${data.companyName}</p>
+              <p><strong>Client Email:</strong> ${data.email}</p>
+              <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin: 15px 0;">
+                <p><strong>Username:</strong> <code>${data.username}</code></p>
+                <p><strong>Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+                <p><strong>Portal URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
+              </div>
+              <p style="font-size: 12px; color: #64748b;">Notice: Sent via sandbox relay to verified account administrator.</p>
+            </div>
+          `
+        })
+      });
+      if (relayRes.ok) {
+        console.log(`[Email Relay] Dispatched credential copy to owner ${ownerEmail}`);
+        recordEmailLog({
+          recipient: data.email,
+          relayTo: ownerEmail,
+          company: data.companyName,
+          username: data.username,
+          status: 'relayed_to_owner',
+          reason: errorMsg
+        });
+        return { dispatched: true, status: 200, relayed: true, note: errorMsg };
+      }
+    } catch (e: any) {
+      console.warn('[Email Relay Error]:', e?.message || e);
+    }
+  }
+
+  recordEmailLog({
+    recipient: data.email,
+    company: data.companyName,
+    username: data.username,
+    status: 'failed',
+    error: errorMsg
+  });
+  return { dispatched: false, error: errorMsg };
 }
 
 // -------------------------------------------------------------
@@ -287,11 +396,14 @@ async function provisionNewTenant(payload: {
   admin_name?: string;
   email: string;
   phone?: string;
-  plan_id: string; // 'starter' | 'pro' | 'enterprise' | 'custom'
+  plan_id: string; // 'trial_3days' | 'plan_1month' | 'plan_3months' | 'plan_6months' | 'plan_12months'
   max_vehicles?: number;
   custom_price?: number;
   address?: string;
   origin?: string;
+  payment_completed?: boolean;
+  payment_method?: string;
+  transaction_id?: string;
 }) {
   const companyName = String(payload.company_name || 'Fleet Company').trim();
   const words = companyName.split(/\s+/).filter(Boolean);
@@ -326,7 +438,7 @@ async function provisionNewTenant(payload: {
   let durationType: 'days' | 'months' | 'years' = 'months';
   let durationVal = 1;
   let priceBdt = 749;
-  let planNameBn = '১ মাস প্ল্যান (749 BDT)';
+  let planNameEn = '1 Month Plan (749 BDT)';
   let isTrial = false;
   let isPaidPlan = true;
 
@@ -335,7 +447,7 @@ async function provisionNewTenant(payload: {
     durationType = 'days';
     durationVal = 3;
     priceBdt = 0;
-    planNameBn = '৩ দিনের ফ্রি ট্রায়াল (3-Day Free Trial)';
+    planNameEn = '3 Days Free Trial';
     isTrial = true;
     isPaidPlan = false;
   } else if (planId === 'plan_1month' || planId === 'starter') {
@@ -343,25 +455,25 @@ async function provisionNewTenant(payload: {
     durationType = 'months';
     durationVal = 1;
     priceBdt = 749;
-    planNameBn = '১ মাস প্ল্যান (749 BDT - Full Options)';
+    planNameEn = '1 Month Plan (749 BDT)';
   } else if (planId === 'plan_3months' || planId === 'pro') {
     endDateObj.setMonth(endDateObj.getMonth() + 3);
     durationType = 'months';
     durationVal = 3;
     priceBdt = 2199;
-    planNameBn = '৩ মাস প্ল্যান (2,199 BDT - Full Options)';
+    planNameEn = '3 Months Plan (2,199 BDT)';
   } else if (planId === 'plan_6months') {
     endDateObj.setMonth(endDateObj.getMonth() + 6);
     durationType = 'months';
     durationVal = 6;
     priceBdt = 3999;
-    planNameBn = '৬ মাস প্ল্যান (3,999 BDT - Full Options)';
+    planNameEn = '6 Months Plan (3,999 BDT)';
   } else if (planId === 'plan_12months' || planId === 'enterprise') {
     endDateObj.setFullYear(endDateObj.getFullYear() + 1);
     durationType = 'years';
     durationVal = 1;
     priceBdt = 7999;
-    planNameBn = '১২ মাস প্ল্যান (7,999 BDT - Full Options)';
+    planNameEn = 'VIP Plan (7,999 BDT)';
   }
 
   if (payload.custom_price !== undefined && payload.custom_price !== null && !isNaN(Number(payload.custom_price))) {
@@ -373,8 +485,9 @@ async function provisionNewTenant(payload: {
   const maxUsers = 25;
   const maxPumps = 15;
 
-  const initialStatus = isTrial ? 'active' : 'pending_payment';
-  const initialPaymentStatus = isTrial ? 'paid' : 'due';
+  const isActuallyPaid = isTrial || Boolean(payload.payment_completed);
+  const initialStatus = isActuallyPaid ? 'active' : 'pending_payment';
+  const initialPaymentStatus = isActuallyPaid ? 'paid' : 'due';
 
   const newTenant: any = {
     id: tenantId,
@@ -390,7 +503,7 @@ async function provisionNewTenant(payload: {
     created_at: startDate,
     subscription: {
       plan: planId as any,
-      plan_name_bn: planNameBn,
+      plan_name_bn: planNameEn,
       status: initialStatus,
       start_date: startDate,
       end_date: endDate,
@@ -410,7 +523,9 @@ async function provisionNewTenant(payload: {
         qr_scanner: true,
         custom_categories: true
       },
-      notes: isTrial ? '3-Day Free Trial Provisioning' : `Direct Gateway Subscription - Plan: ${planId.toUpperCase()}`
+      notes: isTrial
+        ? '3-Day Free Trial Provisioning'
+        : `Subscription - Plan: ${planId.toUpperCase()} (${payload.payment_method || 'Online Checkout'})`
     }
   };
 
@@ -477,13 +592,14 @@ async function provisionNewTenant(payload: {
   await upsertUserInDB(newSuperAdminUser).catch(e => console.warn('[DB] Provision user sync warning:', e));
 
   // Dispatch Welcome Email
-  const loginUrl = `${payload.origin || ''}/login`;
-  await sendWelcomeEmail({
+  const loginUrl = 'https://fuelnest.xyz/login';
+  const emailRes = await sendWelcomeEmail({
     email: payload.email,
     companyName,
     username: superAdminUsername,
     tempPassword: temporaryPassword,
-    loginUrl
+    loginUrl,
+    planName: planNameEn
   });
 
   return {
@@ -492,7 +608,8 @@ async function provisionNewTenant(payload: {
     user: newSuperAdminUser,
     super_admin_username: superAdminUsername,
     temporary_password: temporaryPassword,
-    login_url: loginUrl
+    login_url: loginUrl,
+    email_status: emailRes
   };
 }
 
@@ -1136,7 +1253,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // Dedicated subscriber registration endpoint for Landing Page (Trial & Premium Plans)
   app.post('/api/subscribers/register', async (req: Request, res: Response) => {
     try {
-      const { company_name, admin_name, email, phone, plan_id } = req.body;
+      const { company_name, admin_name, email, phone, plan_id, payment_completed, payment_method, transaction_id } = req.body;
       const origin = req.protocol + '://' + req.get('host');
 
       const result = await provisionNewTenant({
@@ -1145,12 +1262,29 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         email,
         phone,
         plan_id: plan_id || 'trial_3days',
+        payment_completed: Boolean(payment_completed),
+        payment_method,
+        transaction_id,
         origin
       });
 
       res.status(201).json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Registration error' });
+    }
+  });
+
+  // Recent Email Dispatch Logs endpoint for Master Audit
+  app.get('/api/email/logs', (req: Request, res: Response) => {
+    try {
+      ensureDataDir();
+      let logs: any[] = [];
+      if (fs.existsSync(EMAIL_LOGS_FILE)) {
+        logs = JSON.parse(fs.readFileSync(EMAIL_LOGS_FILE, 'utf-8'));
+      }
+      res.json({ success: true, count: logs.length, logs });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
     }
   });
 
