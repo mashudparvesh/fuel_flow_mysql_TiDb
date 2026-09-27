@@ -126,7 +126,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const canApproveRequests = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN' || effectiveRole === 'ADMIN';
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway'>('subscribers');
+  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway' | 'email'>('subscribers');
 
   // Enforce access control if tab is restricted
   useEffect(() => {
@@ -134,6 +134,56 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       setActiveTab('subscribers');
     }
   }, [activeTab, canAccessOwnerSecurity]);
+
+  // Email & SMTP configuration states
+  const [emailConfig, setEmailConfig] = useState<any>({
+    smtp_enabled: false,
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_secure: false,
+    smtp_user: '',
+    smtp_pass: '',
+    smtp_pass_configured: false,
+    smtp_from: '',
+    resend_active: false,
+    resend_from: '',
+    verified_domain: 'fuelnest.xyz',
+    owner_email: 'mashudrus@gmail.com'
+  });
+  const [emailConfigLoading, setEmailConfigLoading] = useState(false);
+  const [emailConfigSaving, setEmailConfigSaving] = useState(false);
+  const [emailConfigMessage, setEmailConfigMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [emailTestRecipient, setEmailTestRecipient] = useState('prematraders542@gmail.com');
+  const [emailTestLoading, setEmailTestLoading] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<any>(null);
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [emailLogsLoading, setEmailLogsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'email') {
+      setEmailConfigLoading(true);
+      fetch('/api/email/config')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.config) {
+            setEmailConfig((prev: any) => ({ ...prev, ...data.config, smtp_pass: '' }));
+          }
+        })
+        .catch(err => console.warn('Failed to fetch email config:', err))
+        .finally(() => setEmailConfigLoading(false));
+
+      setEmailLogsLoading(true);
+      fetch('/api/email/logs')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.logs)) {
+            setEmailLogs(data.logs);
+          }
+        })
+        .catch(err => console.warn('Failed to fetch email logs:', err))
+        .finally(() => setEmailLogsLoading(false));
+    }
+  }, [activeTab]);
 
   // Pending count for badge
   const pendingApprovalsCount = useMemo(() => {
@@ -862,6 +912,19 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           >
             <CreditCard className="w-4 h-4" />
             <span>{'Baniq Pay Gateway'}</span>
+          </button>
+
+          {/* Tab 6: Email & SMTP */}
+          <button
+            onClick={() => setActiveTab('email')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'email'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>{'Email & SMTP'}</span>
           </button>
         </div>
 
@@ -1967,7 +2030,371 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         </div>
       )}
 
-      {/* ================= MODAL: ADD SUBSCRIBER ================= */}
+      {activeTab === 'email' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Email Status & Sandbox Diagnostic Card */}
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/20">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      Automated Email Dispatch & SMTP Engine
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      Live Multi-Channel
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Dispatches Super Admin credentials, onboarding welcome kits, and receipts to subscribers
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  Domain: fuelnest.xyz
+                </span>
+              </div>
+            </div>
+
+            {/* Sandbox Notice Banner */}
+            <div className="mt-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>ইমেইল ডেলিভারি তথ্য ও স্যান্ডবক্স স্ট্যাটাস (Email Delivery Diagnostics):</span>
+              </div>
+              <p className="leading-relaxed">
+                বর্তমানে <strong>Resend API</strong> টেস্টিং/স্যান্ডবক্স মোডে রয়েছে। এর ফলে <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">onboarding@resend.dev</code> ব্যবহার করার কারণে সরাসরি শুধুমাত্র ভেরিফাইড অ্যাকাউন্ট ওনারের ইমেইলে (<span className="underline font-mono">mashudrus@gmail.com</span>) টেস্ট ডেলিভারি নিশ্চিত হয়। অন্য যেকোনো টেস্ট গ্রাহক ইমেইলে সরাসরি ডেলিভারি করতে নিচের যেকোনো একটি পদ্ধতি অনুসরণ করুন:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-900/80 border border-amber-500/20 text-slate-800 dark:text-slate-200">
+                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">পদ্ধতি ১: Custom SMTP (সবচেয়ে সহজ)</div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    নিচে আপনার ডোমেন ওয়েবমেইল (যেমন: <code className="font-mono">mail.fuelnest.xyz</code>) অথবা Gmail App Password বা Brevo/SendGrid SMTP কনফিগার করুন। SMTP-তে কোনো স্যান্ডবক্স সীমাবদ্ধতা নেই!
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-900/80 border border-amber-500/20 text-slate-800 dark:text-slate-200">
+                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">পদ্ধতি ২: Resend ডোমেন ভেরিফিকেশন</div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    <a href="https://resend.com/domains" target="_blank" rel="noreferrer" className="text-amber-500 underline font-bold">resend.com/domains</a> এ গিয়ে <code className="font-mono">fuelnest.xyz</code> ডোমেনের DNS রেকর্ড ভেরিফাই করে নিচে প্রেরক ইমেইল সেট করুন।
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom SMTP Configuration Form */}
+            <div className="mt-6 p-5 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Custom SMTP Server Configuration</h4>
+                  <p className="text-xs text-slate-500">Enable SMTP to dispatch directly to all subscribers without third-party sandbox restrictions</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={emailConfig.smtp_enabled}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_enabled: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">SMTP Host</label>
+                  <input
+                    type="text"
+                    value={emailConfig.smtp_host || ''}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_host: e.target.value }))}
+                    placeholder="e.g., mail.fuelnest.xyz or smtp.gmail.com"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Port</label>
+                    <input
+                      type="number"
+                      value={emailConfig.smtp_port || 587}
+                      onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_port: Number(e.target.value) }))}
+                      placeholder="587 or 465"
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">SSL/TLS</label>
+                    <button
+                      type="button"
+                      onClick={() => setEmailConfig((prev: any) => ({ ...prev, smtp_secure: !prev.smtp_secure }))}
+                      className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                        emailConfig.smtp_secure
+                          ? 'bg-amber-500/10 border-amber-500 text-amber-500'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500'
+                      }`}
+                    >
+                      {emailConfig.smtp_secure ? 'SSL Active (465)' : 'STARTTLS (587)'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">SMTP Username / Email</label>
+                  <input
+                    type="text"
+                    value={emailConfig.smtp_user || ''}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_user: e.target.value }))}
+                    placeholder="admin@fuelnest.xyz"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    SMTP Password {emailConfig.smtp_pass_configured && <span className="text-emerald-500 text-[10px]">(Password Configured)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    value={emailConfig.smtp_pass || ''}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_pass: e.target.value }))}
+                    placeholder={emailConfig.smtp_pass_configured ? '••••••••••••••••' : 'Enter SMTP password'}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Sender 'From' Name & Email</label>
+                  <input
+                    type="text"
+                    value={emailConfig.smtp_from || ''}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, smtp_from: e.target.value }))}
+                    placeholder='FuelNest Intelligence <admin@fuelnest.xyz>'
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Resend Verified Sender (Optional)</label>
+                  <input
+                    type="text"
+                    value={emailConfig.resend_from || ''}
+                    onChange={e => setEmailConfig((prev: any) => ({ ...prev, resend_from: e.target.value }))}
+                    placeholder="FuelNest <noreply@fuelnest.xyz>"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {emailConfigMessage && (
+                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  emailConfigMessage.isError
+                    ? 'bg-red-500/10 border border-red-500/30 text-red-500'
+                    : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'
+                }`}>
+                  {emailConfigMessage.isError ? <AlertTriangle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                  <span>{emailConfigMessage.text}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  disabled={emailConfigSaving}
+                  onClick={async () => {
+                    setEmailConfigSaving(true);
+                    setEmailConfigMessage(null);
+                    try {
+                      const res = await fetch('/api/email/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(emailConfig)
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setEmailConfigMessage({ text: 'Email & SMTP settings saved successfully!' });
+                        if (data.config) setEmailConfig((prev: any) => ({ ...prev, ...data.config, smtp_pass: '' }));
+                      } else {
+                        setEmailConfigMessage({ text: data.message || 'Failed to save configuration.', isError: true });
+                      }
+                    } catch (e: any) {
+                      setEmailConfigMessage({ text: e?.message || 'Network error saving settings.', isError: true });
+                    } finally {
+                      setEmailConfigSaving(false);
+                    }
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{emailConfigSaving ? 'Saving Settings...' : 'Save Email Settings'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Test Email Dispatcher Tool */}
+            <div className="mt-6 p-5 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center gap-2">
+                <Send className="w-4 h-4 text-amber-500" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Live Email Dispatch Test Tool</h4>
+              </div>
+              <p className="text-xs text-slate-500">
+                Send a real test email with temporary Super Admin credentials to test deliverability to any recipient.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <input
+                  type="email"
+                  value={emailTestRecipient}
+                  onChange={e => setEmailTestRecipient(e.target.value)}
+                  placeholder="Enter email to test (e.g. prematraders542@gmail.com)"
+                  className="flex-1 w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 font-mono"
+                />
+                <button
+                  type="button"
+                  disabled={emailTestLoading || !emailTestRecipient.trim()}
+                  onClick={async () => {
+                    setEmailTestLoading(true);
+                    setEmailTestResult(null);
+                    try {
+                      const res = await fetch('/api/email/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipient_email: emailTestRecipient.trim() })
+                      });
+                      const data = await res.json();
+                      setEmailTestResult(data);
+                      // Refresh logs
+                      fetch('/api/email/logs')
+                        .then(r => r.json())
+                        .then(d => { if (d.success && Array.isArray(d.logs)) setEmailLogs(d.logs); })
+                        .catch(() => {});
+                    } catch (e: any) {
+                      setEmailTestResult({ success: false, message: e?.message });
+                    } finally {
+                      setEmailTestLoading(false);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${emailTestLoading ? 'animate-spin' : ''}`} />
+                  <span>{emailTestLoading ? 'Dispatching Test...' : 'Send Test Email'}</span>
+                </button>
+              </div>
+
+              {emailTestResult && (
+                <div className={`mt-3 p-3.5 rounded-xl border text-xs space-y-1 font-mono ${
+                  emailTestResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : emailTestResult.result?.sandbox_restricted
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+                }`}>
+                  <div className="font-bold font-sans flex items-center gap-1.5">
+                    {emailTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span>
+                      {emailTestResult.success
+                        ? `Test Email Successfully Delivered via ${emailTestResult.result?.method || 'Direct Dispatch'}!`
+                        : emailTestResult.result?.sandbox_restricted
+                        ? 'Sandbox Restriction: Relayed to verified owner (mashudrus@gmail.com)'
+                        : 'Delivery Failed'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {emailTestResult.result?.reason || emailTestResult.result?.error || emailTestResult.message || JSON.stringify(emailTestResult.result)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Email Dispatch Audit History Table */}
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-500" />
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Recent Email Dispatch Audit Logs</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailLogsLoading(true);
+                    fetch('/api/email/logs')
+                      .then(r => r.json())
+                      .then(d => { if (d.success && Array.isArray(d.logs)) setEmailLogs(d.logs); })
+                      .finally(() => setEmailLogsLoading(false));
+                  }}
+                  className="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3 h-3 ${emailLogsLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh Logs</span>
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-100 dark:bg-slate-900/80 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th className="py-2.5 px-3">Timestamp</th>
+                      <th className="py-2.5 px-3">Recipient</th>
+                      <th className="py-2.5 px-3">Company</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Method</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {emailLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 italic">
+                          No email dispatch records found yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      emailLogs.slice(0, 15).map((log: any, idx: number) => (
+                        <tr key={log.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">
+                            {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                            {log.recipient}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
+                            {log.company || '—'}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              log.status === 'delivered'
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                : log.status === 'relayed_to_owner' || log.status === 'sandbox_restricted'
+                                ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                            }`}>
+                              {log.status === 'delivered'
+                                ? 'Delivered'
+                                : log.status === 'relayed_to_owner' || log.status === 'sandbox_restricted'
+                                ? 'Relayed (Sandbox)'
+                                : 'Failed'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">
+                            {log.method || 'Resend'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {isAddSubscriberModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
           <div className="relative w-full max-w-2xl bg-white dark:bg-[#0c162d] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 my-8 space-y-6">

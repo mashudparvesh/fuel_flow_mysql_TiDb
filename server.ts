@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import path from "path";
 import fs from "fs";
+import nodemailer from "nodemailer";
 import {
   initMySQLDatabase,
   getMySQLStatus,
@@ -211,9 +212,55 @@ function saveApprovals(approvals: any[]) {
 }
 
 // -------------------------------------------------------------
-// Automated Email Dispatch (Resend / Nodemailer fallback)
+// Automated Email Dispatch (SMTP Nodemailer & Resend Multi-Channel)
 // -------------------------------------------------------------
 const EMAIL_LOGS_FILE = path.join(DATA_DIR, 'email_logs.json');
+const EMAIL_CONFIG_FILE = path.join(DATA_DIR, 'email_config.json');
+
+export interface EmailSettingsConfig {
+  smtp_enabled: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_pass: string;
+  smtp_from: string;
+  resend_from: string;
+  verified_domain: string;
+}
+
+function loadEmailConfig(): EmailSettingsConfig {
+  ensureDataDir();
+  let config: EmailSettingsConfig = {
+    smtp_enabled: process.env.SMTP_ENABLED === 'true',
+    smtp_host: process.env.SMTP_HOST || '',
+    smtp_port: Number(process.env.SMTP_PORT) || 587,
+    smtp_secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+    smtp_user: process.env.SMTP_USER || '',
+    smtp_pass: process.env.SMTP_PASS || '',
+    smtp_from: process.env.SMTP_FROM || '',
+    resend_from: process.env.RESEND_FROM || '',
+    verified_domain: process.env.EMAIL_DOMAIN || 'fuelnest.xyz'
+  };
+
+  if (fs.existsSync(EMAIL_CONFIG_FILE)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(EMAIL_CONFIG_FILE, 'utf-8'));
+      config = { ...config, ...saved };
+    } catch (e) {
+      console.warn('[Email Config Load Error]:', e);
+    }
+  }
+  return config;
+}
+
+function saveEmailConfig(cfg: Partial<EmailSettingsConfig>) {
+  ensureDataDir();
+  const current = loadEmailConfig();
+  const updated = { ...current, ...cfg };
+  fs.writeFileSync(EMAIL_CONFIG_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+  return updated;
+}
 
 function recordEmailLog(entry: any) {
   try {
@@ -241,11 +288,14 @@ async function sendWelcomeEmail(data: {
   companyName: string;
   username: string;
   tempPassword: string;
-  loginUrl: string;
+  loginUrl?: string;
   planName?: string;
 }) {
+  const emailCfg = loadEmailConfig();
   const resendApiKey = process.env.RESEND_API_KEY;
-  console.log(`[Email Dispatch] Triggered for ${data.companyName} (${data.email}) - User: ${data.username}`);
+  // Always enforce the dedicated subscriber portal URL: https://fuelnest.xyz/login
+  const targetLoginUrl = (data.loginUrl && !data.loginUrl.includes('localhost')) ? data.loginUrl : 'https://fuelnest.xyz/login';
+  console.log(`[Email Dispatch] Triggered for ${data.companyName} (${data.email}) - User: ${data.username} - Portal: ${targetLoginUrl}`);
 
   const htmlBody = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -261,7 +311,7 @@ async function sendWelcomeEmail(data: {
 
       <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin: 20px 0;">
         <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 16px;">Your Super Admin Sign-in Credentials:</h3>
-        <p style="margin: 6px 0; font-size: 14px;"><strong>Portal Access URL:</strong> <a href="${data.loginUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">${data.loginUrl}</a></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong>Portal Access URL:</strong> <a href="${targetLoginUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">${targetLoginUrl}</a></p>
         <p style="margin: 6px 0; font-size: 14px;"><strong>Super Admin Username:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.username}</code></p>
         <p style="margin: 6px 0; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: bold;">${data.tempPassword}</code></p>
       </div>
@@ -271,7 +321,7 @@ async function sendWelcomeEmail(data: {
       </div>
 
       <div style="text-align: center; margin: 30px 0 20px;">
-        <a href="${data.loginUrl}" style="background: #f59e0b; color: #000000; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block; font-size: 15px;">Login to Your Fleet Dashboard &rarr;</a>
+        <a href="${targetLoginUrl}" style="background: #f59e0b; color: #000000; padding: 12px 28px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block; font-size: 15px;">Login to Your Fleet Dashboard &rarr;</a>
       </div>
 
       <p style="color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
@@ -280,112 +330,196 @@ async function sendWelcomeEmail(data: {
     </div>
   `;
 
-  if (!resendApiKey) {
-    console.log(`[Email Mock] Welcome email for ${data.companyName} to ${data.email}:`);
-    console.log(`[Email Mock] Portal URL: ${data.loginUrl} | Username: ${data.username} | Temporary Password: ${data.tempPassword}`);
-    recordEmailLog({
-      recipient: data.email,
-      company: data.companyName,
-      username: data.username,
-      status: 'simulated_no_api_key'
-    });
-    return { dispatched: true, simulated: true };
-  }
+  // CHANNEL 1: Custom SMTP (Nodemailer) - No sandbox restriction! Sends directly to ANY recipient email
+  const isSmtpReady = emailCfg.smtp_enabled || (Boolean(emailCfg.smtp_host) && Boolean(emailCfg.smtp_user) && Boolean(emailCfg.smtp_pass));
+  if (isSmtpReady) {
+    try {
+      console.log(`[Email SMTP] Dispatching to ${data.email} via ${emailCfg.smtp_host}:${emailCfg.smtp_port}...`);
+      const transporter = nodemailer.createTransport({
+        host: emailCfg.smtp_host,
+        port: Number(emailCfg.smtp_port) || 587,
+        secure: Boolean(emailCfg.smtp_secure),
+        auth: {
+          user: emailCfg.smtp_user,
+          pass: emailCfg.smtp_pass
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
 
-  let directOk = false;
-  let errorMsg = '';
-
-  // Attempt 1: Direct dispatch via Resend
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'FuelNest Onboarding <onboarding@resend.dev>',
-        to: [data.email],
+      const senderFrom = emailCfg.smtp_from || `"FuelNest Intelligence" <${emailCfg.smtp_user}>`;
+      const info = await transporter.sendMail({
+        from: senderFrom,
+        to: data.email,
         subject: `Welcome to FuelNest - Your Fleet Workspace is Ready! (${data.companyName})`,
         html: htmlBody
-      })
-    });
-    if (res.ok) {
-      directOk = true;
+      });
+
+      console.log(`[Email SMTP Success] Delivered to ${data.email} - ID: ${info.messageId}`);
       recordEmailLog({
         recipient: data.email,
         company: data.companyName,
         username: data.username,
         status: 'delivered',
-        method: 'resend_direct'
+        method: 'smtp',
+        messageId: info.messageId,
+        from: senderFrom
       });
-      console.log(`[Email Success] Delivered to ${data.email}`);
-      return { dispatched: true, status: res.status, recipient: data.email };
-    } else {
-      const errJson: any = await res.json().catch(() => ({}));
-      errorMsg = errJson.message || `HTTP ${res.status}`;
-      console.warn(`[Resend Notice] Direct send to ${data.email} returned: ${errorMsg}`);
+
+      return {
+        dispatched: true,
+        delivered: true,
+        method: 'smtp',
+        recipient: data.email
+      };
+    } catch (smtpErr: any) {
+      const smtpErrMsg = smtpErr?.message || String(smtpErr);
+      console.warn('[Email SMTP Failed]:', smtpErrMsg);
+      recordEmailLog({
+        recipient: data.email,
+        company: data.companyName,
+        username: data.username,
+        status: 'smtp_failed',
+        error: smtpErrMsg
+      });
+      // Fall through to Resend
     }
-  } catch (err: any) {
-    errorMsg = err?.message || String(err);
-    console.warn('[Resend Email Error]:', errorMsg);
   }
 
-  // Attempt 2: If direct send failed due to sandbox unverified recipient limitation (e.g. 403),
-  // relay notification to the verified account owner (mashudrus@gmail.com) so the credentials are never lost!
-  const ownerEmail = 'mashudrus@gmail.com';
-  if (!directOk && data.email.toLowerCase() !== ownerEmail.toLowerCase()) {
+  // CHANNEL 2: Resend API Dispatch
+  if (resendApiKey) {
+    let directOk = false;
+    let errorMsg = '';
+    const resendSender = (emailCfg.resend_from && emailCfg.resend_from.trim().length > 0)
+      ? emailCfg.resend_from.trim()
+      : 'FuelNest Onboarding <onboarding@resend.dev>';
+
     try {
-      const relayRes = await fetch('https://api.resend.com/emails', {
+      const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${resendApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'FuelNest Onboarding <onboarding@resend.dev>',
-          to: [ownerEmail],
-          subject: `[Subscriber Credentials] Workspace Provisioned: ${data.companyName} (${data.email})`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-              <h2 style="color: #0f172a;">New Subscriber Workspace Provisioned</h2>
-              <p><strong>Company:</strong> ${data.companyName}</p>
-              <p><strong>Client Email:</strong> ${data.email}</p>
-              <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin: 15px 0;">
-                <p><strong>Username:</strong> <code>${data.username}</code></p>
-                <p><strong>Temporary Password:</strong> <code>${data.tempPassword}</code></p>
-                <p><strong>Portal URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
-              </div>
-              <p style="font-size: 12px; color: #64748b;">Notice: Sent via sandbox relay to verified account administrator.</p>
-            </div>
-          `
+          from: resendSender,
+          to: [data.email],
+          subject: `Welcome to FuelNest - Your Fleet Workspace is Ready! (${data.companyName})`,
+          html: htmlBody
         })
       });
-      if (relayRes.ok) {
-        console.log(`[Email Relay] Dispatched credential copy to owner ${ownerEmail}`);
+
+      if (res.ok) {
+        directOk = true;
         recordEmailLog({
           recipient: data.email,
-          relayTo: ownerEmail,
           company: data.companyName,
           username: data.username,
-          status: 'relayed_to_owner',
-          reason: errorMsg
+          status: 'delivered',
+          method: 'resend_direct',
+          from: resendSender
         });
-        return { dispatched: true, status: 200, relayed: true, note: errorMsg };
+        console.log(`[Email Success] Delivered to ${data.email} via Resend`);
+        return {
+          dispatched: true,
+          delivered: true,
+          status: res.status,
+          recipient: data.email,
+          method: 'resend'
+        };
+      } else {
+        const errJson: any = await res.json().catch(() => ({}));
+        errorMsg = errJson.message || `HTTP ${res.status}`;
+        console.warn(`[Resend Notice] Direct send to ${data.email} returned: ${errorMsg}`);
       }
-    } catch (e: any) {
-      console.warn('[Email Relay Error]:', e?.message || e);
+    } catch (err: any) {
+      errorMsg = err?.message || String(err);
+      console.warn('[Resend Email Error]:', errorMsg);
     }
+
+    const isSandboxLimitation = errorMsg.toLowerCase().includes('testing emails to your own email address') ||
+                                errorMsg.toLowerCase().includes('verify a domain') ||
+                                errorMsg.toLowerCase().includes('resend.com/domains');
+
+    // Attempt sandbox relay to verified account owner (mashudrus@gmail.com) so credentials are preserved
+    const ownerEmail = 'mashudrus@gmail.com';
+    let relayedOk = false;
+    if (!directOk && data.email.toLowerCase() !== ownerEmail.toLowerCase()) {
+      try {
+        const relayRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'FuelNest Onboarding <onboarding@resend.dev>',
+            to: [ownerEmail],
+            subject: `[Subscriber Credentials] Workspace Provisioned: ${data.companyName} (${data.email})`,
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <h2 style="color: #0f172a;">New Subscriber Workspace Provisioned</h2>
+                <p><strong>Company:</strong> ${data.companyName}</p>
+                <p><strong>Client Email:</strong> ${data.email}</p>
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin: 15px 0;">
+                  <p><strong>Username:</strong> <code>${data.username}</code></p>
+                  <p><strong>Temporary Password:</strong> <code>${data.tempPassword}</code></p>
+                  <p><strong>Portal URL:</strong> <a href="${targetLoginUrl}">${targetLoginUrl}</a></p>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px; border-radius: 8px; font-size: 13px;">
+                  <strong>Delivery Notice:</strong> Direct send to client (${data.email}) was blocked because Resend is in testing sandbox mode. To send directly to client inboxes: verify domain (fuelnest.xyz) at resend.com/domains or configure custom SMTP in Master Control.
+                </div>
+              </div>
+            `
+          })
+        });
+        if (relayRes.ok) {
+          relayedOk = true;
+          console.log(`[Email Relay] Dispatched credential copy to owner ${ownerEmail}`);
+        }
+      } catch (e: any) {
+        console.warn('[Email Relay Error]:', e?.message || e);
+      }
+    }
+
+    recordEmailLog({
+      recipient: data.email,
+      company: data.companyName,
+      username: data.username,
+      status: isSandboxLimitation ? 'sandbox_restricted' : 'failed',
+      relayTo: relayedOk ? ownerEmail : undefined,
+      error: errorMsg,
+      reason: isSandboxLimitation
+        ? 'Resend sandbox mode limitation: Testing emails can only be sent to owner. Verify domain at resend.com/domains or configure SMTP.'
+        : errorMsg
+    });
+
+    return {
+      dispatched: false,
+      delivered: false,
+      sandbox_restricted: isSandboxLimitation,
+      recipient: data.email,
+      relayed_to_owner: relayedOk,
+      relay_target: ownerEmail,
+      error: errorMsg,
+      message: isSandboxLimitation
+        ? 'Sandbox limitation: To dispatch emails directly to customer inboxes, verify fuelnest.xyz at resend.com/domains or connect SMTP.'
+        : errorMsg
+    };
   }
 
+  // CHANNEL 3: Simulated mock fallback
+  console.log(`[Email Mock] Welcome email for ${data.companyName} to ${data.email}:`);
+  console.log(`[Email Mock] Portal URL: ${targetLoginUrl} | Username: ${data.username} | Temporary Password: ${data.tempPassword}`);
   recordEmailLog({
     recipient: data.email,
     company: data.companyName,
     username: data.username,
-    status: 'failed',
-    error: errorMsg
+    portalUrl: targetLoginUrl,
+    status: 'simulated_no_api_key'
   });
-  return { dispatched: false, error: errorMsg };
+  return { dispatched: false, delivered: false, simulated: true, recipient: data.email };
 }
 
 // -------------------------------------------------------------
@@ -1283,6 +1417,109 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         logs = JSON.parse(fs.readFileSync(EMAIL_LOGS_FILE, 'utf-8'));
       }
       res.json({ success: true, count: logs.length, logs });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Email & SMTP Configuration Endpoint
+  app.get('/api/email/config', (req: Request, res: Response) => {
+    try {
+      const cfg = loadEmailConfig();
+      res.json({
+        success: true,
+        config: {
+          smtp_enabled: Boolean(cfg.smtp_enabled),
+          smtp_host: cfg.smtp_host || '',
+          smtp_port: Number(cfg.smtp_port) || 587,
+          smtp_secure: Boolean(cfg.smtp_secure),
+          smtp_user: cfg.smtp_user || '',
+          smtp_pass_configured: Boolean(cfg.smtp_pass),
+          smtp_from: cfg.smtp_from || '',
+          resend_active: Boolean(process.env.RESEND_API_KEY),
+          resend_from: cfg.resend_from || 'FuelNest Onboarding <onboarding@resend.dev>',
+          verified_domain: cfg.verified_domain || 'fuelnest.xyz',
+          owner_email: 'mashudrus@gmail.com'
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  app.post('/api/email/config', (req: Request, res: Response) => {
+    try {
+      const {
+        smtp_enabled,
+        smtp_host,
+        smtp_port,
+        smtp_secure,
+        smtp_user,
+        smtp_pass,
+        smtp_from,
+        resend_from,
+        verified_domain
+      } = req.body;
+
+      const current = loadEmailConfig();
+      const updated = saveEmailConfig({
+        smtp_enabled: typeof smtp_enabled === 'boolean' ? smtp_enabled : current.smtp_enabled,
+        smtp_host: smtp_host !== undefined ? String(smtp_host).trim() : current.smtp_host,
+        smtp_port: smtp_port !== undefined ? Number(smtp_port) : current.smtp_port,
+        smtp_secure: typeof smtp_secure === 'boolean' ? smtp_secure : current.smtp_secure,
+        smtp_user: smtp_user !== undefined ? String(smtp_user).trim() : current.smtp_user,
+        smtp_pass: smtp_pass ? String(smtp_pass) : current.smtp_pass,
+        smtp_from: smtp_from !== undefined ? String(smtp_from).trim() : current.smtp_from,
+        resend_from: resend_from !== undefined ? String(resend_from).trim() : current.resend_from,
+        verified_domain: verified_domain !== undefined ? String(verified_domain).trim() : current.verified_domain
+      });
+
+      res.json({
+        success: true,
+        message: 'Email & SMTP settings saved successfully.',
+        config: {
+          smtp_enabled: updated.smtp_enabled,
+          smtp_host: updated.smtp_host,
+          smtp_port: updated.smtp_port,
+          smtp_secure: updated.smtp_secure,
+          smtp_user: updated.smtp_user,
+          smtp_pass_configured: Boolean(updated.smtp_pass),
+          smtp_from: updated.smtp_from,
+          resend_active: Boolean(process.env.RESEND_API_KEY),
+          resend_from: updated.resend_from,
+          verified_domain: updated.verified_domain
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Test Email Dispatcher Endpoint
+  app.post('/api/email/test', async (req: Request, res: Response) => {
+    try {
+      const { recipient_email } = req.body;
+      const targetEmail = String(recipient_email || 'mashudrus@gmail.com').trim();
+
+      if (!targetEmail.includes('@')) {
+        res.status(400).json({ success: false, message: 'Valid recipient email address is required.' });
+        return;
+      }
+
+      console.log(`[Email Test] Initiating test delivery to ${targetEmail}...`);
+      const result = await sendWelcomeEmail({
+        email: targetEmail,
+        companyName: 'Test Fleet Intelligence Ltd',
+        username: 'test_admin',
+        tempPassword: 'Test@' + Math.floor(10000 + Math.random() * 90000),
+        loginUrl: 'https://fuelnest.xyz/login',
+        planName: 'Enterprise Test Delivery'
+      });
+
+      res.json({
+        success: Boolean(result.delivered || result.dispatched),
+        result
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, message: e?.message });
     }

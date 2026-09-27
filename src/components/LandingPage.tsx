@@ -60,10 +60,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     username?: string;
     temporaryPassword?: string;
     loginUrl?: string;
+    emailStatus?: any;
   } | null>(null);
 
   // Payment Gateway Popup Modal State (Problem 2)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [hasClickedPayNow, setHasClickedPayNow] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'bkash' | 'nagad' | 'rocket' | 'bank' | 'card'>('bkash');
   const [paymentTrxId, setPaymentTrxId] = useState('');
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
@@ -123,6 +125,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       setIsRegisterOpen(false);
       setPaymentError('');
       setPaymentTrxId('');
+      setHasClickedPayNow(false);
       setIsPaymentModalOpen(true);
       return;
     }
@@ -168,7 +171,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         planName: activePlan.name_en || activePlan.nameEn || activePlan.name_bn,
         username: data.super_admin_username,
         temporaryPassword: data.temporary_password,
-        loginUrl: data.login_url || '/login'
+        loginUrl: 'https://fuelnest.xyz/login',
+        emailStatus: data.email_status
       });
 
     } catch (err: any) {
@@ -228,7 +232,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         planName: activePlan.name_en || activePlan.nameEn || activePlan.name_bn,
         username: data.super_admin_username,
         temporaryPassword: data.temporary_password,
-        loginUrl: data.login_url || '/login'
+        loginUrl: 'https://fuelnest.xyz/login',
+        emailStatus: data.email_status
       });
       setIsRegisterOpen(true);
 
@@ -879,19 +884,56 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
 
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 text-left text-xs mb-5 space-y-3">
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
-                    <Mail className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span>Sign-in credentials have been automatically dispatched to </span>
-                      <strong className="text-white underline">{regSuccessResult.email}</strong>.
+                  {regSuccessResult.emailStatus?.delivered ? (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-white block">Email Dispatched Successfully</span>
+                        <span>Sign-in credentials have been emailed to <strong className="text-white underline">{regSuccessResult.email}</strong>.</span>
+                      </div>
                     </div>
-                  </div>
+                  ) : regSuccessResult.emailStatus?.sandbox_restricted ? (
+                    <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <span className="font-bold text-white block">Email Delivery Notice (Sandbox Limitation)</span>
+                        <p className="leading-relaxed">
+                          Your email provider is currently in testing sandbox mode (direct emails to other domains are restricted until <strong>fuelnest.xyz</strong> domain verification is completed or custom SMTP is enabled).
+                        </p>
+                        <p className="font-semibold text-amber-300">
+                          👉 Your Super Admin credentials are fully generated and ready below — please copy them to sign in!
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
+                      <Mail className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span>Sign-in credentials generated for </span>
+                        <strong className="text-white underline">{regSuccessResult.email}</strong>.
+                        <span className="block text-[11px] text-slate-400 mt-0.5">Please copy your credentials below to log in immediately.</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Immediate Credential Access Box */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800 pb-2">
                       <span className="font-bold text-slate-200">Super Admin Credentials:</span>
                       <span className="text-emerald-400 font-semibold">Active & Verified</span>
+                    </div>
+
+                    {/* Dedicated Portal Access URL */}
+                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-500 block uppercase font-sans font-bold">Portal Access URL</span>
+                      <a
+                        href="https://fuelnest.xyz/login"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-400 hover:text-amber-300 hover:underline font-mono font-bold text-xs break-all"
+                      >
+                        https://fuelnest.xyz/login
+                      </a>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
@@ -908,7 +950,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const text = `FuelNest Login Credentials\nPortal URL: ${window.location.origin}/login\nUsername: ${regSuccessResult.username}\nTemporary Password: ${regSuccessResult.temporaryPassword}`;
+                        const portalUrl = 'https://fuelnest.xyz/login';
+                        const text = `FuelNest Super Admin Credentials:\nPortal Access URL: ${portalUrl}\nSuper Admin Username: ${regSuccessResult.username}\nTemporary Password: ${regSuccessResult.temporaryPassword}`;
                         navigator.clipboard?.writeText(text);
                         setCopiedCreds(true);
                         setTimeout(() => setCopiedCreds(false), 2500);
@@ -1142,79 +1185,119 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               )}
 
-              {/* Transaction ID / Reference Input */}
-              <div className="pt-1">
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                  Transaction ID / Payment Reference (TrxID) *
-                </label>
-                <input
-                  type="text"
-                  value={paymentTrxId}
-                  onChange={e => setPaymentTrxId(e.target.value)}
-                  placeholder="e.g., 9J47AB12CD"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
-                />
-              </div>
-
-              {/* Direct Baniq Gateway Link option */}
-              {(() => {
-                const currentPlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[1];
-                if (currentPlan.payment_url) {
-                  return (
-                    <div className="pt-1 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">Prefer direct checkout window?</span>
-                      <a
-                        href={currentPlan.payment_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
-                      >
-                        <span>Open Gateway Portal</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
             </div>
 
-            {/* Payment Error message */}
-            {paymentError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{paymentError}</span>
+            {/* Step A: Before clicking Pay Now (No TrxID, No Confirm button) */}
+            {!hasClickedPayNow ? (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentPlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[1];
+                    if (currentPlan.payment_url) {
+                      window.open(currentPlan.payment_url, '_blank');
+                    }
+                    setHasClickedPayNow(true);
+                  }}
+                  className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer transform active:scale-[0.99]"
+                >
+                  <CreditCard className="w-4 h-4 text-slate-950" />
+                  <span>Pay Now</span>
+                  <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="w-full py-2.5 text-center text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  Cancel and return
+                </button>
+              </div>
+            ) : (
+              /* Step B: After clicking Pay Now (Reveals TrxID input & Confirm button) */
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* Gateway Launched Guidance Banner */}
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-white block">Payment Gateway Launched</span>
+                      <span className="text-[11px] text-slate-300 leading-relaxed block mt-0.5">
+                        Please finish your transaction. Then copy the Transaction ID (TrxID) and enter it below to activate your workspace.
+                      </span>
+                    </div>
+                  </div>
+                  {(() => {
+                    const currentPlan = OFFICIAL_SUBSCRIPTION_PLANS.find(p => p.id === selectedPlanId) || OFFICIAL_SUBSCRIPTION_PLANS[1];
+                    if (currentPlan.payment_url) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => window.open(currentPlan.payment_url, '_blank')}
+                          className="shrink-0 text-[11px] font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                        >
+                          Re-open Link
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
+                {/* Transaction ID / Reference Input */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                    Transaction ID / Payment Reference (TrxID) *
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentTrxId}
+                    onChange={e => setPaymentTrxId(e.target.value)}
+                    placeholder="e.g., 9J47AB12CD"
+                    autoFocus
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+
+                {/* Payment Error message */}
+                {paymentError && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{paymentError}</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={handlePaymentConfirm}
+                    disabled={paymentSubmitting}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {paymentSubmitting ? (
+                      <span>Verifying Transaction & Provisioning...</span>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Confirm & Complete Payment</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    disabled={paymentSubmitting}
+                    className="w-full py-2.5 text-center text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Cancel and return
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Action Buttons */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handlePaymentConfirm}
-                disabled={paymentSubmitting}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {paymentSubmitting ? (
-                  <span>Verifying Transaction & Provisioning...</span>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Confirm & Complete Payment</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsPaymentModalOpen(false)}
-                disabled={paymentSubmitting}
-                className="w-full py-2.5 text-center text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-              >
-                Cancel and return
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -135,7 +135,8 @@ const AppContent: React.FC = () => {
     if (publicRoute === 'master_control') {
       return (
         <LoginPage
-          mode="master_control_only"
+          mode="combined"
+          initialTab="control"
           onBackToLanding={() => navigateTo('landing')}
         />
       );

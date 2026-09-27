@@ -1,5 +1,66 @@
 [
   {
+    "id": "em_1790508847770_k5jc",
+    "timestamp": "2026-09-27T11:34:07.770Z",
+    "recipient": "prematraders542@gmail.com",
+    "company": "Test Fleet Intelligence Ltd",
+    "username": "test_admin",
+    "status": "sandbox_restricted",
+    "relayTo": "mashudrus@gmail.com",
+    "error": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.",
+    "reason": "Resend sandbox mode limitation: Testing emails can only be sent to owner. Verify domain at resend.com/domains or configure SMTP."
+  },
+  {
+    "id": "em_1790508838436_d7m3",
+    "timestamp": "2026-09-27T11:33:58.436Z",
+    "recipient": "mashudrus@gmail.com",
+    "company": "Test Fleet Intelligence Ltd",
+    "username": "test_admin",
+    "status": "delivered",
+    "method": "resend_direct",
+    "from": "FuelNest Onboarding <onboarding@resend.dev>"
+  },
+  {
+    "id": "em_1790508230230_wa2o",
+    "timestamp": "2026-09-27T11:23:50.230Z",
+    "recipient": "prematraders542@gmail.com",
+    "relayTo": "mashudrus@gmail.com",
+    "company": "Prema Traders",
+    "username": "prema_admin",
+    "status": "relayed_to_owner",
+    "reason": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+  },
+  {
+    "id": "em_1790508089615_m7ma",
+    "timestamp": "2026-09-27T11:21:29.615Z",
+    "recipient": "prematraders542@gmail.com",
+    "relayTo": "mashudrus@gmail.com",
+    "company": "Prema Traders",
+    "username": "prema_admin",
+    "status": "relayed_to_owner",
+    "reason": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+  },
+  {
+    "id": "em_1790507957599_fw07",
+    "timestamp": "2026-09-27T11:19:17.599Z",
+    "recipient": "mdmashudparvesh07@gmail.com",
+    "relayTo": "mashudrus@gmail.com",
+    "company": "Prema Traders",
+    "username": "prema_admin",
+    "status": "relayed_to_owner",
+    "reason": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+  },
+  {
+    "id": "em_1790507869163_1748",
+    "timestamp": "2026-09-27T11:17:49.163Z",
+    "recipient": "doroliceazure@uberip.com",
+    "relayTo": "mashudrus@gmail.com",
+    "company": "Prema Traders",
+    "username": "prema_admin",
+    "status": "relayed_to_owner",
+    "reason": "You can only send testing emails to your own email address (mashudrus@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."
+  },
+  {
     "id": "em_1790485351959_leo7",
     "timestamp": "2026-09-27T05:02:31.959Z",
     "recipient": "sadikur@test-domain.com",
