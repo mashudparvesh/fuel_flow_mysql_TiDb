@@ -49,7 +49,8 @@ import {
   Download,
   FileText,
   Send,
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 
 export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void; onSwitchToFleetView?: () => void }> = ({ onOpenCompanyUserManagement, onSwitchToFleetView }) => {
@@ -126,7 +127,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const canApproveRequests = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN' || effectiveRole === 'ADMIN';
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'subscribers' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway' | 'email'>('subscribers');
+  const [activeTab, setActiveTab] = useState<'subscribers' | 'registrations' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway' | 'email'>('subscribers');
 
   // Enforce access control if tab is restricted
   useEffect(() => {
@@ -134,6 +135,151 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       setActiveTab('subscribers');
     }
   }, [activeTab, canAccessOwnerSecurity]);
+
+  // Registration Requests (New User Approvals Workflow)
+  const [registrationRequests, setRegistrationRequests] = useState<any[]>([]);
+  const [regRequestsLoading, setRegRequestsLoading] = useState(false);
+  const [regFilter, setRegFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [regSearchTerm, setRegSearchTerm] = useState('');
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [selectedApprovalModalData, setSelectedApprovalModalData] = useState<any | null>(null);
+  const [copiedEmailText, setCopiedEmailText] = useState(false);
+  const [copiedCredsModal, setCopiedCredsModal] = useState(false);
+  const [sendingEmailDirectly, setSendingEmailDirectly] = useState(false);
+  const [directEmailResult, setDirectEmailResult] = useState<any | null>(null);
+
+  const fetchRegistrationRequests = async () => {
+    try {
+      setRegRequestsLoading(true);
+      const res = await fetch('/api/subscribers/registration-requests');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.requests)) {
+        setRegistrationRequests(data.requests);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch registration requests:', err);
+    } finally {
+      setRegRequestsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRegistrationRequests();
+
+    try {
+      const ch = new BroadcastChannel('fuelflow_tenants_sync');
+      ch.onmessage = (event) => {
+        if (event.data?.type === 'NEW_REGISTRATION' || event.data?.type === 'REFRESH_TENANTS') {
+          fetchRegistrationRequests();
+        }
+      };
+      return () => ch.close();
+    } catch (e) {}
+  }, []);
+
+  const pendingRegRequestsCount = useMemo(() => {
+    return registrationRequests.filter(r => r.status === 'pending').length;
+  }, [registrationRequests]);
+
+  const handleApproveRegistration = async (reqItem: any) => {
+    try {
+      setActionLoadingId(reqItem.id);
+      const res = await fetch(`/api/subscribers/registration-requests/${reqItem.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved_by: currentUserName })
+      });
+      const data = await res.json();
+      setActionLoadingId(null);
+
+      if (data.success) {
+        // Refresh tenants across the platform
+        await refreshTenantsFromServer?.();
+        await refreshUsersFromServer?.();
+        await fetchRegistrationRequests();
+
+        try {
+          const ch = new BroadcastChannel('fuelflow_tenants_sync');
+          ch.postMessage({ type: 'REFRESH_TENANTS' });
+          ch.postMessage({ type: 'REFRESH_USERS' });
+          ch.close();
+        } catch (e) {}
+
+        // Open Credentials & Email modal for immediate manual email dispatch
+        setSelectedApprovalModalData({
+          ...reqItem,
+          ...data.request,
+          super_admin_username: data.super_admin_username,
+          temporary_password: data.temporary_password,
+          login_url: data.login_url || 'https://fuelnest.xyz/login'
+        });
+        setDirectEmailResult(null);
+      } else {
+        alert(data.message || 'Failed to approve registration.');
+      }
+    } catch (err: any) {
+      setActionLoadingId(null);
+      alert(err?.message || 'Error occurred while approving registration.');
+    }
+  };
+
+  const handleRejectRegistration = async (id: string) => {
+    const reason = window.prompt('Please enter rejection reason (optional):', 'Information incomplete or payment unverified');
+    if (reason === null) return;
+
+    try {
+      setActionLoadingId(id);
+      const res = await fetch(`/api/subscribers/registration-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await res.json();
+      setActionLoadingId(null);
+      if (data.success) {
+        fetchRegistrationRequests();
+      } else {
+        alert(data.message || 'Failed to reject registration.');
+      }
+    } catch (err: any) {
+      setActionLoadingId(null);
+      alert(err?.message || 'Error occurred.');
+    }
+  };
+
+  const handleDeleteRegistration = async (id: string) => {
+    if (!window.confirm('Delete this registration request permanently?')) return;
+    try {
+      setActionLoadingId(id);
+      const res = await fetch(`/api/subscribers/registration-requests/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      setActionLoadingId(null);
+      if (data.success) {
+        fetchRegistrationRequests();
+      }
+    } catch (err) {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleSendDirectEmail = async (id: string) => {
+    try {
+      setSendingEmailDirectly(true);
+      setDirectEmailResult(null);
+      const res = await fetch(`/api/subscribers/registration-requests/${id}/send-email`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      setSendingEmailDirectly(false);
+      setDirectEmailResult(data.email_status || { error: 'Unknown response' });
+      fetchRegistrationRequests();
+    } catch (err: any) {
+      setSendingEmailDirectly(false);
+      setDirectEmailResult({ delivered: false, error: err?.message || 'Failed to send' });
+    }
+  };
 
   // Email & SMTP configuration states
   const [emailConfig, setEmailConfig] = useState<any>({
@@ -848,6 +994,28 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </span>
           </button>
 
+          {/* Tab 2: New User Approvals */}
+          <button
+            onClick={() => setActiveTab('registrations')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'registrations'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>{'New User Approvals'}</span>
+            {pendingRegRequestsCount > 0 ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+                {pendingRegRequestsCount} Pending
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10 dark:bg-white/10">
+                {registrationRequests.length}
+              </span>
+            )}
+          </button>
+
           {/* Tab 2: Control Roles & Team */}
           <button
             onClick={() => setActiveTab('moderators')}
@@ -963,6 +1131,17 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </>
           )}
 
+          {activeTab === 'registrations' && (
+            <button
+              onClick={fetchRegistrationRequests}
+              disabled={regRequestsLoading}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0c162d] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 text-amber-500 ${regRequestsLoading ? 'animate-spin' : ''}`} />
+              <span>{regRequestsLoading ? 'Loading...' : 'Refresh Requests'}</span>
+            </button>
+          )}
+
           {activeTab === 'moderators' && canManageControlUsers && (
             <button
               onClick={() => setIsAddModeratorModalOpen(true)}
@@ -978,6 +1157,37 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       {/* ================= TAB 1: SUBSCRIBERS ================= */}
       {activeTab === 'subscribers' && (
         <div className="space-y-4">
+          {/* Pending Registration Requests Alert Banner */}
+          {pendingRegRequestsCount > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
+                  <Clock className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-black text-sm text-slate-900 dark:text-white">
+                      {pendingRegRequestsCount} New Subscriber Registration{pendingRegRequestsCount > 1 ? 's' : ''} Awaiting Approval
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+                      Pending
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Subscribers have registered from the landing page. Approve to activate their workspace and email credentials.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('registrations')}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer shrink-0 transition-transform active:scale-95"
+              >
+                <span>Review & Approve Now</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           {/* Search & Filter Bar */}
           <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div className="relative flex-1">
@@ -1305,6 +1515,311 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ================= TAB: NEW USER REGISTRATIONS & APPROVALS ================= */}
+      {activeTab === 'registrations' && (
+        <div className="space-y-4">
+          {/* Header Info Banner */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-950 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 shrink-0">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <span>New Subscriber Approvals & Credential Dispatch</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950">
+                    Master Queue
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  When users register from the landing page (Free Trial or Paid Plan), their requests arrive here. Review each application, click <strong>Approve & Activate</strong> to provision their workspace, and send credentials via 1-click email or copy.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchRegistrationRequests}
+              disabled={regRequestsLoading}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl flex items-center gap-2 shrink-0 transition-colors border border-slate-700 cursor-pointer self-start md:self-auto"
+            >
+              <RefreshCw className={`w-4 h-4 text-amber-400 ${regRequestsLoading ? 'animate-spin' : ''}`} />
+              <span>{regRequestsLoading ? 'Refreshing...' : 'Refresh List'}</span>
+            </button>
+          </div>
+
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[11px] font-bold text-slate-500 uppercase block">Total Requests</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white mt-1 block">
+                {registrationRequests.length}
+              </span>
+            </div>
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-amber-500/40 shadow-xs">
+              <span className="text-[11px] font-bold text-amber-500 uppercase block">Pending Review</span>
+              <span className="text-2xl font-black text-amber-500 mt-1 block">
+                {registrationRequests.filter(r => r.status === 'pending').length}
+              </span>
+            </div>
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-emerald-500/40 shadow-xs">
+              <span className="text-[11px] font-bold text-emerald-500 uppercase block">Approved & Active</span>
+              <span className="text-2xl font-black text-emerald-500 mt-1 block">
+                {registrationRequests.filter(r => r.status === 'approved').length}
+              </span>
+            </div>
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-rose-500/40 shadow-xs">
+              <span className="text-[11px] font-bold text-rose-500 uppercase block">Rejected</span>
+              <span className="text-2xl font-black text-rose-500 mt-1 block">
+                {registrationRequests.filter(r => r.status === 'rejected').length}
+              </span>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by company name, contact, email, phone, trx id..."
+                value={regSearchTerm}
+                onChange={e => setRegSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white placeholder-slate-400"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {(['all', 'pending', 'approved', 'rejected'] as const).map(tab => {
+                const count =
+                  tab === 'all'
+                    ? registrationRequests.length
+                    : registrationRequests.filter(r => r.status === tab).length;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setRegFilter(tab)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                      regFilter === tab
+                        ? 'bg-amber-500 text-slate-950 font-black'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {tab} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Requests List */}
+          {(() => {
+            const filtered = registrationRequests
+              .filter(r => regFilter === 'all' || r.status === regFilter)
+              .filter(r => {
+                if (!regSearchTerm.trim()) return true;
+                const q = regSearchTerm.toLowerCase();
+                return (
+                  r.company_name?.toLowerCase().includes(q) ||
+                  r.admin_name?.toLowerCase().includes(q) ||
+                  r.email?.toLowerCase().includes(q) ||
+                  r.phone?.toLowerCase().includes(q) ||
+                  r.transaction_id?.toLowerCase().includes(q) ||
+                  r.plan_name?.toLowerCase().includes(q)
+                );
+              });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-12 bg-white dark:bg-[#0c162d] rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
+                  <UserCheck className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                  <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                    {registrationRequests.length === 0
+                      ? 'No Registration Requests Yet'
+                      : 'No Matching Requests Found'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {registrationRequests.length === 0
+                      ? 'When subscribers sign up on the landing page, they will automatically appear here for approval.'
+                      : 'Try adjusting your search query or filter selection.'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {filtered.map(item => {
+                  const isPending = item.status === 'pending';
+                  const isApproved = item.status === 'approved';
+                  const isRejected = item.status === 'rejected';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0c162d] border transition-all shadow-xs ${
+                        isPending
+                          ? 'border-amber-400/80 dark:border-amber-500/50 hover:border-amber-500'
+                          : isApproved
+                          ? 'border-emerald-300 dark:border-emerald-800/40'
+                          : 'border-slate-200 dark:border-slate-800 opacity-75'
+                      }`}
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        {/* Left / Info */}
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-black text-base text-slate-900 dark:text-white">
+                              {item.company_name}
+                            </span>
+
+                            {isPending && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/15 border border-amber-500/30 text-amber-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                <span>Pending Approval</span>
+                              </span>
+                            )}
+                            {isApproved && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Approved & Active</span>
+                              </span>
+                            )}
+                            {isRejected && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/15 border border-rose-500/30 text-rose-500 flex items-center gap-1">
+                                <X className="w-3 h-3" />
+                                <span>Rejected</span>
+                              </span>
+                            )}
+
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              Requested: {new Date(item.created_at).toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Data Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs pt-1">
+                            <div className="bg-slate-50 dark:bg-[#080e1e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Contact Person</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{item.admin_name || 'Admin'}</span>
+                              <span className="text-[11px] text-slate-500 block font-mono mt-0.5">{item.phone || 'No phone'}</span>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-[#080e1e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Email Address</span>
+                              <span className="font-mono text-slate-800 dark:text-amber-400 select-all font-semibold break-all">
+                                {item.email}
+                              </span>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-[#080e1e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Requested Plan</span>
+                              <span className="font-bold text-slate-900 dark:text-white">{item.plan_name}</span>
+                              <span className="text-[11px] font-semibold text-amber-500 block">
+                                {item.is_trial ? 'Free Trial (0 BDT)' : `${item.price_bdt} BDT`}
+                              </span>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-[#080e1e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Payment & Reference</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                {item.payment_method || (item.is_trial ? 'Free Trial' : 'Online')}
+                              </span>
+                              {item.transaction_id && (
+                                <div className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
+                                  <span>Trx: {item.transaction_id}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Rejection / Approval info */}
+                          {isRejected && item.rejection_reason && (
+                            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+                              <strong>Rejection reason:</strong> {item.rejection_reason}
+                            </div>
+                          )}
+
+                          {isApproved && (
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-1">
+                              <span>Approved by: <strong className="text-white">{item.approved_by || 'Admin'}</strong></span>
+                              <span>Tenant Code: <strong className="text-amber-400 font-mono">{item.tenant_id}</strong></span>
+                              <span>Super Admin: <strong className="text-emerald-400 font-mono">{item.super_admin_username}</strong></span>
+                              {item.email_sent && (
+                                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5" /> Email Dispatched
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right / Actions */}
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 self-end lg:self-center">
+                          {isPending && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleApproveRegistration(item)}
+                                disabled={actionLoadingId === item.id}
+                                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                {actionLoadingId === item.id ? (
+                                  <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Provisioning...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Approve & Activate</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRejectRegistration(item.id)}
+                                disabled={actionLoadingId === item.id}
+                                className="px-3 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+
+                          {isApproved && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedApprovalModalData(item);
+                                setDirectEmailResult(null);
+                              }}
+                              className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Key className="w-3.5 h-3.5" />
+                              <span>View Credentials & Email</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRegistration(item.id)}
+                            className="p-2.5 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Delete Request Record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -3177,6 +3692,203 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               >
                 <X className="w-3.5 h-3.5" />
                 <span>{isProcessingApproval ? 'Processing...' : 'Confirm Rejection'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ================= MODAL: WORKSPACE APPROVED & CREDENTIAL / EMAIL DISPATCH ================= */}
+      {selectedApprovalModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl relative max-h-[92vh] overflow-y-auto space-y-4">
+            <button
+              onClick={() => setSelectedApprovalModalData(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">
+                  Subscriber Workspace Approved & Active
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {selectedApprovalModalData.company_name} &bull; {selectedApprovalModalData.plan_name}
+                </p>
+              </div>
+            </div>
+
+            {/* Generated Super Admin Credentials Card */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/80 pb-2">
+                <span className="font-bold text-slate-300 uppercase tracking-wider">Super Admin Credentials</span>
+                <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Ready & Provisioned
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-slate-500 block uppercase font-bold">Dedicated Portal Access URL</span>
+                <a
+                  href={selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-400 hover:text-amber-300 font-mono font-bold text-xs hover:underline break-all"
+                >
+                  {selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login'}
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block uppercase font-sans font-bold">Username</span>
+                  <span className="text-white font-bold select-all">{selectedApprovalModalData.super_admin_username}</span>
+                </div>
+                <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block uppercase font-sans font-bold">Temporary Password</span>
+                  <span className="text-amber-400 font-bold select-all">{selectedApprovalModalData.temporary_password}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const url = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
+                  const text = `FuelNest Super Admin Access:\nPortal: ${url}\nUsername: ${selectedApprovalModalData.super_admin_username}\nPassword: ${selectedApprovalModalData.temporary_password}`;
+                  navigator.clipboard?.writeText(text);
+                  setCopiedCredsModal(true);
+                  setTimeout(() => setCopiedCredsModal(false), 2000);
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedCredsModal ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400">Credentials Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Copy Login Credentials</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Email Dispatch Section (Manual & Automated Options) */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-slate-200 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-amber-400" />
+                  <span>Send Credentials to User (গ্রাহককে ইমেইল পাঠান)</span>
+                </div>
+                <span className="text-[11px] text-amber-300 font-mono underline">
+                  {selectedApprovalModalData.email}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                You can directly open your default email app with the pre-filled message, copy the formatted email to paste into Gmail/Webmail, or send it automatically through the system.
+              </p>
+
+              {/* Action Buttons for Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* 1. Open Email Client (Mailto) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
+                    const subject = `FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`;
+                    const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+
+                    const mailtoUrl = `mailto:${selectedApprovalModalData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.location.href = mailtoUrl;
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Open Email App (Mailto)</span>
+                </button>
+
+                {/* 2. Copy Full Email Message */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
+                    const emailMessage = `Subject: FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}\n\nDear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+
+                    navigator.clipboard?.writeText(emailMessage);
+                    setCopiedEmailText(true);
+                    setTimeout(() => setCopiedEmailText(false), 2500);
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
+                >
+                  {copiedEmailText ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span className="text-emerald-400">Email Text Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-amber-400" />
+                      <span>Copy Full Email Text</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 3. Send Email via System */}
+              <div className="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                <span className="text-[11px] text-slate-400">
+                  Or dispatch through server email service:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSendDirectEmail(selectedApprovalModalData.id)}
+                  disabled={sendingEmailDirectly}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {sendingEmailDirectly ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Dispatching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Send via System</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {directEmailResult && (
+                <div
+                  className={`p-2.5 rounded-xl text-[11px] ${
+                    directEmailResult.delivered
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-200 border border-amber-500/30'
+                  }`}
+                >
+                  {directEmailResult.delivered
+                    ? '✅ Email successfully delivered to recipient inbox!'
+                    : `⚠️ ${directEmailResult.error || 'Server email dispatch limited. Please use "Open Email App" or "Copy Full Email Text" above.'}`}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedApprovalModalData(null)}
+                className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Close & Return
               </button>
             </div>
           </div>

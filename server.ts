@@ -32,6 +32,7 @@ const DEFAULT_TENANTS: any[] = [];
 const DATA_DIR = path.join(process.cwd(), 'data');
 const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.json');
 
 const DEFAULT_USERS: any[] = [];
 
@@ -44,6 +45,34 @@ function ensureDataDir() {
   }
   if (!fs.existsSync(USERS_FILE)) {
     fs.writeFileSync(USERS_FILE, JSON.stringify(DEFAULT_USERS, null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
+    fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+}
+
+function loadRegistrationRequests(): any[] {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
+      const raw = fs.readFileSync(REGISTRATION_REQUESTS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading registration requests file:', err);
+  }
+  return [];
+}
+
+function saveRegistrationRequests(requests: any[]) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving registration requests file:', err);
   }
 }
 
@@ -538,6 +567,7 @@ async function provisionNewTenant(payload: {
   payment_completed?: boolean;
   payment_method?: string;
   transaction_id?: string;
+  send_email?: boolean;
 }) {
   const companyName = String(payload.company_name || 'Fleet Company').trim();
   const words = companyName.split(/\s+/).filter(Boolean);
@@ -725,16 +755,19 @@ async function provisionNewTenant(payload: {
   await upsertTenantInDB(newTenant).catch(e => console.warn('[DB] Provision tenant sync warning:', e));
   await upsertUserInDB(newSuperAdminUser).catch(e => console.warn('[DB] Provision user sync warning:', e));
 
-  // Dispatch Welcome Email
+  // Dispatch Welcome Email only if explicitly requested
   const loginUrl = 'https://fuelnest.xyz/login';
-  const emailRes = await sendWelcomeEmail({
-    email: payload.email,
-    companyName,
-    username: superAdminUsername,
-    tempPassword: temporaryPassword,
-    loginUrl,
-    planName: planNameEn
-  });
+  let emailRes: any = { delivered: false, reason: 'Manual master admin approval flow active' };
+  if (payload.send_email) {
+    emailRes = await sendWelcomeEmail({
+      email: payload.email,
+      companyName,
+      username: superAdminUsername,
+      tempPassword: temporaryPassword,
+      loginUrl,
+      planName: planNameEn
+    });
+  }
 
   return {
     success: true,
@@ -1385,26 +1418,238 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   });
 
   // Dedicated subscriber registration endpoint for Landing Page (Trial & Premium Plans)
+  // Submissions are now saved to the Master Approval Queue (pending status).
+  // Subscribers do NOT receive credentials immediately in popup, nor are automatic emails dispatched.
   app.post('/api/subscribers/register', async (req: Request, res: Response) => {
     try {
       const { company_name, admin_name, email, phone, plan_id, payment_completed, payment_method, transaction_id } = req.body;
-      const origin = req.protocol + '://' + req.get('host');
 
-      const result = await provisionNewTenant({
-        company_name,
-        admin_name,
-        email,
-        phone,
-        plan_id: plan_id || 'trial_3days',
-        payment_completed: Boolean(payment_completed),
-        payment_method,
-        transaction_id,
-        origin
+      if (!company_name || !email) {
+        return res.status(400).json({ success: false, message: 'Company name and email are required.' });
+      }
+
+      let planNameEn = '3 Days Free Trial';
+      let isTrial = true;
+      let priceBdt = 0;
+      const pid = plan_id || 'trial_3days';
+
+      if (pid === 'trial_3days') {
+        planNameEn = '3 Days Free Trial';
+        isTrial = true;
+        priceBdt = 0;
+      } else if (pid === 'plan_1month' || pid === 'starter') {
+        planNameEn = '1 Month Plan (749 BDT)';
+        isTrial = false;
+        priceBdt = 749;
+      } else if (pid === 'plan_3months' || pid === 'pro') {
+        planNameEn = '3 Months Plan (2,199 BDT)';
+        isTrial = false;
+        priceBdt = 2199;
+      } else if (pid === 'plan_6months') {
+        planNameEn = '6 Months Plan (3,999 BDT)';
+        isTrial = false;
+        priceBdt = 3999;
+      } else if (pid === 'plan_12months' || pid === 'enterprise') {
+        planNameEn = 'VIP Plan (7,999 BDT)';
+        isTrial = false;
+        priceBdt = 7999;
+      }
+
+      const reqId = `reg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newRequest = {
+        id: reqId,
+        company_name: String(company_name).trim(),
+        admin_name: String(admin_name || company_name + ' Admin').trim(),
+        email: String(email).trim().toLowerCase(),
+        phone: String(phone || '').trim(),
+        plan_id: pid,
+        plan_name: planNameEn,
+        is_trial: isTrial,
+        price_bdt: priceBdt,
+        payment_completed: Boolean(payment_completed || isTrial),
+        payment_method: payment_method || (isTrial ? 'Free Trial' : 'Online Payment'),
+        transaction_id: transaction_id ? String(transaction_id).trim() : '',
+        status: 'pending', // 'pending' | 'approved' | 'rejected'
+        created_at: new Date().toISOString()
+      };
+
+      const requests = loadRegistrationRequests();
+      requests.unshift(newRequest);
+      saveRegistrationRequests(requests);
+
+      // Return confirmation of submission (No username or password exposed to subscriber popup!)
+      res.status(201).json({
+        success: true,
+        pending_approval: true,
+        message: 'Registration application submitted successfully. Awaiting Master Control review and approval.',
+        request: {
+          id: newRequest.id,
+          company_name: newRequest.company_name,
+          admin_name: newRequest.admin_name,
+          email: newRequest.email,
+          phone: newRequest.phone,
+          plan_id: newRequest.plan_id,
+          plan_name: newRequest.plan_name,
+          is_trial: newRequest.is_trial,
+          payment_method: newRequest.payment_method,
+          transaction_id: newRequest.transaction_id,
+          status: newRequest.status,
+          created_at: newRequest.created_at
+        }
       });
-
-      res.status(201).json(result);
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Registration error' });
+    }
+  });
+
+  // Get all subscriber registration requests for Master Control
+  app.get('/api/subscribers/registration-requests', (req: Request, res: Response) => {
+    try {
+      const requests = loadRegistrationRequests();
+      res.json({ success: true, count: requests.length, requests });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Approve a registration request: provisions the tenant, generates credentials, and returns them to Master Admin
+  app.post('/api/subscribers/registration-requests/:id/approve', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const requests = loadRegistrationRequests();
+      const index = requests.findIndex((r: any) => r.id === id);
+
+      if (index === -1) {
+        return res.status(404).json({ success: false, message: 'Registration request not found.' });
+      }
+
+      const item = requests[index];
+
+      // If already approved, return stored credentials
+      if (item.status === 'approved' && item.super_admin_username) {
+        return res.json({
+          success: true,
+          message: 'This request has already been approved.',
+          already_approved: true,
+          request: item,
+          super_admin_username: item.super_admin_username,
+          temporary_password: item.temporary_password,
+          login_url: item.login_url || 'https://fuelnest.xyz/login'
+        });
+      }
+
+      const origin = req.protocol + '://' + req.get('host');
+
+      // Provision tenant immediately
+      const provisionResult = await provisionNewTenant({
+        company_name: item.company_name,
+        admin_name: item.admin_name,
+        email: item.email,
+        phone: item.phone,
+        plan_id: item.plan_id,
+        payment_completed: true,
+        payment_method: item.payment_method,
+        transaction_id: item.transaction_id,
+        origin,
+        send_email: false // Master Admin has manual control to email/copy
+      });
+
+      // Update registration record
+      item.status = 'approved';
+      item.approved_at = new Date().toISOString();
+      item.approved_by = req.body?.approved_by || 'Master Administrator';
+      item.tenant_id = provisionResult.tenant.id;
+      item.super_admin_username = provisionResult.super_admin_username;
+      item.temporary_password = provisionResult.temporary_password;
+      item.login_url = provisionResult.login_url;
+
+      requests[index] = item;
+      saveRegistrationRequests(requests);
+
+      res.json({
+        success: true,
+        message: `Subscriber workspace for "${item.company_name}" has been approved and activated!`,
+        request: item,
+        tenant: provisionResult.tenant,
+        user: provisionResult.user,
+        super_admin_username: provisionResult.super_admin_username,
+        temporary_password: provisionResult.temporary_password,
+        login_url: provisionResult.login_url
+      });
+    } catch (err: any) {
+      console.error('[Registration Approval Error]:', err);
+      res.status(500).json({ success: false, message: err?.message || 'Failed to approve registration.' });
+    }
+  });
+
+  // Reject a registration request
+  app.post('/api/subscribers/registration-requests/:id/reject', (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const requests = loadRegistrationRequests();
+      const index = requests.findIndex((r: any) => r.id === id);
+
+      if (index === -1) {
+        return res.status(404).json({ success: false, message: 'Registration request not found.' });
+      }
+
+      requests[index].status = 'rejected';
+      requests[index].rejected_at = new Date().toISOString();
+      requests[index].rejection_reason = reason || 'Declined by Administrator';
+
+      saveRegistrationRequests(requests);
+      res.json({ success: true, message: 'Registration request rejected.', request: requests[index] });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Manual trigger by Master Admin to send welcome email via system
+  app.post('/api/subscribers/registration-requests/:id/send-email', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const requests = loadRegistrationRequests();
+      const item = requests.find((r: any) => r.id === id);
+
+      if (!item) {
+        return res.status(404).json({ success: false, message: 'Registration request not found.' });
+      }
+
+      if (item.status !== 'approved' || !item.super_admin_username) {
+        return res.status(400).json({ success: false, message: 'Cannot email unapproved registration. Approve workspace first.' });
+      }
+
+      const emailRes = await sendWelcomeEmail({
+        email: item.email,
+        companyName: item.company_name,
+        username: item.super_admin_username,
+        tempPassword: item.temporary_password,
+        loginUrl: item.login_url || 'https://fuelnest.xyz/login',
+        planName: item.plan_name
+      });
+
+      item.email_sent = Boolean(emailRes.delivered);
+      item.email_sent_at = new Date().toISOString();
+      item.last_email_status = emailRes;
+      saveRegistrationRequests(requests);
+
+      res.json({ success: true, email_status: emailRes });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Delete a registration request
+  app.delete('/api/subscribers/registration-requests/:id', (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      let requests = loadRegistrationRequests();
+      requests = requests.filter((r: any) => r.id !== id);
+      saveRegistrationRequests(requests);
+      res.json({ success: true, message: 'Registration request deleted.' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
     }
   });
 

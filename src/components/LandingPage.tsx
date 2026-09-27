@@ -28,7 +28,8 @@ import {
   Copy,
   Check,
   Smartphone,
-  QrCode
+  QrCode,
+  Clock
 } from 'lucide-react';
 import { OFFICIAL_SUBSCRIPTION_PLANS, SubscriptionPlanId, SubscriptionPlanConfig } from '../types';
 
@@ -54,13 +55,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [regError, setRegError] = useState('');
   const [regSuccessResult, setRegSuccessResult] = useState<{
     companyName: string;
+    adminName?: string;
     email: string;
+    phone?: string;
     isTrial: boolean;
     planName: string;
-    username?: string;
-    temporaryPassword?: string;
-    loginUrl?: string;
-    emailStatus?: any;
+    paymentMethod?: string;
+    transactionId?: string;
+    pendingApproval: boolean;
   } | null>(null);
 
   // Payment Gateway Popup Modal State (Problem 2)
@@ -130,7 +132,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       return;
     }
 
-    // For Free Trial, immediately provision workspace and dispatch welcome email
+    // For Free Trial, submit registration request to Master Control for approval
     setRegLoading(true);
 
     try {
@@ -149,30 +151,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const data = await res.json();
       setRegLoading(false);
 
-      if (!data.success && !data.tenant) {
-        setRegError(data.message || 'Unable to complete workspace registration. Please try again.');
+      if (!data.success) {
+        setRegError(data.message || 'Unable to submit workspace registration. Please try again.');
         return;
       }
 
-      // Sync state and broadcast across sessions
+      // Broadcast new registration to Master Control across open windows
       try {
-        await refreshTenantsFromServer?.();
         const ch = new BroadcastChannel('fuelflow_tenants_sync');
-        ch.postMessage({ type: 'REFRESH_TENANTS' });
-        ch.postMessage({ type: 'REFRESH_USERS' });
+        ch.postMessage({ type: 'NEW_REGISTRATION', company: regCompanyName.trim() });
         ch.close();
       } catch (e) {}
 
-      // Show Thank You confirmation in popup WITH credentials card so the user can immediately log in
+      // Show Thank You / Under Review confirmation popup (No passwords exposed)
       setRegSuccessResult({
         companyName: regCompanyName.trim(),
+        adminName: regAdminName.trim(),
         email: regEmail.trim(),
+        phone: regPhone.trim(),
         isTrial: true,
         planName: activePlan.name_en || activePlan.nameEn || activePlan.name_bn,
-        username: data.super_admin_username,
-        temporaryPassword: data.temporary_password,
-        loginUrl: 'https://fuelnest.xyz/login',
-        emailStatus: data.email_status
+        paymentMethod: 'Free Trial',
+        pendingApproval: true
       });
 
     } catch (err: any) {
@@ -181,7 +181,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
-  // Confirm Payment from In-App Payment Popup Modal (Problem 2 Fix)
+  // Confirm Payment from In-App Payment Popup Modal
   const handlePaymentConfirm = async () => {
     setPaymentError('');
     setPaymentSubmitting(true);
@@ -207,33 +207,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const data = await res.json();
       setPaymentSubmitting(false);
 
-      if (!data.success && !data.tenant) {
-        setPaymentError(data.message || 'Payment verification failed. Please try again or contact support.');
+      if (!data.success) {
+        setPaymentError(data.message || 'Payment submission failed. Please try again or contact support.');
         return;
       }
-
-      // Sync master list and broadcast to all windows
-      try {
-        await refreshTenantsFromServer?.();
-        const ch = new BroadcastChannel('fuelflow_tenants_sync');
-        ch.postMessage({ type: 'REFRESH_TENANTS' });
-        ch.postMessage({ type: 'REFRESH_USERS' });
-        ch.close();
-      } catch (e) {}
 
       // Close the payment popup
       setIsPaymentModalOpen(false);
 
-      // Now show the Success Confirmation modal with credentials and email confirmation!
+      // Broadcast to Master Control
+      try {
+        const ch = new BroadcastChannel('fuelflow_tenants_sync');
+        ch.postMessage({ type: 'NEW_REGISTRATION', company: regCompanyName.trim() });
+        ch.close();
+      } catch (e) {}
+
+      // Show Under Review confirmation modal (No passwords exposed)
       setRegSuccessResult({
         companyName: regCompanyName.trim(),
+        adminName: regAdminName.trim(),
         email: regEmail.trim(),
+        phone: regPhone.trim(),
         isTrial: false,
         planName: activePlan.name_en || activePlan.nameEn || activePlan.name_bn,
-        username: data.super_admin_username,
-        temporaryPassword: data.temporary_password,
-        loginUrl: 'https://fuelnest.xyz/login',
-        emailStatus: data.email_status
+        paymentMethod: selectedPaymentMethod,
+        transactionId: paymentTrxId.trim() || 'Recorded',
+        pendingApproval: true
       });
       setIsRegisterOpen(true);
 
@@ -869,120 +868,89 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </form>
               </>
             ) : (
-              /* Success Confirmation Popup with Credentials & Email Confirmation */
+              /* Success Confirmation Popup: Pending Master Admin Review & Approval */
               <div className="text-center py-4">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-3">
-                  <CheckCircle2 className="w-8 h-8" />
+                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3 shadow-lg shadow-amber-500/10">
+                  <Clock className="w-8 h-8" />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold mb-3">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>অ্যাডমিন পর্যালোচনার অপেক্ষমাণ (Pending Approval)</span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mb-1">
-                  {regSuccessResult.isTrial ? 'Welcome! Your 3-Day Free Trial is Active' : 'Payment Confirmed! Your Workspace is Active'}
+                  {regSuccessResult.isTrial ? 'ফ্রি ট্রায়াল আবেদন সফলভাবে জমা হয়েছে!' : 'পেমেন্ট ও সাবস্ক্রিপশন আবেদন জমা হয়েছে!'}
                 </h3>
 
-                <p className="text-xs font-semibold text-amber-400 mb-4">
+                <p className="text-xs font-semibold text-slate-400 mb-4">
                   {regSuccessResult.companyName} &bull; {regSuccessResult.planName}
                 </p>
 
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 text-left text-xs mb-5 space-y-3">
-                  {regSuccessResult.emailStatus?.delivered ? (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 text-left text-xs mb-5 space-y-3.5">
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      আবেদনের বিবরণ (Registration Summary):
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-slate-800">
                       <div>
-                        <span className="font-bold text-white block">Email Dispatched Successfully</span>
-                        <span>Sign-in credentials have been emailed to <strong className="text-white underline">{regSuccessResult.email}</strong>.</span>
+                        <span className="text-[10px] text-slate-500 block uppercase">প্রতিষ্ঠানের নাম</span>
+                        <span className="text-white font-bold">{regSuccessResult.companyName}</span>
                       </div>
-                    </div>
-                  ) : regSuccessResult.emailStatus?.sandbox_restricted ? (
-                    <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
-                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <span className="font-bold text-white block">Email Delivery Notice (Sandbox Limitation)</span>
-                        <p className="leading-relaxed">
-                          Your email provider is currently in testing sandbox mode (direct emails to other domains are restricted until <strong>fuelnest.xyz</strong> domain verification is completed or custom SMTP is enabled).
-                        </p>
-                        <p className="font-semibold text-amber-300">
-                          👉 Your Super Admin credentials are fully generated and ready below — please copy them to sign in!
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
-                      <Mail className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <div>
-                        <span>Sign-in credentials generated for </span>
-                        <strong className="text-white underline">{regSuccessResult.email}</strong>.
-                        <span className="block text-[11px] text-slate-400 mt-0.5">Please copy your credentials below to log in immediately.</span>
+                        <span className="text-[10px] text-slate-500 block uppercase">যোগাযোগ ব্যক্তি</span>
+                        <span className="text-white font-medium">{regSuccessResult.adminName || 'Admin'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">ইমেইল ঠিকানা</span>
+                        <span className="text-white font-mono break-all">{regSuccessResult.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">মোবাইল নম্বর</span>
+                        <span className="text-white font-mono">{regSuccessResult.phone || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">নির্বাচিত প্ল্যান</span>
+                        <span className="text-amber-400 font-bold">{regSuccessResult.planName}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block uppercase">পেমেন্ট / স্ট্যাটাস</span>
+                        <span className="text-emerald-400 font-bold">
+                          {regSuccessResult.isTrial ? '3-Day Free Trial' : `${(regSuccessResult.paymentMethod || 'Online').toUpperCase()} (TrxID: ${regSuccessResult.transactionId})`}
+                        </span>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Immediate Credential Access Box */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800 pb-2">
-                      <span className="font-bold text-slate-200">Super Admin Credentials:</span>
-                      <span className="text-emerald-400 font-semibold">Active & Verified</span>
+                  {/* Informational Message about Manual Master Approval & Direct Email */}
+                  <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs flex items-start gap-2.5">
+                    <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <span className="font-bold text-white block">অনুমোদন প্রক্রিয়া (Next Steps)</span>
+                      <p className="leading-relaxed text-slate-300">
+                        আপনার আবেদনটি সফলভাবে গৃহীত হয়েছে। আমাদের মাস্টার কন্ট্রোল অ্যাডমিন আপনার দেওয়া তথ্য{regSuccessResult.isTrial ? '' : ' ও পেমেন্ট ট্রানজেকশন'} যাচাই করে অ্যাকাউন্টটি অনুমোদন (Approve) করবেন।
+                      </p>
+                      <p className="leading-relaxed text-amber-300 font-medium">
+                        👉 অনুমোদন সম্পন্ন হলে আপনার ইমেইলে (<span className="underline text-white font-mono">{regSuccessResult.email}</span>) সরাসরি ডেডিকেটেড পোর্টাল লিংক, ইউজারনেম ও সিকিউর পাসওয়ার্ড পাঠিয়ে দেওয়া হবে।
+                      </p>
                     </div>
+                  </div>
 
-                    {/* Dedicated Portal Access URL */}
-                    <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block uppercase font-sans font-bold">Portal Access URL</span>
-                      <a
-                        href="https://fuelnest.xyz/login"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-amber-400 hover:text-amber-300 hover:underline font-mono font-bold text-xs break-all"
-                      >
-                        https://fuelnest.xyz/login
-                      </a>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
-                      <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-[10px] text-slate-500 block uppercase font-sans font-bold">Username</span>
-                        <span className="text-white font-bold select-all">{regSuccessResult.username || 'admin'}</span>
-                      </div>
-                      <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-[10px] text-slate-500 block uppercase font-sans font-bold">Temporary Password</span>
-                        <span className="text-amber-400 font-bold select-all">{regSuccessResult.temporaryPassword || 'Password@12345'}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const portalUrl = 'https://fuelnest.xyz/login';
-                        const text = `FuelNest Super Admin Credentials:\nPortal Access URL: ${portalUrl}\nSuper Admin Username: ${regSuccessResult.username}\nTemporary Password: ${regSuccessResult.temporaryPassword}`;
-                        navigator.clipboard?.writeText(text);
-                        setCopiedCreds(true);
-                        setTimeout(() => setCopiedCreds(false), 2500);
-                      }}
-                      className="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      {copiedCreds ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Credentials Copied to Clipboard!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Copy Login Credentials</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="text-[11px] text-slate-400 text-center pt-1 border-t border-slate-800">
+                    জরুরি প্রয়োজনে বা দ্রুত অনুমোদনের জন্য যোগাযোগ করুন: <span className="text-white font-semibold">+880 1700-000000</span> অথবা <span className="text-amber-400 font-mono">admin@fuelnest.xyz</span>
                   </div>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setIsRegisterOpen(false);
                     setRegSuccessResult(null);
-                    onNavigateToLogin();
                   }}
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Sign In to Your Workspace</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <Check className="w-4 h-4" />
+                  <span>ঠিক আছে, বুঝেছি (Done)</span>
                 </button>
               </div>
             )}

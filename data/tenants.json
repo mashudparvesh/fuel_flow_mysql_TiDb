@@ -1,5 +1,42 @@
 [
   {
+    "id": "tenant_padma",
+    "name": "Padma Logistics",
+    "code": "PLFLT",
+    "currency": "BDT",
+    "phone": "01711223344",
+    "address": "Dhaka, Bangladesh",
+    "contact_person": "Farhan Ahmed",
+    "email": "farhan@padmalogistics.com",
+    "status": "active",
+    "deleted_at": null,
+    "created_at": "2026-09-27",
+    "subscription": {
+      "plan": "trial_3days",
+      "plan_name_bn": "3 Days Free Trial",
+      "status": "active",
+      "start_date": "2026-09-27",
+      "end_date": "2026-09-30",
+      "duration_type": "days",
+      "duration_val": 3,
+      "price_bdt": 0,
+      "payment_status": "paid",
+      "max_vehicles": 100,
+      "max_users": 25,
+      "max_pumps": 15,
+      "super_admin_username": "padma_admin",
+      "super_admin_password": "Padma@12345",
+      "features": {
+        "tanker_bowzer": true,
+        "anomaly_ai": true,
+        "reports_export": true,
+        "qr_scanner": true,
+        "custom_categories": true
+      },
+      "notes": "3-Day Free Trial Provisioning"
+    }
+  },
+  {
     "id": "tenant_dhaka",
     "name": "Dhaka Metro Fleet",
     "code": "DMF",

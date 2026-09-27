@@ -1,5 +1,33 @@
 [
   {
+    "id": "usr_tenant_padma_admin",
+    "tenant_id": "tenant_padma",
+    "name": "Farhan Ahmed",
+    "email": "farhan@padmalogistics.com",
+    "username": "padma_admin",
+    "password": "Padma@12345",
+    "phone": "01711223344",
+    "role": "super_admin",
+    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-09-27"
+  },
+  {
     "id": "usr_tenant_dhaka_admin",
     "tenant_id": "tenant_dhaka",
     "name": "Sadikur Rahman",
