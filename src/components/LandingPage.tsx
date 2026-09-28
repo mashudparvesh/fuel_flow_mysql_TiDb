@@ -160,6 +160,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       try {
         const ch = new BroadcastChannel('fuelflow_tenants_sync');
         ch.postMessage({ type: 'NEW_REGISTRATION', company: regCompanyName.trim() });
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.postMessage({ type: 'REFRESH_USERS' });
         ch.close();
       } catch (e) {}
 
@@ -219,6 +221,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       try {
         const ch = new BroadcastChannel('fuelflow_tenants_sync');
         ch.postMessage({ type: 'NEW_REGISTRATION', company: regCompanyName.trim() });
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.postMessage({ type: 'REFRESH_USERS' });
         ch.close();
       } catch (e) {}
 

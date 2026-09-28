@@ -348,6 +348,106 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     }
   };
 
+  // Dedicated Master Control Unsuspend & Activate Handler (Available to SaaS Owner, Admin & Moderator)
+  const handleUnsuspendAndActivate = async (tenant: any) => {
+    if (!tenant) return;
+    try {
+      setActionLoadingId(tenant.id);
+      const res = await fetch(`/api/tenants/${tenant.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' })
+      });
+      const data = await res.json();
+      setActionLoadingId(null);
+
+      // Local state update
+      setTenantStatus(tenant.id, 'active');
+      await Promise.all([
+        refreshTenantsFromServer?.(),
+        refreshUsersFromServer?.(),
+        fetchRegistrationRequests()
+      ]);
+
+      try {
+        const ch = new BroadcastChannel('fuelflow_tenants_sync');
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.postMessage({ type: 'REFRESH_USERS' });
+        ch.close();
+      } catch (e) {}
+
+      // Find matching registration request if available to get credentials
+      const matchingReq = registrationRequests.find(r => r.tenant_id === tenant.id || r.company_name?.toLowerCase() === tenant.name?.toLowerCase());
+      const sub = tenant.subscription;
+      const uname = matchingReq?.super_admin_username || sub?.super_admin_username || data.super_admin_username || `admin_${tenant.code.toLowerCase()}`;
+      const pass = matchingReq?.temporary_password || sub?.super_admin_password || data.temporary_password || `${tenant.code}@12345`;
+
+      // Open Credentials Modal immediately with full 1-click tools
+      setSelectedApprovalModalData({
+        id: tenant.id,
+        company_name: tenant.name,
+        admin_name: tenant.contact_person,
+        email: tenant.email,
+        phone: tenant.phone,
+        plan_name: sub?.plan_name_bn || sub?.plan || matchingReq?.plan_name || 'Standard Plan',
+        super_admin_username: uname,
+        temporary_password: pass,
+        login_url: 'https://fuelnest.xyz/login'
+      });
+      setDirectEmailResult(null);
+
+      setActionFeedbackMsg({
+        text: `Workspace for "${tenant.name}" has been unsuspended and activated! Access is now active.`,
+        type: 'success'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
+    } catch (err: any) {
+      setActionLoadingId(null);
+      setActionFeedbackMsg({
+        text: err?.message || 'Error occurred while unsuspending workspace.',
+        type: 'error'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
+    }
+  };
+
+  const handleSuspendTenant = async (tenant: any) => {
+    if (!tenant) return;
+    try {
+      setActionLoadingId(tenant.id);
+      await fetch(`/api/tenants/${tenant.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'suspended' })
+      });
+      setActionLoadingId(null);
+      setTenantStatus(tenant.id, 'suspended');
+      await Promise.all([
+        refreshTenantsFromServer?.(),
+        refreshUsersFromServer?.()
+      ]);
+
+      try {
+        const ch = new BroadcastChannel('fuelflow_tenants_sync');
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.postMessage({ type: 'REFRESH_USERS' });
+        ch.close();
+      } catch (e) {}
+
+      setActionFeedbackMsg({
+        text: `Workspace for "${tenant.name}" has been suspended.`,
+        type: 'success'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 4000);
+    } catch (err: any) {
+      setActionLoadingId(null);
+      setActionFeedbackMsg({
+        text: err?.message || 'Error suspending workspace.',
+        type: 'error'
+      });
+    }
+  };
+
   // Email & SMTP configuration states
   const [emailConfig, setEmailConfig] = useState<any>({
     smtp_enabled: false,
@@ -536,8 +636,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         (t.phone || '').toLowerCase().includes(q) ||
         ((t.subscription?.super_admin_username || '').toLowerCase().includes(q));
 
-      const subStatus = t.subscription?.status || t.status || 'active';
-      const matchStatus = statusFilter === 'all' || subStatus === statusFilter;
+      const isSusp = t.status === 'suspended' || t.subscription?.status === 'suspended';
+      const subStatus = isSusp ? 'suspended' : (t.subscription?.status || t.status || 'active');
+      const matchStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'suspended' && isSusp) ||
+        (statusFilter === 'pending_approval' && isSusp) ||
+        subStatus === statusFilter;
       const matchPlan = planFilter === 'all' || t.subscription?.plan === planFilter;
 
       return matchSearch && matchStatus && matchPlan;
@@ -558,29 +663,33 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     let active = 0;
     let expiring = 0;
     let expired = 0;
+    let suspended = 0;
     let totalRevenue = 0;
 
     allTenants.forEach(t => {
       const sub = t.subscription;
-      if (sub) {
-        totalRevenue += Number(sub.price_bdt) || 0;
-        const days = getDaysRemaining(sub.end_date);
-        if (sub.status === 'suspended') {
-          // suspended
-        } else if (days < 0 || sub.status === 'expired') {
-          expired++;
-        } else if (days <= 7) {
-          expiring++;
-          active++;
+      const isSusp = t.status === 'suspended' || sub?.status === 'suspended';
+      if (isSusp) {
+        suspended++;
+      } else {
+        if (sub) {
+          totalRevenue += Number(sub.price_bdt) || 0;
+          const days = getDaysRemaining(sub.end_date);
+          if (days < 0 || sub.status === 'expired') {
+            expired++;
+          } else if (days <= 7) {
+            expiring++;
+            active++;
+          } else {
+            active++;
+          }
         } else {
           active++;
         }
-      } else {
-        active++;
       }
     });
 
-    return { total, active, expiring, expired, totalRevenue };
+    return { total, active, expiring, expired, suspended, totalRevenue };
   }, [allTenants]);
 
   // Auto-generate code when typing name
