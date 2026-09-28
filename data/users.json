@@ -1,5 +1,61 @@
 [
   {
+    "id": "usr_tenant_dhaka_1_admin",
+    "tenant_id": "tenant_dhaka_1",
+    "name": "Kamal Uddin",
+    "email": "kamal@dhakaswift.com",
+    "username": "dhaka_admin",
+    "password": "Dhaka@12345",
+    "phone": "01811223344",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-09-28"
+  },
+  {
+    "id": "usr_tenant_apex_1_admin",
+    "tenant_id": "tenant_apex_1",
+    "name": "Rafiqul Islam",
+    "email": "rafiq@apexlogistics.com",
+    "username": "apex_admin",
+    "password": "Apex@12345",
+    "phone": "01700112233",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-09-28"
+  },
+  {
     "id": "usr_tenant_padma_admin",
     "tenant_id": "tenant_padma",
     "name": "Farhan Ahmed",
@@ -8,7 +64,7 @@
     "password": "Padma@12345",
     "phone": "01711223344",
     "role": "super_admin",
-    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "role_title_bn": "Company Super Admin",
     "status": "active",
     "must_change_password": true,
     "allowed_category_ids": [
@@ -36,7 +92,7 @@
     "password": "Dhaka@12345",
     "phone": "+8801700112233",
     "role": "super_admin",
-    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "role_title_bn": "Company Super Admin",
     "status": "active",
     "must_change_password": true,
     "allowed_category_ids": [
@@ -64,7 +120,7 @@
     "password": "Surma@12345",
     "phone": "+8801911998877",
     "role": "super_admin",
-    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "role_title_bn": "Company Super Admin",
     "status": "active",
     "must_change_password": true,
     "allowed_category_ids": [
@@ -92,7 +148,7 @@
     "password": "Meghna@12345",
     "phone": "+8801811223344",
     "role": "super_admin",
-    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "role_title_bn": "Company Super Admin",
     "status": "active",
     "must_change_password": true,
     "allowed_category_ids": [
@@ -120,7 +176,7 @@
     "password": "Apex@12345",
     "phone": "+8801712345678",
     "role": "super_admin",
-    "role_title_bn": "কোম্পানি সুপার অ্যাডমিন (Super Admin)",
+    "role_title_bn": "Company Super Admin",
     "status": "active",
     "must_change_password": true,
     "allowed_category_ids": [

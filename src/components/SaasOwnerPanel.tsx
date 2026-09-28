@@ -147,6 +147,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const [copiedCredsModal, setCopiedCredsModal] = useState(false);
   const [sendingEmailDirectly, setSendingEmailDirectly] = useState(false);
   const [directEmailResult, setDirectEmailResult] = useState<any | null>(null);
+  const [actionFeedbackMsg, setActionFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // In-app modal for rejecting registration request (replaces window.prompt)
+  const [rejectModalItem, setRejectModalItem] = useState<any | null>(null);
+  const [rejectReasonText, setRejectReasonText] = useState('Information incomplete or payment unverified');
+
+  // In-app modal for deleting registration request (replaces window.confirm)
+  const [deleteRegModalItem, setDeleteRegModalItem] = useState<any | null>(null);
 
   const fetchRegistrationRequests = async () => {
     try {
@@ -166,15 +174,36 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   useEffect(() => {
     fetchRegistrationRequests();
 
+    // Automatic real-time polling every 4 seconds so new registrations appear instantly
+    const interval = setInterval(() => {
+      fetchRegistrationRequests();
+    }, 4000);
+
+    const handleWindowFocus = () => {
+      fetchRegistrationRequests();
+      refreshTenantsFromServer?.();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
     try {
       const ch = new BroadcastChannel('fuelflow_tenants_sync');
       ch.onmessage = (event) => {
         if (event.data?.type === 'NEW_REGISTRATION' || event.data?.type === 'REFRESH_TENANTS') {
           fetchRegistrationRequests();
+          refreshTenantsFromServer?.();
         }
       };
-      return () => ch.close();
-    } catch (e) {}
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('focus', handleWindowFocus);
+        ch.close();
+      };
+    } catch (e) {
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('focus', handleWindowFocus);
+      };
+    }
   }, []);
 
   const pendingRegRequestsCount = useMemo(() => {
@@ -193,7 +222,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       setActionLoadingId(null);
 
       if (data.success) {
-        // Refresh tenants across the platform
+        // Refresh tenants and users across the platform
         await refreshTenantsFromServer?.();
         await refreshUsersFromServer?.();
         await fetchRegistrationRequests();
@@ -205,6 +234,12 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           ch.close();
         } catch (e) {}
 
+        setActionFeedbackMsg({
+          text: `Workspace for "${reqItem.company_name}" has been approved and activated!`,
+          type: 'success'
+        });
+        setTimeout(() => setActionFeedbackMsg(null), 5000);
+
         // Open Credentials & Email modal for immediate manual email dispatch
         setSelectedApprovalModalData({
           ...reqItem,
@@ -215,52 +250,84 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         });
         setDirectEmailResult(null);
       } else {
-        alert(data.message || 'Failed to approve registration.');
+        setActionFeedbackMsg({
+          text: data.message || 'Failed to approve registration.',
+          type: 'error'
+        });
+        setTimeout(() => setActionFeedbackMsg(null), 5000);
       }
     } catch (err: any) {
       setActionLoadingId(null);
-      alert(err?.message || 'Error occurred while approving registration.');
+      setActionFeedbackMsg({
+        text: err?.message || 'Error occurred while approving registration.',
+        type: 'error'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
     }
   };
 
-  const handleRejectRegistration = async (id: string) => {
-    const reason = window.prompt('Please enter rejection reason (optional):', 'Information incomplete or payment unverified');
-    if (reason === null) return;
+  const handleConfirmRejectRegistration = async () => {
+    if (!rejectModalItem) return;
+    const reqId = rejectModalItem.id;
+    const reason = rejectReasonText.trim() || 'Information incomplete or payment unverified';
 
     try {
-      setActionLoadingId(id);
-      const res = await fetch(`/api/subscribers/registration-requests/${id}/reject`, {
+      setActionLoadingId(reqId);
+      const res = await fetch(`/api/subscribers/registration-requests/${reqId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
       });
       const data = await res.json();
       setActionLoadingId(null);
+      setRejectModalItem(null);
       if (data.success) {
         fetchRegistrationRequests();
+        setActionFeedbackMsg({
+          text: `Registration request for "${rejectModalItem.company_name}" rejected.`,
+          type: 'success'
+        });
+        setTimeout(() => setActionFeedbackMsg(null), 5000);
       } else {
-        alert(data.message || 'Failed to reject registration.');
+        setActionFeedbackMsg({
+          text: data.message || 'Failed to reject registration.',
+          type: 'error'
+        });
+        setTimeout(() => setActionFeedbackMsg(null), 5000);
       }
     } catch (err: any) {
       setActionLoadingId(null);
-      alert(err?.message || 'Error occurred.');
+      setRejectModalItem(null);
+      setActionFeedbackMsg({
+        text: err?.message || 'Error occurred while rejecting request.',
+        type: 'error'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
     }
   };
 
-  const handleDeleteRegistration = async (id: string) => {
-    if (!window.confirm('Delete this registration request permanently?')) return;
+  const handleConfirmDeleteRegistration = async () => {
+    if (!deleteRegModalItem) return;
+    const reqId = deleteRegModalItem.id;
     try {
-      setActionLoadingId(id);
-      const res = await fetch(`/api/subscribers/registration-requests/${id}`, {
+      setActionLoadingId(reqId);
+      const res = await fetch(`/api/subscribers/registration-requests/${reqId}`, {
         method: 'DELETE'
       });
       const data = await res.json();
       setActionLoadingId(null);
+      setDeleteRegModalItem(null);
       if (data.success) {
         fetchRegistrationRequests();
+        setActionFeedbackMsg({
+          text: 'Registration request deleted successfully.',
+          type: 'success'
+        });
+        setTimeout(() => setActionFeedbackMsg(null), 4000);
       }
     } catch (err) {
       setActionLoadingId(null);
+      setDeleteRegModalItem(null);
     }
   };
 
@@ -992,9 +1059,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
               {allTenants.length}
             </span>
+            {pendingRegRequestsCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-500 text-slate-950 animate-pulse">
+                +{pendingRegRequestsCount}
+              </span>
+            )}
           </button>
 
-          {/* Tab 2: New User Approvals */}
+          {/* Tab 2: Subscriber Approvals */}
           <button
             onClick={() => setActiveTab('registrations')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -1004,7 +1076,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span>{'New User Approvals'}</span>
+            <span>{'Subscriber Approvals'}</span>
             {pendingRegRequestsCount > 0 ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
                 {pendingRegRequestsCount} Pending
@@ -1016,7 +1088,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             )}
           </button>
 
-          {/* Tab 2: Control Roles & Team */}
+          {/* Tab 3: Control Roles & Team */}
           <button
             onClick={() => setActiveTab('moderators')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -1032,7 +1104,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             </span>
           </button>
 
-          {/* Tab 3: Approvals & Governance Queue */}
+          {/* Tab 4: Approvals & Governance Queue */}
           <button
             onClick={() => setActiveTab('approvals')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
@@ -1043,13 +1115,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           >
             <ShieldCheck className="w-4 h-4" />
             <span>{'Approvals & Governance'}</span>
-            {pendingApprovalsCount > 0 ? (
+            {(pendingApprovalsCount + pendingRegRequestsCount) > 0 ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
-                {pendingApprovalsCount}
+                {pendingApprovalsCount + pendingRegRequestsCount} Pending
               </span>
             ) : (
               <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
-                {approvals.length}
+                {approvals.length + registrationRequests.length}
               </span>
             )}
           </button>
@@ -1157,37 +1229,138 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       {/* ================= TAB 1: SUBSCRIBERS ================= */}
       {activeTab === 'subscribers' && (
         <div className="space-y-4">
-          {/* Pending Registration Requests Alert Banner */}
+          {/* Pending Registration Requests Alert Banner & Quick Approval Grid */}
           {pendingRegRequestsCount > 0 && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
-                  <Clock className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-black text-sm text-slate-900 dark:text-white">
-                      {pendingRegRequestsCount} New Subscriber Registration{pendingRegRequestsCount > 1 ? 's' : ''} Awaiting Approval
-                    </h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
-                      Pending
-                    </span>
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border-2 border-amber-500/50 shadow-lg space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
+                    <Clock className="w-5 h-5 animate-pulse" />
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Subscribers have registered from the landing page. Approve to activate their workspace and email credentials.
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-sm text-slate-900 dark:text-white">
+                        {pendingRegRequestsCount} New Subscriber Registration{pendingRegRequestsCount > 1 ? 's' : ''} Awaiting Approval
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+                        Action Required
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                      New subscribers registered from the landing page. Click <strong>Approve & Activate</strong> below to instantly create their workspace and view credentials.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={fetchRegistrationRequests}
+                    disabled={regRequestsLoading}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0c162d] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-amber-500 ${regRequestsLoading ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('registrations')}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer shrink-0 transition-transform active:scale-95"
+                  >
+                    <span>View All Approvals</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+
+              {/* Quick Pending Registrations Approval Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                {registrationRequests
+                  .filter(r => r.status === 'pending')
+                  .map(reqItem => (
+                    <div
+                      key={reqItem.id}
+                      className="p-3.5 rounded-xl bg-white dark:bg-[#0c162d] border-2 border-amber-500/40 hover:border-amber-400 shadow-sm flex flex-col justify-between gap-3 transition-all"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <h5 className="font-black text-xs text-slate-900 dark:text-white truncate">
+                            {reqItem.company_name}
+                          </h5>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                            {reqItem.is_trial ? 'Free Trial' : 'Paid Plan'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-amber-500 truncate">
+                          {reqItem.plan_name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5 font-mono">
+                          <div className="truncate">Contact: {reqItem.admin_name || 'Admin'}</div>
+                          <div className="truncate">Email: {reqItem.email}</div>
+                          <div className="truncate">Phone: {reqItem.phone || 'N/A'}</div>
+                          <div className="truncate text-emerald-400 font-semibold">
+                            Payment: {reqItem.payment_method || 'Verified'} {reqItem.transaction_id ? `(${reqItem.transaction_id})` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => handleApproveRegistration(reqItem)}
+                          disabled={actionLoadingId === reqItem.id}
+                          className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                        >
+                          {actionLoadingId === reqItem.id ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <span>Activating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Approve & Activate</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectModalItem(reqItem);
+                            setRejectReasonText('Information incomplete or payment unverified');
+                          }}
+                          disabled={actionLoadingId === reqItem.id}
+                          className="py-1.5 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[11px] font-bold border border-rose-500/30 cursor-pointer disabled:opacity-50"
+                          title="Reject Application"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Feedback Message Toast */}
+          {actionFeedbackMsg && (
+            <div
+              className={`p-3.5 rounded-xl text-xs font-bold flex items-center justify-between gap-3 shadow-md ${
+                actionFeedbackMsg.type === 'success'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+              }`}
+            >
+              <span>{actionFeedbackMsg.text}</span>
               <button
                 type="button"
-                onClick={() => setActiveTab('registrations')}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer shrink-0 transition-transform active:scale-95"
+                onClick={() => setActionFeedbackMsg(null)}
+                className="p-1 text-slate-400 hover:text-white"
               >
-                <span>Review & Approve Now</span>
-                <ArrowRight className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
+
           {/* Search & Filter Bar */}
           <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div className="relative flex-1">
@@ -1209,6 +1382,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               >
                 <option value="all">{'All Status'}</option>
                 <option value="active">{'Active'}</option>
+                <option value="pending_approval">{`Pending Approval (${pendingRegRequestsCount})`}</option>
                 <option value="expired">{'Expired'}</option>
                 <option value="suspended">{'Suspended'}</option>
               </select>
@@ -1781,7 +1955,10 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                               <button
                                 type="button"
-                                onClick={() => handleRejectRegistration(item.id)}
+                                onClick={() => {
+                                  setRejectModalItem(item);
+                                  setRejectReasonText('Information incomplete or payment unverified');
+                                }}
                                 disabled={actionLoadingId === item.id}
                                 className="px-3 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                               >
@@ -1806,7 +1983,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                           <button
                             type="button"
-                            onClick={() => handleDeleteRegistration(item.id)}
+                            onClick={() => setDeleteRegModalItem(item)}
                             className="p-2.5 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                             title="Delete Request Record"
                           >
@@ -2052,20 +2229,198 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         </div>
       )}
 
-      {/* ================= TAB 3: APPROVALS & GOVERNANCE ================= */}
+      {/* ================= TAB 4: APPROVALS & GOVERNANCE ================= */}
       {activeTab === 'approvals' && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
-            <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed">
-              <strong className="font-bold block text-sm mb-1">
-                {'Dual-Control Governance & Sensitive Action Approval Queue:'}
-              </strong>
-              <p>
-                {'Officers can request critical operations (Subscriber Deletion, Subscription Extension, Suspension/Unsuspension). These actions require explicit approval from an Executive Administrator to ensure system security.'}
-              </p>
+        <div className="space-y-6">
+          {/* Action Feedback Message Toast */}
+          {actionFeedbackMsg && (
+            <div
+              className={`p-3.5 rounded-xl text-xs font-bold flex items-center justify-between gap-3 shadow-md ${
+                actionFeedbackMsg.type === 'success'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+              }`}
+            >
+              <span>{actionFeedbackMsg.text}</span>
+              <button
+                type="button"
+                onClick={() => setActionFeedbackMsg(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
+          )}
+
+          {/* SECTION 1: NEW SUBSCRIBER REGISTRATIONS AWAITING MASTER APPROVAL */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0c162d] border-2 border-amber-500/40 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                      New Subscriber Registrations
+                    </h3>
+                    {pendingRegRequestsCount > 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white animate-pulse">
+                        {pendingRegRequestsCount} Awaiting Approval
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        All Cleared ({registrationRequests.length} Total)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Subscribers registering via the landing page arrive here. Approve to provision their tenant database and generate credentials.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchRegistrationRequests}
+                  disabled={regRequestsLoading}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-amber-500 ${regRequestsLoading ? 'animate-spin' : ''}`} />
+                  <span>{regRequestsLoading ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('registrations')}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <span>Subscriber Queue</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* List of Pending Subscriber Registration Requests */}
+            {registrationRequests.filter(r => r.status === 'pending').length === 0 ? (
+              <div className="p-6 text-center rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-dashed border-slate-200 dark:border-slate-800">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  No Pending Subscriber Registrations
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  When new subscribers sign up on the landing page, their applications will immediately appear here for approval.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                {registrationRequests
+                  .filter(r => r.status === 'pending')
+                  .map(reqItem => (
+                    <div
+                      key={reqItem.id}
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-[#080e1e] border-2 border-amber-500/40 hover:border-amber-400 transition-all flex flex-col justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                {reqItem.company_name}
+                              </h4>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+                                Pending Approval
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-bold text-amber-500">
+                              {reqItem.plan_name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {new Date(reqItem.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-white dark:bg-[#0c162d] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 font-mono">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Contact Person</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold truncate block">
+                              {reqItem.admin_name || 'Admin'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Email Address</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold truncate block">
+                              {reqItem.email}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Phone</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold truncate block">
+                              {reqItem.phone || 'N/A'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Payment</span>
+                            <span className="text-emerald-500 font-bold truncate block">
+                              {reqItem.payment_method || 'Verified'} {reqItem.transaction_id ? `(${reqItem.transaction_id})` : ''}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => handleApproveRegistration(reqItem)}
+                          disabled={actionLoadingId === reqItem.id}
+                          className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                        >
+                          {actionLoadingId === reqItem.id ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Activating Workspace...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Approve & Activate</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectModalItem(reqItem);
+                            setRejectReasonText('Information incomplete or payment unverified');
+                          }}
+                          disabled={actionLoadingId === reqItem.id}
+                          className="py-2 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
+
+          {/* SECTION 2: DUAL-CONTROL INTERNAL GOVERNANCE & SENSITIVE OPERATIONS */}
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed">
+                <strong className="font-bold block text-sm mb-1">
+                  {'Dual-Control Governance & Sensitive Action Approval Queue:'}
+                </strong>
+                <p>
+                  {'Officers can request critical operations (Subscriber Deletion, Subscription Extension, Suspension/Unsuspension). These actions require explicit approval from an Executive Administrator to ensure system security.'}
+                </p>
+              </div>
+            </div>
 
           {/* Filter Bar */}
           <div className="flex items-center gap-2">
@@ -2222,7 +2577,8 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             )}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ================= TAB 4: OWNER SECURITY & PROFILE ================= */}
       {activeTab === 'owner_profile' && (
@@ -2580,22 +2936,22 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             <div className="mt-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-2">
               <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>ইমেইল ডেলিভারি তথ্য ও স্যান্ডবক্স স্ট্যাটাস (Email Delivery Diagnostics):</span>
+                <span>Email Delivery Diagnostics & Sandbox Notice:</span>
               </div>
               <p className="leading-relaxed">
-                বর্তমানে <strong>Resend API</strong> টেস্টিং/স্যান্ডবক্স মোডে রয়েছে। এর ফলে <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">onboarding@resend.dev</code> ব্যবহার করার কারণে সরাসরি শুধুমাত্র ভেরিফাইড অ্যাকাউন্ট ওনারের ইমেইলে (<span className="underline font-mono">mashudrus@gmail.com</span>) টেস্ট ডেলিভারি নিশ্চিত হয়। অন্য যেকোনো টেস্ট গ্রাহক ইমেইলে সরাসরি ডেলিভারি করতে নিচের যেকোনো একটি পদ্ধতি অনুসরণ করুন:
+                Currently <strong>Resend API</strong> is active in test/sandbox mode. Using <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">onboarding@resend.dev</code> allows test delivery directly to the verified account owner email (<span className="underline font-mono">mashudrus@gmail.com</span>). To deliver emails directly to any external subscriber address, follow either method below:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-900/80 border border-amber-500/20 text-slate-800 dark:text-slate-200">
-                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">পদ্ধতি ১: Custom SMTP (সবচেয়ে সহজ)</div>
+                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">Method 1: Custom SMTP (Recommended)</div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    নিচে আপনার ডোমেন ওয়েবমেইল (যেমন: <code className="font-mono">mail.fuelnest.xyz</code>) অথবা Gmail App Password বা Brevo/SendGrid SMTP কনফিগার করুন। SMTP-তে কোনো স্যান্ডবক্স সীমাবদ্ধতা নেই!
+                    Configure your custom domain webmail (e.g., <code className="font-mono">mail.fuelnest.xyz</code>) or Gmail App Password or Brevo/SendGrid SMTP below. Custom SMTP has no sandbox restrictions!
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-900/80 border border-amber-500/20 text-slate-800 dark:text-slate-200">
-                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">পদ্ধতি ২: Resend ডোমেন ভেরিফিকেশন</div>
+                  <div className="font-bold text-amber-600 dark:text-amber-400 mb-1">Method 2: Resend Domain Verification</div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    <a href="https://resend.com/domains" target="_blank" rel="noreferrer" className="text-amber-500 underline font-bold">resend.com/domains</a> এ গিয়ে <code className="font-mono">fuelnest.xyz</code> ডোমেনের DNS রেকর্ড ভেরিফাই করে নিচে প্রেরক ইমেইল সেট করুন।
+                    Visit <a href="https://resend.com/domains" target="_blank" rel="noreferrer" className="text-amber-500 underline font-bold">resend.com/domains</a> and verify the DNS records for <code className="font-mono">fuelnest.xyz</code>, then set the sender address below.
                   </p>
                 </div>
               </div>
@@ -3785,7 +4141,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               <div className="flex items-center justify-between">
                 <div className="font-bold text-slate-200 flex items-center gap-2">
                   <Mail className="w-4 h-4 text-amber-400" />
-                  <span>Send Credentials to User (গ্রাহককে ইমেইল পাঠান)</span>
+                  <span>Send Credentials to User</span>
                 </div>
                 <span className="text-[11px] text-amber-300 font-mono underline">
                   {selectedApprovalModalData.email}
@@ -3889,6 +4245,131 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
               >
                 Close & Return
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: IN-APP REGISTRATION REJECTION ================= */}
+      {rejectModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Reject Registration Application
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectModalItem(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              Are you sure you want to decline the registration request for{' '}
+              <strong className="text-slate-900 dark:text-white">{rejectModalItem.company_name}</strong>?
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Reason for Rejection (Visible in Audit Log)
+              </label>
+              <textarea
+                value={rejectReasonText}
+                onChange={e => setRejectReasonText(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                placeholder="Specify rejection reason..."
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setRejectModalItem(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectRegistration}
+                disabled={actionLoadingId === rejectModalItem.id}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {actionLoadingId === rejectModalItem.id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Declining...</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3.5 h-3.5" />
+                    <span>Confirm Rejection</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: IN-APP REGISTRATION DELETION ================= */}
+      {deleteRegModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-500" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Delete Registration Request
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteRegModalItem(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              Permanently delete the registration record for{' '}
+              <strong className="text-slate-900 dark:text-white">{deleteRegModalItem.company_name}</strong>? This action cannot be undone.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeleteRegModalItem(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteRegistration}
+                disabled={actionLoadingId === deleteRegModalItem.id}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {actionLoadingId === deleteRegModalItem.id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Record</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

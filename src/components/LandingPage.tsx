@@ -876,11 +876,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold mb-3">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>অ্যাডমিন পর্যালোচনার অপেক্ষমাণ (Pending Approval)</span>
+                  <span>Pending Administrator Review & Approval</span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mb-1">
-                  {regSuccessResult.isTrial ? 'ফ্রি ট্রায়াল আবেদন সফলভাবে জমা হয়েছে!' : 'পেমেন্ট ও সাবস্ক্রিপশন আবেদন জমা হয়েছে!'}
+                  {regSuccessResult.isTrial ? 'Free Trial Application Submitted Successfully!' : 'Payment & Subscription Application Submitted!'}
                 </h3>
 
                 <p className="text-xs font-semibold text-slate-400 mb-4">
@@ -890,31 +890,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 text-left text-xs mb-5 space-y-3.5">
                   <div className="space-y-2">
                     <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      আবেদনের বিবরণ (Registration Summary):
+                      Registration Application Summary:
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-slate-800">
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">প্রতিষ্ঠানের নাম</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Company Name</span>
                         <span className="text-white font-bold">{regSuccessResult.companyName}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">যোগাযোগ ব্যক্তি</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Contact Person</span>
                         <span className="text-white font-medium">{regSuccessResult.adminName || 'Admin'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">ইমেইল ঠিকানা</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Email Address</span>
                         <span className="text-white font-mono break-all">{regSuccessResult.email}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">মোবাইল নম্বর</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Phone Number</span>
                         <span className="text-white font-mono">{regSuccessResult.phone || 'N/A'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">নির্বাচিত প্ল্যান</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Selected Plan</span>
                         <span className="text-amber-400 font-bold">{regSuccessResult.planName}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block uppercase">পেমেন্ট / স্ট্যাটাস</span>
+                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Payment / Status</span>
                         <span className="text-emerald-400 font-bold">
                           {regSuccessResult.isTrial ? '3-Day Free Trial' : `${(regSuccessResult.paymentMethod || 'Online').toUpperCase()} (TrxID: ${regSuccessResult.transactionId})`}
                         </span>
@@ -926,18 +926,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs flex items-start gap-2.5">
                     <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div className="space-y-1">
-                      <span className="font-bold text-white block">অনুমোদন প্রক্রিয়া (Next Steps)</span>
+                      <span className="font-bold text-white block">Approval & Activation Process (Next Steps)</span>
                       <p className="leading-relaxed text-slate-300">
-                        আপনার আবেদনটি সফলভাবে গৃহীত হয়েছে। আমাদের মাস্টার কন্ট্রোল অ্যাডমিন আপনার দেওয়া তথ্য{regSuccessResult.isTrial ? '' : ' ও পেমেন্ট ট্রানজেকশন'} যাচাই করে অ্যাকাউন্টটি অনুমোদন (Approve) করবেন।
+                        Your registration has been submitted successfully to Master Control. Our system administrator will review your application{regSuccessResult.isTrial ? '' : ' and verify payment reference'} to activate your workspace.
                       </p>
                       <p className="leading-relaxed text-amber-300 font-medium">
-                        👉 অনুমোদন সম্পন্ন হলে আপনার ইমেইলে (<span className="underline text-white font-mono">{regSuccessResult.email}</span>) সরাসরি ডেডিকেটেড পোর্টাল লিংক, ইউজারনেম ও সিকিউর পাসওয়ার্ড পাঠিয়ে দেওয়া হবে।
+                        👉 Once approved, your dedicated login portal link, super admin username, and secure password will be dispatched to your email (<span className="underline text-white font-mono">{regSuccessResult.email}</span>).
                       </p>
                     </div>
                   </div>
 
                   <div className="text-[11px] text-slate-400 text-center pt-1 border-t border-slate-800">
-                    জরুরি প্রয়োজনে বা দ্রুত অনুমোদনের জন্য যোগাযোগ করুন: <span className="text-white font-semibold">+880 1700-000000</span> অথবা <span className="text-amber-400 font-mono">admin@fuelnest.xyz</span>
+                    For onboarding assistance or expedited activation, contact: <span className="text-white font-semibold">+880 1700-000000</span> or <span className="text-amber-400 font-mono">admin@fuelnest.xyz</span>
                   </div>
                 </div>
 
@@ -950,7 +950,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
-                  <span>ঠিক আছে, বুঝেছি (Done)</span>
+                  <span>Got it, Close Window</span>
                 </button>
               </div>
             )}

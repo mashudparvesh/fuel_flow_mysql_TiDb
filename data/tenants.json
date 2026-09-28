@@ -1,5 +1,79 @@
 [
   {
+    "id": "tenant_dhaka_1",
+    "name": "Dhaka Swift Express",
+    "code": "DSE",
+    "currency": "BDT",
+    "phone": "01811223344",
+    "address": "Dhaka, Bangladesh",
+    "contact_person": "Kamal Uddin",
+    "email": "kamal@dhakaswift.com",
+    "status": "active",
+    "deleted_at": null,
+    "created_at": "2026-09-28",
+    "subscription": {
+      "plan": "trial_3days",
+      "plan_name_bn": "3 Days Free Trial",
+      "status": "active",
+      "start_date": "2026-09-28",
+      "end_date": "2026-10-01",
+      "duration_type": "days",
+      "duration_val": 3,
+      "price_bdt": 0,
+      "payment_status": "paid",
+      "max_vehicles": 100,
+      "max_users": 25,
+      "max_pumps": 15,
+      "super_admin_username": "dhaka_admin",
+      "super_admin_password": "Dhaka@12345",
+      "features": {
+        "tanker_bowzer": true,
+        "anomaly_ai": true,
+        "reports_export": true,
+        "qr_scanner": true,
+        "custom_categories": true
+      },
+      "notes": "3-Day Free Trial Provisioning"
+    }
+  },
+  {
+    "id": "tenant_apex_1",
+    "name": "Apex Logistics Test",
+    "code": "ALT",
+    "currency": "BDT",
+    "phone": "01700112233",
+    "address": "Dhaka, Bangladesh",
+    "contact_person": "Rafiqul Islam",
+    "email": "rafiq@apexlogistics.com",
+    "status": "active",
+    "deleted_at": null,
+    "created_at": "2026-09-28",
+    "subscription": {
+      "plan": "trial_3days",
+      "plan_name_bn": "3 Days Free Trial",
+      "status": "active",
+      "start_date": "2026-09-28",
+      "end_date": "2026-10-01",
+      "duration_type": "days",
+      "duration_val": 3,
+      "price_bdt": 0,
+      "payment_status": "paid",
+      "max_vehicles": 100,
+      "max_users": 25,
+      "max_pumps": 15,
+      "super_admin_username": "apex_admin",
+      "super_admin_password": "Apex@12345",
+      "features": {
+        "tanker_bowzer": true,
+        "anomaly_ai": true,
+        "reports_export": true,
+        "qr_scanner": true,
+        "custom_categories": true
+      },
+      "notes": "3-Day Free Trial Provisioning"
+    }
+  },
+  {
     "id": "tenant_padma",
     "name": "Padma Logistics",
     "code": "PLFLT",
@@ -161,7 +235,7 @@
     "created_at": "2026-09-27",
     "subscription": {
       "plan": "trial_3days",
-      "plan_name_bn": "৩ দিনের ফ্রি ট্রায়াল (3-Day Free Trial)",
+      "plan_name_bn": "3-Day Free Trial",
       "status": "active",
       "start_date": "2026-09-27",
       "end_date": "2026-09-30",
