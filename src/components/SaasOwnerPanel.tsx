@@ -641,7 +641,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       const matchStatus =
         statusFilter === 'all' ||
         (statusFilter === 'suspended' && isSusp) ||
-        (statusFilter === 'pending_approval' && isSusp) ||
+        ((statusFilter as string) === 'pending_approval' && isSusp) ||
         subStatus === statusFilter;
       const matchPlan = planFilter === 'all' || t.subscription?.plan === planFilter;
 
@@ -1084,7 +1084,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       )}
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className="p-4 rounded-xl bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-blue-900/40 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
             <span>{'Total Subscribers'}</span>
@@ -1108,6 +1108,35 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
             {'Valid subscriptions'}
+          </div>
+        </div>
+
+        <div
+          onClick={() => {
+            setActiveTab('subscribers');
+            setStatusFilter('suspended');
+          }}
+          className={`p-4 rounded-xl border shadow-xs cursor-pointer transition-all hover:scale-[1.02] ${
+            stats.suspended > 0
+              ? 'bg-amber-500/10 border-amber-500/50 hover:bg-amber-500/20'
+              : 'bg-white dark:bg-[#0c162d] border-slate-200 dark:border-blue-900/40'
+          }`}
+          title="Click to view suspended subscriptions"
+        >
+          <div className="flex items-center justify-between text-amber-500 dark:text-amber-400 text-xs font-semibold mb-1">
+            <span>{'Suspended'}</span>
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-2xl font-black text-amber-500 flex items-center gap-1.5">
+            <span>{stats.suspended}</span>
+            {stats.suspended > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-600 text-white font-bold animate-pulse">
+                Action
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            {'Awaiting Activation'}
           </div>
         </div>
 
@@ -1709,78 +1738,111 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   {/* Actions Footer */}
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 mt-4">
-                    {/* Primary Button: Impersonate / Launch Workspace */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => impersonateTenant(tenant.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all hover:scale-[1.01]"
-                        title={'Launch Tenant Fleet'}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>{'Enter Workspace'}</span>
-                      </button>
+                    {isSuspended ? (
+                      <div className="space-y-2">
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[11px] font-bold flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
+                          <span>Workspace is suspended. Click below to unsuspend and activate access.</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUnsuspendAndActivate(tenant)}
+                            disabled={actionLoadingId === tenant.id}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                          >
+                            {actionLoadingId === tenant.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Activating...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>✅ Unsuspend & Activate</span>
+                              </>
+                            )}
+                          </button>
 
-                      <button
-                        onClick={() => {
-                          if (isModerator) {
-                            setModRequestModal({ type: 'EXTEND_SUBSCRIPTION', tenant });
-                            setModRequestDays(30);
-                            setModRequestReason('');
-                          } else {
-                            setSelectedTenantForExtend(tenant);
-                            setIsExtendModalOpen(true);
-                          }
-                        }}
-                        className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-bold text-xs border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
-                        title={isModerator ? 'Request Extend Duration (Requires Approval)' : 'Extend Duration'}
-                      >
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{isModerator ? 'Req +Days' : '+Days'}</span>
-                      </button>
-                    </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isModerator) {
+                                setModRequestModal({ type: 'DELETE_SUBSCRIBER', tenant });
+                                setModRequestReason('');
+                              } else {
+                                setDeleteConfirmTenant(tenant);
+                              }
+                            }}
+                            className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 cursor-pointer"
+                            title="Delete Subscriber"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Primary Button: Impersonate / Launch Workspace */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => impersonateTenant(tenant.id)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all hover:scale-[1.01]"
+                            title={'Launch Tenant Fleet'}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>{'Enter Workspace'}</span>
+                          </button>
 
-                    {/* Secondary Row: Quick Actions */}
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <button
-                        onClick={() => {
-                          if (isModerator) {
-                            setModRequestModal({
-                              type: isSuspended ? 'UNSUSPEND_TENANT' : 'SUSPEND_TENANT',
-                              tenant
-                            });
-                            setModRequestReason('');
-                          } else {
-                            setTenantStatus(tenant.id, isSuspended ? 'active' : 'suspended');
-                          }
-                        }}
-                        className={`text-[11px] font-semibold hover:underline cursor-pointer ${
-                          isSuspended ? 'text-emerald-600' : 'text-slate-500 hover:text-amber-600'
-                        }`}
-                      >
-                        {isSuspended
-                          ? (isModerator ? 'Req Unsuspend' : '✅ Unsuspend Access')
-                          : (isModerator ? 'Req Suspend' : '⏸️ Suspend Access')}
-                      </button>
+                          <button
+                            onClick={() => {
+                              if (isModerator) {
+                                setModRequestModal({ type: 'EXTEND_SUBSCRIPTION', tenant });
+                                setModRequestDays(30);
+                                setModRequestReason('');
+                              } else {
+                                setSelectedTenantForExtend(tenant);
+                                setIsExtendModalOpen(true);
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-bold text-xs border border-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
+                            title={isModerator ? 'Request Extend Duration (Requires Approval)' : 'Extend Duration'}
+                          >
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{isModerator ? 'Req +Days' : '+Days'}</span>
+                          </button>
+                        </div>
 
-                      <button
-                        onClick={() => {
-                          if (isModerator) {
-                            setModRequestModal({
-                              type: 'DELETE_SUBSCRIBER',
-                              tenant
-                            });
-                            setModRequestReason('');
-                          } else {
-                            setDeleteConfirmTenant(tenant);
-                          }
-                        }}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1 cursor-pointer"
-                        title={isModerator ? 'Request Deletion Approval' : 'Delete Subscriber'}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>{isModerator ? 'Req Delete' : 'Delete'}</span>
-                      </button>
-                    </div>
+                        {/* Secondary Row: Quick Actions */}
+                        <div className="flex items-center justify-between text-xs pt-1">
+                          <button
+                            onClick={() => handleSuspendTenant(tenant)}
+                            className="text-[11px] font-semibold text-slate-500 hover:text-amber-600 cursor-pointer"
+                          >
+                            ⏸️ Suspend Access
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (isModerator) {
+                                setModRequestModal({
+                                  type: 'DELETE_SUBSCRIBER',
+                                  tenant
+                                });
+                                setModRequestReason('');
+                              } else {
+                                setDeleteConfirmTenant(tenant);
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1 cursor-pointer"
+                            title={isModerator ? 'Request Deletion Approval' : 'Delete Subscriber'}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>{isModerator ? 'Req Delete' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );

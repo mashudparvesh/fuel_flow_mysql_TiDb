@@ -1036,12 +1036,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     // Update corresponding users for this tenant
     activeUsers = loadUsers();
     let usersUpdated = false;
-    activeUsers.forEach((u: any) => {
+    for (const u of activeUsers) {
       if (u.tenant_id === id) {
         u.status = status === 'active' ? 'active' : 'suspended';
         usersUpdated = true;
+        await upsertUserInDB(u).catch(e => console.warn('[MySQL] User status update error:', e));
       }
-    });
+    }
     if (usersUpdated) {
       saveUsers(activeUsers);
     }
@@ -1617,12 +1618,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
           // Activate user
           activeUsers = loadUsers();
-          activeUsers.forEach(u => {
+          for (const u of activeUsers) {
             if (u.tenant_id === item.tenant_id) {
               u.status = 'active';
               targetUser = u;
+              await upsertUserInDB(u).catch(() => {});
             }
-          });
+          }
           saveUsers(activeUsers);
 
           superAdminUsername = targetTenant.subscription?.super_admin_username || item.super_admin_username;
