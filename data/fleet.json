@@ -1603,6 +1603,56 @@
       "default_benchmark": 4.5,
       "icon_name": "Car",
       "description": "Personnel logistics"
+    },
+    {
+      "id": "cat_dump_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Dump Truck",
+      "metric_type": "kmpl",
+      "default_benchmark": 3.2,
+      "icon_name": "Truck",
+      "description": "Heavy material & sand hauling"
+    },
+    {
+      "id": "cat_excavator_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Hydraulic Excavator",
+      "metric_type": "lph",
+      "default_benchmark": 14,
+      "icon_name": "Excavator",
+      "description": "Earthmoving & construction"
+    },
+    {
+      "id": "cat_crane_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Crane & Rig",
+      "metric_type": "lph",
+      "default_benchmark": 18,
+      "icon_name": "Truck",
+      "description": "Heavy lifting & piling rig"
+    },
+    {
+      "id": "cat_generator_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Site Diesel Generator",
+      "metric_type": "lph",
+      "default_benchmark": 22,
+      "icon_name": "Fuel",
+      "description": "Power generation"
+    },
+    {
+      "id": "cat_bus_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "40-Seat Staff Bus",
+      "metric_type": "kmpl",
+      "default_benchmark": 4.5,
+      "icon_name": "Car",
+      "description": "Personnel logistics"
     }
   ],
   "companies": [
@@ -2011,12 +2061,12 @@
       "current_price": 108.5,
       "price_history": [
         {
-          "date": "2026-09-27",
+          "date": "2026-09-29",
           "price": 108.5,
-          "changed_by": "Md Babul Hossain"
+          "changed_by": "Babul Hossain"
         }
       ],
-      "updated_at": "2026-09-27"
+      "updated_at": "2026-09-29"
     },
     {
       "id": "fuel_octane_tenant_prema",
@@ -2028,12 +2078,12 @@
       "current_price": 131,
       "price_history": [
         {
-          "date": "2026-09-27",
+          "date": "2026-09-29",
           "price": 131,
-          "changed_by": "Md Babul Hossain"
+          "changed_by": "Babul Hossain"
         }
       ],
-      "updated_at": "2026-09-27"
+      "updated_at": "2026-09-29"
     },
     {
       "id": "fuel_petrol_tenant_prema",
@@ -2045,12 +2095,12 @@
       "current_price": 126,
       "price_history": [
         {
-          "date": "2026-09-27",
+          "date": "2026-09-29",
           "price": 126,
-          "changed_by": "Md Babul Hossain"
+          "changed_by": "Babul Hossain"
         }
       ],
-      "updated_at": "2026-09-27"
+      "updated_at": "2026-09-29"
     },
     {
       "id": "fuel_cng_tenant_prema",
@@ -2062,12 +2112,12 @@
       "current_price": 43,
       "price_history": [
         {
-          "date": "2026-09-27",
+          "date": "2026-09-29",
           "price": 43,
-          "changed_by": "Md Babul Hossain"
+          "changed_by": "Babul Hossain"
         }
       ],
-      "updated_at": "2026-09-27"
+      "updated_at": "2026-09-29"
     },
     {
       "id": "fuel_lpg_tenant_prema",
@@ -2079,12 +2129,12 @@
       "current_price": 115,
       "price_history": [
         {
-          "date": "2026-09-27",
+          "date": "2026-09-29",
           "price": 115,
-          "changed_by": "Md Babul Hossain"
+          "changed_by": "Babul Hossain"
         }
       ],
-      "updated_at": "2026-09-27"
+      "updated_at": "2026-09-29"
     },
     {
       "id": "fuel_diesel_tenant_prema_1",
@@ -2762,6 +2812,91 @@
           "date": "2026-09-29",
           "price": 115,
           "changed_by": "Farid Ahmed"
+        }
+      ],
+      "updated_at": "2026-09-29"
+    },
+    {
+      "id": "fuel_diesel_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Diesel",
+      "code": "diesel",
+      "unit": "Liter",
+      "current_price": 108.5,
+      "price_history": [
+        {
+          "date": "2026-09-29",
+          "price": 108.5,
+          "changed_by": "Babul Hossain"
+        }
+      ],
+      "updated_at": "2026-09-29"
+    },
+    {
+      "id": "fuel_octane_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Octane",
+      "code": "octane",
+      "unit": "Liter",
+      "current_price": 131,
+      "price_history": [
+        {
+          "date": "2026-09-29",
+          "price": 131,
+          "changed_by": "Babul Hossain"
+        }
+      ],
+      "updated_at": "2026-09-29"
+    },
+    {
+      "id": "fuel_petrol_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "Petrol",
+      "code": "petrol",
+      "unit": "Liter",
+      "current_price": 126,
+      "price_history": [
+        {
+          "date": "2026-09-29",
+          "price": 126,
+          "changed_by": "Babul Hossain"
+        }
+      ],
+      "updated_at": "2026-09-29"
+    },
+    {
+      "id": "fuel_cng_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "CNG",
+      "code": "cng",
+      "unit": "m3",
+      "current_price": 43,
+      "price_history": [
+        {
+          "date": "2026-09-29",
+          "price": 43,
+          "changed_by": "Babul Hossain"
+        }
+      ],
+      "updated_at": "2026-09-29"
+    },
+    {
+      "id": "fuel_lpg_tenant_prema_mumlel9a_vope",
+      "tenant_id": "tenant_prema_mumlel9a_vope",
+      "user_id": "usr_tenant_prema_mumlel9a_vope_admin",
+      "name": "LPG",
+      "code": "lpg",
+      "unit": "Kg",
+      "current_price": 115,
+      "price_history": [
+        {
+          "date": "2026-09-29",
+          "price": 115,
+          "changed_by": "Babul Hossain"
         }
       ],
       "updated_at": "2026-09-29"

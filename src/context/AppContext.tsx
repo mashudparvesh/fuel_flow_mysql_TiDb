@@ -595,15 +595,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? json
           : (json.success && Array.isArray(json.data) ? json.data : []);
 
-        const serverTenants: Tenant[] = serverList.filter(t => t && t.id && !deletedIds.includes(t.id) && !t.deleted_at);
+        // Server is authoritative: include all valid non-deleted tenants from server
+        const serverTenants: Tenant[] = serverList.filter(t => t && t.id && !t.deleted_at);
 
         if (serverTenants.length > 0) {
+          // If server returns tenants that were in deletedIds tombstone, purge them from tombstone
+          if (deletedIds.length > 0) {
+            const liveIds = new Set(serverTenants.map(t => t.id));
+            const cleanedDeleted = deletedIds.filter(id => !liveIds.has(id));
+            if (cleanedDeleted.length !== deletedIds.length) {
+              try {
+                localStorage.setItem('fuelflow_deleted_tenants', JSON.stringify(cleanedDeleted));
+              } catch {}
+            }
+          }
+
           setTenants(prev => {
             const safePrev = Array.isArray(prev) ? prev.filter(pt => pt && pt.id) : [];
             const merged = [...serverTenants];
-            // Retain any locally registered subscribers that are NOT deleted
+            // Retain any locally created subscribers that are NOT on server and NOT deleted
             safePrev.filter(pt => !deletedIds.includes(pt.id) && !pt.deleted_at).forEach(pt => {
-              const existingIdx = merged.findIndex(st => st && (st.id === pt.id || (st.code && pt.code && st.code.toLowerCase() === pt.code.toLowerCase())));
+              const existingIdx = merged.findIndex(st => st && st.id === pt.id);
               if (existingIdx === -1) {
                 merged.push(pt);
                 // Self-healing: sync subscriber present locally to the server backend
@@ -630,6 +642,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
               }
             });
+            try {
+              localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(merged));
+            } catch (e) {}
             return merged;
           });
         }

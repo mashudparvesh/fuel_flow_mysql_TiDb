@@ -579,17 +579,31 @@ async function provisionNewTenant(payload: {
   ).toUpperCase().substring(0, 8);
 
   const existingTenants = loadTenants();
-  let candidateId = `tenant_${firstWord.toLowerCase()}`;
-  let counter = 1;
-  while (existingTenants.some(t => t.id === candidateId)) {
-    candidateId = `tenant_${firstWord.toLowerCase()}_${counter++}`;
+  const dbTenants = await fetchTenantsFromDB().catch(() => null);
+  const allKnownTenants = [...existingTenants, ...(dbTenants || [])];
+
+  // Guaranteed unique tenant ID with timestamp to prevent any collisions or client tombstone caching
+  const uniqueSuffix = Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+  const tenantId = `tenant_${firstWord.toLowerCase()}_${uniqueSuffix}`;
+
+  // Ensure unique code to avoid MySQL UNIQUE KEY idx_tenants_code collisions
+  let baseCode = cleanCode.length < 3 ? `${cleanCode}FLT` : cleanCode;
+  let tenantCode = baseCode;
+  let codeCounter = 1;
+  while (allKnownTenants.some(t => t && t.code && t.code.toUpperCase() === tenantCode.toUpperCase())) {
+    tenantCode = `${baseCode}${codeCounter++}`.substring(0, 16);
   }
 
-  const tenantId = candidateId;
-  const tenantCode = cleanCode.length < 3 ? `${cleanCode}FLT` : cleanCode;
-
-  // 2. Super Admin Username: FirstWord_admin
-  const superAdminUsername = `${firstWord.toLowerCase()}_admin`;
+  // 2. Super Admin Username: FirstWord_admin (guaranteed unique)
+  const baseUsername = `${firstWord.toLowerCase()}_admin`;
+  let superAdminUsername = baseUsername;
+  let userCounter = 1;
+  const existingUsers = loadUsers();
+  const dbUsers = await fetchUsersFromDB().catch(() => null);
+  const allKnownUsers = [...existingUsers, ...(dbUsers || [])];
+  while (allKnownUsers.some(u => u && u.username && u.username.toLowerCase() === superAdminUsername.toLowerCase())) {
+    superAdminUsername = `${baseUsername}_${userCounter++}`;
+  }
 
   // 3. Temporary Password: FirstWord@12345
   const capitalizedWord = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
@@ -934,17 +948,19 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // 1. GET /api/tenants - Public dropdown endpoint for Login Form
   // Filters out soft-deleted (whereNull('deleted_at')) and inactive/suspended (where('status', 'active')) (ISSUE 1 & 2 Fix)
   app.get('/api/tenants', async (req: Request, res: Response) => {
-    // Try to load from MySQL if connected
-    const dbTenants = await fetchTenantsFromDB();
-    if (dbTenants && dbTenants.length > 0) {
-      activeTenants = dbTenants;
-    } else {
-      activeTenants = loadTenants();
-    }
+    const dbTenants = await fetchTenantsFromDB().catch(() => null);
+    const fileTenants = loadTenants();
+    const combined = Array.isArray(dbTenants) && dbTenants.length > 0 ? [...dbTenants] : [...fileTenants];
+    fileTenants.forEach(ft => {
+      if (ft && ft.id && !combined.some(ct => ct.id === ft.id)) {
+        combined.unshift(ft);
+      }
+    });
+    activeTenants = combined;
 
-    // STRICT FILTER: Return non-deleted tenants with complete details preserved
+    // Return non-deleted active tenants for login dropdown
     const publicCompanies = activeTenants
-      .filter(t => !t.deleted_at)
+      .filter(t => !t.deleted_at && (t.status === 'active' || t.subscription?.status === 'active'))
       .map(t => ({
         ...t,
         status: t.status || t.subscription?.status || 'active'
@@ -957,17 +973,20 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     });
   });
 
-  // 2. GET /api/tenants/all - Full subscriber list for SaaS Master Control Panel
+  // 2. GET /api/tenants/all - Full subscriber list for SaaS Master Control Panel (Includes Active & Suspended)
   app.get('/api/tenants/all', async (req: Request, res: Response) => {
-    const dbTenants = await fetchTenantsFromDB();
-    if (dbTenants && dbTenants.length > 0) {
-      activeTenants = dbTenants;
-    } else {
-      activeTenants = loadTenants();
-    }
+    const dbTenants = await fetchTenantsFromDB().catch(() => null);
+    const fileTenants = loadTenants();
+    const combined = Array.isArray(dbTenants) && dbTenants.length > 0 ? [...dbTenants] : [...fileTenants];
+    fileTenants.forEach(ft => {
+      if (ft && ft.id && !combined.some(ct => ct.id === ft.id)) {
+        combined.unshift(ft);
+      }
+    });
+    activeTenants = combined;
     res.json({
       success: true,
-      data: activeTenants,
+      data: activeTenants.filter(t => t && !t.deleted_at),
       timestamp: new Date().toISOString()
     });
   });
@@ -1017,7 +1036,15 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body; // 'active' | 'suspended' | 'inactive'
 
-    activeTenants = loadTenants();
+    const fileTenants = loadTenants();
+    const dbTenants = await fetchTenantsFromDB().catch(() => null);
+    activeTenants = Array.isArray(dbTenants) && dbTenants.length > 0 ? dbTenants : fileTenants;
+    fileTenants.forEach(ft => {
+      if (ft && ft.id && !activeTenants.some(ct => ct.id === ft.id)) {
+        activeTenants.unshift(ft);
+      }
+    });
+
     const tenant = activeTenants.find(t => t.id === id);
 
     if (!tenant) {
@@ -1605,7 +1632,14 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
       // If tenant already provisioned in suspended state, unsuspend it now
       if (item.tenant_id) {
-        activeTenants = loadTenants();
+        const fileTenants = loadTenants();
+        const dbTenants = await fetchTenantsFromDB().catch(() => null);
+        activeTenants = Array.isArray(dbTenants) && dbTenants.length > 0 ? dbTenants : fileTenants;
+        fileTenants.forEach(ft => {
+          if (ft && ft.id && !activeTenants.some(ct => ct.id === ft.id)) {
+            activeTenants.unshift(ft);
+          }
+        });
         targetTenant = activeTenants.find(t => t.id === item.tenant_id);
         if (targetTenant) {
           targetTenant.status = 'active';

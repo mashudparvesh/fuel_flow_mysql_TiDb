@@ -571,14 +571,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     email: '',
     address: '',
     currency: 'BDT',
-    plan: 'professional' as SubscriptionPlan,
+    plan: 'plan_1month' as SubscriptionPlan,
     duration_type: 'months' as 'days' | 'months' | 'years',
     duration_val: 1,
-    price_bdt: 15000,
+    price_bdt: 749,
     payment_status: 'paid' as 'paid' | 'partial' | 'due',
-    max_vehicles: 50,
-    max_users: 10,
-    max_pumps: 10,
+    max_vehicles: 100,
+    max_users: 25,
+    max_pumps: 15,
     super_admin_name: '',
     super_admin_username: '',
     super_admin_password: '',
@@ -750,14 +750,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       email: '',
       address: '',
       currency: 'BDT',
-      plan: 'professional',
+      plan: 'plan_1month',
       duration_type: 'months',
       duration_val: 1,
-      price_bdt: 15000,
+      price_bdt: 749,
       payment_status: 'paid',
-      max_vehicles: 50,
-      max_users: 10,
-      max_pumps: 10,
+      max_vehicles: 100,
+      max_users: 25,
+      max_pumps: 15,
       super_admin_name: '',
       super_admin_username: '',
       super_admin_password: '',
@@ -1531,27 +1531,45 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 className="px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
               >
                 <option value="all">{'All Plans'}</option>
-                <option value="trial_3days">3 Days Free Trial</option>
-                <option value="plan_1month">1 Month Plan</option>
-                <option value="plan_3months">3 Months Plan</option>
-                <option value="plan_6months">6 Months Plan</option>
-                <option value="plan_12months">VIP Plan</option>
+                <option value="trial_3days">3 Days Free Trial (0 BDT)</option>
+                <option value="plan_1month">1 Month Plan (749 BDT)</option>
+                <option value="plan_3months">3 Months Plan (2,199 BDT)</option>
+                <option value="plan_6months">6 Months Plan (3,999 BDT)</option>
+                <option value="plan_12months">VIP Plan (7,999 BDT)</option>
+                <option value="custom">Custom Enterprise</option>
                 <option value="starter">Starter (Legacy)</option>
                 <option value="professional">Professional (Legacy)</option>
                 <option value="enterprise">Enterprise (Legacy)</option>
-                <option value="custom">Custom</option>
               </select>
             </div>
           </div>
 
           {/* Subscribers Cards Grid */}
+          {stats.suspended > 0 && statusFilter !== 'suspended' && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 animate-pulse" />
+                <span className="font-bold text-amber-400">
+                  {stats.suspended} subscriber workspace{stats.suspended > 1 ? 's are' : ' is'} currently suspended awaiting review and unsuspension.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('suspended')}
+                className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] cursor-pointer shadow-xs"
+              >
+                View Suspended ({stats.suspended})
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredSubscribers.map(tenant => {
               const sub = tenant.subscription;
               const daysRemaining = sub ? getDaysRemaining(sub.end_date) : 0;
               const isExpired = daysRemaining < 0 || sub?.status === 'expired';
               const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 7;
-              const isSuspended = sub?.status === 'suspended';
+              const isSuspended = tenant.status === 'suspended' || sub?.status === 'suspended';
               const showPass = visiblePasswords[tenant.id];
 
               const superAdminUsername = sub?.super_admin_username || 'admin_' + tenant.code.toLowerCase();
@@ -1562,7 +1580,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   key={tenant.id}
                   className={`rounded-2xl p-5 bg-white dark:bg-[#0c162d] border transition-all flex flex-col justify-between shadow-sm hover:shadow-md ${
                     isSuspended
-                      ? 'border-slate-300 dark:border-slate-700 opacity-80'
+                      ? 'border-2 border-amber-500/60 bg-amber-500/[0.03] shadow-amber-500/10'
                       : isExpired
                       ? 'border-red-300 dark:border-red-900/60 bg-red-50/20'
                       : isExpiringSoon
@@ -1594,7 +1612,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
                             isSuspended
-                              ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                              ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse'
                               : isExpired
                               ? 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 border border-red-300'
                               : isExpiringSoon
@@ -1603,7 +1621,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           }`}
                         >
                           {isSuspended
-                            ? ('Suspended')
+                            ? ('Suspended (Awaiting Activation)')
                             : isExpired
                             ? ('Expired')
                             : isExpiringSoon
@@ -1611,8 +1629,17 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                             : (`${daysRemaining}d Active`)}
                         </span>
 
-                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 capitalize">
-                          {sub?.plan ? `${sub.plan.toUpperCase()} Plan` : 'Standard Plan'}
+                        <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 capitalize">
+                          {(() => {
+                            const p = sub?.plan;
+                            if (p === 'trial_3days') return '3 Days Free Trial';
+                            if (p === 'plan_1month') return '1 Month Plan (749 BDT)';
+                            if (p === 'plan_3months') return '3 Months Plan (2,199 BDT)';
+                            if (p === 'plan_6months') return '6 Months Plan (3,999 BDT)';
+                            if (p === 'plan_12months') return 'VIP Plan (7,999 BDT)';
+                            if (p === 'custom') return 'Custom Enterprise';
+                            return sub?.plan ? `${sub.plan.toUpperCase()} Plan` : 'Standard Plan';
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -3531,17 +3558,57 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       value={newSubForm.plan}
                       onChange={e => {
                         const p = e.target.value as SubscriptionPlan;
-                        let price = 15000;
-                        if (p === 'starter') price = 6000;
-                        if (p === 'enterprise') price = 35000;
-                        if (p === 'custom') price = 50000;
-                        setNewSubForm(prev => ({ ...prev, plan: p, price_bdt: price }));
+                        let price = 749;
+                        let dType: 'days' | 'months' | 'years' = 'months';
+                        let dVal = 1;
+                        let maxVehicles = 100;
+                        if (p === 'trial_3days') {
+                          price = 0;
+                          dType = 'days';
+                          dVal = 3;
+                          maxVehicles = 100;
+                        } else if (p === 'plan_1month') {
+                          price = 749;
+                          dType = 'months';
+                          dVal = 1;
+                          maxVehicles = 100;
+                        } else if (p === 'plan_3months') {
+                          price = 2199;
+                          dType = 'months';
+                          dVal = 3;
+                          maxVehicles = 100;
+                        } else if (p === 'plan_6months') {
+                          price = 3999;
+                          dType = 'months';
+                          dVal = 6;
+                          maxVehicles = 250;
+                        } else if (p === 'plan_12months') {
+                          price = 7999;
+                          dType = 'years';
+                          dVal = 1;
+                          maxVehicles = 999;
+                        } else if (p === 'custom') {
+                          price = 25000;
+                          dType = 'months';
+                          dVal = 12;
+                          maxVehicles = 999;
+                        }
+                        setNewSubForm(prev => ({
+                          ...prev,
+                          plan: p,
+                          price_bdt: price,
+                          duration_type: dType,
+                          duration_val: dVal,
+                          max_vehicles: maxVehicles
+                        }));
                       }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] text-slate-900 dark:text-white font-medium"
                     >
-                      <option value="starter">Starter (Up to 50 Vehicles)</option>
-                      <option value="professional">Professional (Up to 200 Vehicles)</option>
-                      <option value="enterprise">Enterprise (Unlimited Vehicles)</option>
+                      <option value="trial_3days">3 Days Free Trial (3 Days - 0 BDT)</option>
+                      <option value="plan_1month">1 Month Plan (30 Days - 749 BDT)</option>
+                      <option value="plan_3months">3 Months Plan (90 Days - 2,199 BDT)</option>
+                      <option value="plan_6months">6 Months Plan (180 Days - 3,999 BDT)</option>
+                      <option value="plan_12months">VIP Plan (365 Days - 7,999 BDT)</option>
                       <option value="custom">Custom Enterprise</option>
                     </select>
                   </div>

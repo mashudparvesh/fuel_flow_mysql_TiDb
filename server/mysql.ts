@@ -486,7 +486,7 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
       tenant.deleted_at || null,
       tenant.created_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
       sub.plan || 'starter',
-      sub.status || 'active',
+      sub.status || safeStatus,
       sub.start_date || null,
       sub.end_date || null,
       Number(sub.price_bdt) || 0,
