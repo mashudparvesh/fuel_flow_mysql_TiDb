@@ -285,6 +285,9 @@ async function runMigrations(p: Pool): Promise<void> {
       try {
         await p.query("ALTER TABLE `users` MODIFY COLUMN `status` VARCHAR(32) DEFAULT 'active'");
       } catch (e) {}
+      try {
+        await p.query("ALTER TABLE `tenants` ADD COLUMN `is_approved` TINYINT(1) DEFAULT 0");
+      } catch (e) {}
       console.log('[MySQL] Schema migration completed.');
     } catch (err) {
       console.error('[MySQL] Error reading fuelflow_schema.sql:', err);
@@ -430,6 +433,7 @@ export async function fetchTenantsFromDB(): Promise<any[] | null> {
         contact_person: r.contact_person || '',
         email: r.email || '',
         status: r.status || 'active',
+        is_approved: r.is_approved !== undefined ? Boolean(r.is_approved) : (r.status === 'active'),
         deleted_at: r.deleted_at,
         created_at: formatDateStr(r.created_at) || r.created_at,
         subscription: sub
@@ -448,8 +452,8 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
       INSERT INTO \`tenants\` (
         \`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
         \`status\`, \`deleted_at\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`,
-        \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`, \`is_approved\`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         \`name\` = VALUES(\`name\`),
         \`code\` = VALUES(\`code\`),
@@ -465,14 +469,16 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
         \`subscription_start_date\` = VALUES(\`subscription_start_date\`),
         \`subscription_end_date\` = VALUES(\`subscription_end_date\`),
         \`subscription_price\` = VALUES(\`subscription_price\`),
-        \`subscription_raw\` = VALUES(\`subscription_raw\`);
+        \`subscription_raw\` = VALUES(\`subscription_raw\`),
+        \`is_approved\` = VALUES(\`is_approved\`);
     `;
 
     const sub = { ...(tenant.subscription || {}) };
     if (tenant.logo) {
       sub.logo = tenant.logo;
     }
-    const safeStatus = tenant.status === 'inactive' ? 'suspended' : (tenant.status || 'active');
+    const safeStatus = tenant.status === 'inactive' ? 'suspended' : (tenant.status || 'pending');
+    const isApproved = tenant.is_approved ? 1 : (safeStatus === 'active' ? 1 : 0);
     const values = [
       tenant.id,
       tenant.name,
@@ -485,12 +491,13 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
       safeStatus,
       tenant.deleted_at || null,
       tenant.created_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
-      sub.plan || 'starter',
+      sub.plan || 'trial_3days',
       sub.status || safeStatus,
       sub.start_date || null,
       sub.end_date || null,
       Number(sub.price_bdt) || 0,
-      JSON.stringify(sub)
+      JSON.stringify(sub),
+      isApproved
     ];
 
     await pool.query(query, values);
@@ -498,6 +505,149 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
   } catch (err) {
     console.error('[MySQL] Error upserting tenant:', err);
     return false;
+  }
+}
+
+/**
+ * Atomic MySQL Transaction for onboarding new tenant and super admin user
+ * Rolls back automatically on any error
+ */
+export async function registerTenantWithTransaction(params: {
+  tenant: any;
+  user: any;
+}): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const tenant = params.tenant;
+    const sub = { ...(tenant.subscription || {}) };
+    const safeStatus = tenant.status || 'pending';
+    const isApproved = tenant.is_approved ? 1 : (safeStatus === 'active' ? 1 : 0);
+
+    const tenantQuery = `
+      INSERT INTO \`tenants\` (
+        \`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
+        \`status\`, \`deleted_at\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`,
+        \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`, \`is_approved\`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        \`name\` = VALUES(\`name\`),
+        \`code\` = VALUES(\`code\`),
+        \`currency\` = VALUES(\`currency\`),
+        \`phone\` = VALUES(\`phone\`),
+        \`address\` = VALUES(\`address\`),
+        \`contact_person\` = VALUES(\`contact_person\`),
+        \`email\` = VALUES(\`email\`),
+        \`status\` = VALUES(\`status\`),
+        \`subscription_plan\` = VALUES(\`subscription_plan\`),
+        \`subscription_status\` = VALUES(\`subscription_status\`),
+        \`subscription_start_date\` = VALUES(\`subscription_start_date\`),
+        \`subscription_end_date\` = VALUES(\`subscription_end_date\`),
+        \`subscription_price\` = VALUES(\`subscription_price\`),
+        \`subscription_raw\` = VALUES(\`subscription_raw\`),
+        \`is_approved\` = VALUES(\`is_approved\`);
+    `;
+
+    const tenantValues = [
+      tenant.id,
+      tenant.name,
+      tenant.code,
+      tenant.currency || 'BDT',
+      tenant.phone || '',
+      tenant.address || '',
+      tenant.contact_person || '',
+      tenant.email || '',
+      safeStatus,
+      tenant.deleted_at || null,
+      tenant.created_at || new Date().toISOString().slice(0, 19).replace('T', ' '),
+      sub.plan || 'trial_3days',
+      sub.status || safeStatus,
+      sub.start_date || null,
+      sub.end_date || null,
+      Number(sub.price_bdt) || 0,
+      JSON.stringify(sub),
+      isApproved
+    ];
+
+    await conn.query(tenantQuery, tenantValues);
+
+    const user = params.user;
+    const userQuery = `
+      INSERT INTO \`users\` (
+        \`id\`, \`tenant_id\`, \`name\`, \`email\`, \`username\`, \`password_hash\`, \`phone\`,
+        \`role\`, \`role_title_bn\`, \`company_id\`, \`status\`, \`allowed_categories\`,
+        \`allowed_pumps\`, \`permissions\`, \`created_at\`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        \`name\` = VALUES(\`name\`),
+        \`email\` = VALUES(\`email\`),
+        \`password_hash\` = VALUES(\`password_hash\`),
+        \`status\` = VALUES(\`status\`),
+        \`permissions\` = VALUES(\`permissions\`);
+    `;
+
+    const userValues = [
+      user.id,
+      user.tenant_id,
+      user.name,
+      user.email,
+      user.username,
+      user.password,
+      user.phone || '',
+      user.role || 'super_admin',
+      user.role_title_bn || 'Company Super Admin',
+      user.company_id || null,
+      safeStatus === 'active' ? 'active' : 'suspended',
+      JSON.stringify(user.allowed_category_ids || ['all']),
+      JSON.stringify(user.allowed_pump_ids || ['all']),
+      JSON.stringify(user.permissions || {}),
+      user.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ')
+    ];
+
+    await conn.query(userQuery, userValues);
+
+    await conn.commit();
+    await updateTableCounts().catch(() => {});
+    return true;
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    console.error('[MySQL Transaction Error] registerTenantWithTransaction rolled back:', err);
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * Atomic MySQL Transaction for approving a pending tenant and enabling login access
+ */
+export async function approveTenantWithTransaction(tenantId: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      "UPDATE `tenants` SET `status` = 'active', `subscription_status` = 'active', `is_approved` = 1 WHERE `id` = ?",
+      [tenantId]
+    );
+
+    await conn.query(
+      "UPDATE `users` SET `status` = 'active' WHERE `tenant_id` = ?",
+      [tenantId]
+    );
+
+    await conn.commit();
+    await updateTableCounts().catch(() => {});
+    return true;
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    console.error('[MySQL Transaction Error] approveTenantWithTransaction rolled back:', err);
+    throw err;
+  } finally {
+    conn.release();
   }
 }
 

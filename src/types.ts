@@ -10,7 +10,7 @@ export type SubscriptionPlan =
   | 'professional'
   | 'enterprise'
   | 'custom';
-export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial' | 'inactive' | 'pending_payment';
+export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial' | 'inactive' | 'pending_payment' | 'pending';
 
 export type SubscriptionPlanId = SubscriptionPlan;
 
@@ -219,6 +219,7 @@ export interface Tenant {
   contact_person?: string;
   email?: string;
   status?: SubscriptionStatus;
+  is_approved?: boolean;
   deleted_at?: string | null;
   created_at?: string;
   subscription?: TenantSubscription;

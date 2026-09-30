@@ -22,9 +22,11 @@ import {
   deletePaymentInDB,
   deleteCategoryInDB,
   deleteTankerInDB,
-  wipeAllDataFromDB
+  wipeAllDataFromDB,
+  registerTenantWithTransaction,
+  approveTenantWithTransaction
 } from "./server/mysql.ts";
-import { verifyPassword, hashPassword } from "./src/utils/authSecurity.ts";
+import { verifyPassword, hashPassword, isHashed } from "./src/utils/authSecurity.ts";
 
 // Initial fallback tenant data (empty - clean production state)
 const DEFAULT_TENANTS: any[] = [];
@@ -569,7 +571,9 @@ async function provisionNewTenant(payload: {
   payment_method?: string;
   transaction_id?: string;
   send_email?: boolean;
-  initial_status?: 'active' | 'suspended';
+  initial_status?: 'active' | 'suspended' | 'pending';
+  is_approved?: boolean;
+  password?: string;
 }) {
   const companyName = String(payload.company_name || 'Fleet Company').trim();
   const words = companyName.split(/\s+/).filter(Boolean);
@@ -606,9 +610,13 @@ async function provisionNewTenant(payload: {
     superAdminUsername = `${baseUsername}_${userCounter++}`;
   }
 
-  // 3. Temporary Password: FirstWord@12345
+  // 3. Password: User provided or FirstWord@12345
   const capitalizedWord = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
-  const temporaryPassword = `${capitalizedWord}@12345`;
+  const rawPassword = payload.password && String(payload.password).trim().length >= 6
+    ? String(payload.password).trim()
+    : `${capitalizedWord}@12345`;
+  const temporaryPassword = rawPassword;
+  const hashedPassword = isHashed(temporaryPassword) ? temporaryPassword : hashPassword(temporaryPassword);
 
   const today = new Date();
   const startDate = today.toISOString().split('T')[0];
@@ -666,7 +674,8 @@ async function provisionNewTenant(payload: {
   const maxPumps = 15;
 
   const isActuallyPaid = isTrial || Boolean(payload.payment_completed);
-  const initialStatus = payload.initial_status || (isActuallyPaid ? 'active' : 'pending_payment');
+  const initialStatus = payload.initial_status || (isActuallyPaid ? 'active' : 'pending');
+  const isApproved = payload.is_approved !== undefined ? Boolean(payload.is_approved) : (initialStatus === 'active');
   const initialPaymentStatus = isTrial ? 'trial' : (isActuallyPaid ? 'paid' : 'due');
 
   const newTenant: any = {
@@ -679,12 +688,14 @@ async function provisionNewTenant(payload: {
     contact_person: payload.admin_name || `${companyName} Admin`,
     email: payload.email,
     status: initialStatus,
+    is_approved: isApproved,
     deleted_at: null,
     created_at: startDate,
     subscription: {
       plan: planId as any,
       plan_name_bn: planNameEn,
       status: initialStatus,
+      is_approved: isApproved,
       start_date: startDate,
       end_date: endDate,
       duration_type: durationType,
@@ -704,8 +715,8 @@ async function provisionNewTenant(payload: {
         custom_categories: true
       },
       notes: isTrial
-        ? '3-Day Free Trial (Landing Page Registration - Suspended awaiting approval)'
-        : `Subscription - Plan: ${planNameEn} (${payload.payment_method || 'Online Checkout'} - Suspended awaiting approval)`
+        ? '3-Day Free Trial (Landing Page Registration - Pending Master Control approval)'
+        : `Subscription - Plan: ${planNameEn} (${payload.payment_method || 'Online Checkout'} - Pending Master Control approval)`
     }
   };
 
@@ -715,11 +726,11 @@ async function provisionNewTenant(payload: {
     name: payload.admin_name || `${companyName} Administrator`,
     email: payload.email,
     username: superAdminUsername,
-    password: temporaryPassword,
+    password: hashedPassword,
     phone: payload.phone || '',
     role: 'super_admin',
     role_title_bn: 'Company Super Admin',
-    status: initialStatus === 'suspended' ? 'suspended' : 'active',
+    status: initialStatus === 'active' ? 'active' : 'suspended',
     must_change_password: true,
     allowed_category_ids: ['all'],
     allowed_pump_ids: ['all'],
@@ -767,9 +778,14 @@ async function provisionNewTenant(payload: {
   saveUsers(usersList);
   activeUsers = usersList;
 
-  // Persist to DB if connected
-  await upsertTenantInDB(newTenant).catch(e => console.warn('[DB] Provision tenant sync warning:', e));
-  await upsertUserInDB(newSuperAdminUser).catch(e => console.warn('[DB] Provision user sync warning:', e));
+  // Persist to DB with atomic transaction
+  try {
+    await registerTenantWithTransaction({ tenant: newTenant, user: newSuperAdminUser });
+  } catch (dbErr) {
+    console.warn('[DB] Transaction fallback to individual upserts:', dbErr);
+    await upsertTenantInDB(newTenant).catch(() => {});
+    await upsertUserInDB(newSuperAdminUser).catch(() => {});
+  }
 
   // Dispatch Welcome Email only if explicitly requested
   const loginUrl = 'https://fuelnest.xyz/login';
@@ -974,8 +990,8 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     });
   });
 
-  // 2. GET /api/tenants/all - Full subscriber list for SaaS Master Control Panel (Includes Active & Suspended)
-  app.get('/api/tenants/all', async (req: Request, res: Response) => {
+  // 2. GET /api/tenants/all & /api/owner/subscribers - Full subscriber list for SaaS Master Control Panel (Includes Pending, Active & Suspended)
+  const handleGetAllSubscribers = async (req: Request, res: Response) => {
     const dbTenants = await fetchTenantsFromDB().catch(() => null);
     if (dbTenants !== null) {
       activeTenants = dbTenants;
@@ -988,7 +1004,10 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       data: activeTenants.filter(t => t && !t.deleted_at),
       timestamp: new Date().toISOString()
     });
-  });
+  };
+
+  app.get('/api/tenants/all', handleGetAllSubscribers);
+  app.get('/api/owner/subscribers', handleGetAllSubscribers);
 
   // 2.b POST /api/saas/wipe-all-subscribers - Complete wipe of all subscribers and database data
   app.post('/api/saas/wipe-all-subscribers', async (req: Request, res: Response) => {
@@ -1516,10 +1535,10 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   });
 
   // Dedicated subscriber registration endpoint for Landing Page (Trial & Premium Plans)
-  // Submissions immediately provision a workspace in suspended state awaiting Master Control unsuspend/activation.
-  app.post('/api/subscribers/register', async (req: Request, res: Response) => {
+  // Submissions immediately provision a workspace in PENDING state awaiting Master Control approval.
+  const handleSubscriberRegister = async (req: Request, res: Response) => {
     try {
-      const { company_name, admin_name, email, phone, plan_id, payment_completed, payment_method, transaction_id } = req.body;
+      const { company_name, admin_name, email, phone, plan_id, payment_completed, payment_method, transaction_id, password } = req.body;
 
       if (!company_name || !email) {
         return res.status(400).json({ success: false, message: 'Company name and email are required.' });
@@ -1530,7 +1549,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       let priceBdt = 0;
       const pid = plan_id || 'trial_3days';
 
-      if (pid === 'trial_3days') {
+      if (pid === 'trial_3days' || pid === 'trial') {
         planNameEn = '3 Days Free Trial';
         isTrial = true;
         priceBdt = 0;
@@ -1554,19 +1573,21 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
       const origin = req.protocol + '://' + req.get('host');
 
-      // 1. Immediately provision the tenant subscription and user in ACTIVE state
+      // 1. Immediately provision the tenant subscription and user in PENDING state (MySQL Transaction Safe)
       const provisionResult = await provisionNewTenant({
         company_name: String(company_name).trim(),
         admin_name: String(admin_name || company_name + ' Admin').trim(),
         email: String(email).trim().toLowerCase(),
         phone: String(phone || '').trim(),
+        password: password ? String(password).trim() : (req.body.password ? String(req.body.password).trim() : undefined),
         plan_id: pid,
         payment_completed: Boolean(payment_completed || isTrial),
         payment_method: payment_method || (isTrial ? 'Free Trial' : 'Online Payment'),
         transaction_id: transaction_id ? String(transaction_id).trim() : '',
         origin,
         send_email: false,
-        initial_status: 'active' // ACTIVE STATE: IMMEDIATELY AVAILABLE IN SUBSCRIBER LIST
+        initial_status: 'pending', // PENDING STATE AWAITING MASTER CONTROL APPROVAL
+        is_approved: false
       });
 
       const reqId = `reg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1583,7 +1604,8 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         payment_completed: Boolean(payment_completed || isTrial),
         payment_method: payment_method || (isTrial ? 'Free Trial' : 'Online Payment'),
         transaction_id: transaction_id ? String(transaction_id).trim() : '',
-        status: 'approved', // Immediately active
+        status: 'pending', // Pending manual Master Control approval
+        is_approved: false,
         tenant_id: provisionResult.tenant.id,
         super_admin_username: provisionResult.super_admin_username,
         temporary_password: provisionResult.temporary_password,
@@ -1596,12 +1618,14 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       saveRegistrationRequests(requests);
 
       // Return confirmation of submission
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
-        pending_approval: false,
+        pending_approval: true,
+        status: 'pending',
+        is_approved: false,
         tenant_id: provisionResult.tenant.id,
         tenant: provisionResult.tenant,
-        message: 'Registration application submitted successfully. Workspace created and ready.',
+        message: 'Registration application submitted successfully. Workspace created in PENDING status awaiting Master Control approval.',
         request: {
           id: newRequest.id,
           company_name: newRequest.company_name,
@@ -1614,13 +1638,85 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
           payment_method: newRequest.payment_method,
           transaction_id: newRequest.transaction_id,
           status: newRequest.status,
+          is_approved: false,
           created_at: newRequest.created_at
         }
       });
     } catch (err: any) {
-      res.status(500).json({ success: false, message: err?.message || 'Registration error' });
+      console.error('[Registration Error]:', err);
+      return res.status(500).json({ success: false, message: err?.message || 'Registration error' });
     }
-  });
+  };
+
+  app.post('/api/subscribers/register', handleSubscriberRegister);
+  app.post('/api/register', handleSubscriberRegister);
+
+  // Direct Tenant Plan Approval Endpoint for Master Control Panel
+  const handleApproveTenant = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { approved_by } = req.body || {};
+
+      // 1. Transaction-safe approval in MySQL
+      await approveTenantWithTransaction(id).catch(async () => {
+        await updateTenantStatusInDB(id, 'active').catch(() => {});
+      });
+
+      // 2. Update activeTenants in memory & disk
+      const fileTenants = loadTenants();
+      const dbTenants = await fetchTenantsFromDB().catch(() => null);
+      activeTenants = Array.isArray(dbTenants) && dbTenants.length > 0 ? dbTenants : fileTenants;
+      const targetTenant = activeTenants.find(t => t.id === id);
+      if (targetTenant) {
+        targetTenant.status = 'active';
+        targetTenant.is_approved = true;
+        if (targetTenant.subscription) {
+          targetTenant.subscription.status = 'active';
+          targetTenant.subscription.is_approved = true;
+        }
+        saveTenants(activeTenants);
+      }
+
+      // 3. Activate associated admin users
+      activeUsers = loadUsers();
+      let activatedUser: any = null;
+      activeUsers.forEach(u => {
+        if (u.tenant_id === id) {
+          u.status = 'active';
+          activatedUser = u;
+          upsertUserInDB(u).catch(() => {});
+        }
+      });
+      saveUsers(activeUsers);
+
+      // 4. Mark registration request as approved
+      const requests = loadRegistrationRequests();
+      const reqItem = requests.find((r: any) => r.tenant_id === id);
+      if (reqItem) {
+        reqItem.status = 'approved';
+        reqItem.is_approved = true;
+        reqItem.approved_at = new Date().toISOString();
+        reqItem.approved_by = approved_by || 'Platform Owner';
+        saveRegistrationRequests(requests);
+      }
+
+      return res.json({
+        success: true,
+        tenant_id: id,
+        status: 'active',
+        is_approved: true,
+        message: `Plan approved for "${targetTenant?.name || id}". Workspace is now ACTIVE and login access is enabled.`,
+        tenant: targetTenant,
+        user: activatedUser
+      });
+    } catch (err: any) {
+      console.error('[Approval Error]:', err);
+      return res.status(500).json({ success: false, message: err?.message || 'Error approving plan' });
+    }
+  };
+
+  app.post('/api/tenants/:id/approve', handleApproveTenant);
+  app.post('/api/owner/subscribers/:id/approve', handleApproveTenant);
 
   // Get all subscriber registration requests for Master Control
   app.get('/api/subscribers/registration-requests', (req: Request, res: Response) => {

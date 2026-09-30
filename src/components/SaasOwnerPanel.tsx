@@ -411,6 +411,69 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     }
   };
 
+  // Dedicated Master Control Direct Plan Approval Handler (Available to SaaS Owner, Admin & Moderator)
+  const handleApproveTenantPlan = async (tenant: any) => {
+    if (!tenant) return;
+    try {
+      setActionLoadingId(tenant.id);
+      const res = await fetch(`/api/tenants/${tenant.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved_by: currentUserName })
+      });
+      const data = await res.json();
+      setActionLoadingId(null);
+
+      // Local state update
+      setTenantStatus(tenant.id, 'active');
+      await Promise.all([
+        refreshTenantsFromServer?.(),
+        refreshUsersFromServer?.(),
+        fetchRegistrationRequests()
+      ]);
+
+      try {
+        const ch = new BroadcastChannel('fuelflow_tenants_sync');
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.postMessage({ type: 'REFRESH_USERS' });
+        ch.close();
+      } catch (e) {}
+
+      // Find matching registration request if available to get credentials
+      const matchingReq = registrationRequests.find(r => r.tenant_id === tenant.id || r.company_name?.toLowerCase() === tenant.name?.toLowerCase());
+      const sub = tenant.subscription;
+      const uname = matchingReq?.super_admin_username || sub?.super_admin_username || data.user?.username || `admin_${(tenant.code || '').toLowerCase()}`;
+      const pass = matchingReq?.temporary_password || sub?.super_admin_password || `${tenant.code || 'User'}@12345`;
+
+      // Open Credentials Modal immediately with full 1-click tools
+      setSelectedApprovalModalData({
+        id: tenant.id,
+        company_name: tenant.name,
+        admin_name: tenant.contact_person,
+        email: tenant.email,
+        phone: tenant.phone,
+        plan_name: sub?.plan_name_bn || sub?.plan || matchingReq?.plan_name || 'Standard Plan',
+        super_admin_username: uname,
+        temporary_password: pass,
+        login_url: 'https://fuelnest.xyz/login'
+      });
+      setDirectEmailResult(null);
+
+      setActionFeedbackMsg({
+        text: `Plan approved for "${tenant.name}"! Workspace is now ACTIVE and login access is enabled.`,
+        type: 'success'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
+    } catch (err: any) {
+      setActionLoadingId(null);
+      setActionFeedbackMsg({
+        text: err?.message || 'Error occurred while approving plan.',
+        type: 'error'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
+    }
+  };
+
   const handleSuspendTenant = async (tenant: any) => {
     if (!tenant) return;
     try {
@@ -636,12 +699,14 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
         (t.phone || '').toLowerCase().includes(q) ||
         ((t.subscription?.super_admin_username || '').toLowerCase().includes(q));
 
-      const isSusp = t.status === 'suspended' || t.subscription?.status === 'suspended';
-      const subStatus = isSusp ? 'suspended' : (t.subscription?.status || t.status || 'active');
+      const isPending = t.status === 'pending' || t.subscription?.status === 'pending' || t.is_approved === false;
+      const isSusp = !isPending && (t.status === 'suspended' || t.subscription?.status === 'suspended');
+      const subStatus = isPending ? 'pending' : (isSusp ? 'suspended' : (t.subscription?.status || t.status || 'active'));
       const matchStatus =
         statusFilter === 'all' ||
         (statusFilter === 'suspended' && isSusp) ||
-        ((statusFilter as string) === 'pending_approval' && isSusp) ||
+        (((statusFilter as string) === 'pending_approval' || (statusFilter as string) === 'pending') && isPending) ||
+        (statusFilter === 'active' && !isPending && !isSusp && subStatus === 'active') ||
         subStatus === statusFilter;
       const matchPlan = planFilter === 'all' || t.subscription?.plan === planFilter;
 
@@ -664,12 +729,16 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     let expiring = 0;
     let expired = 0;
     let suspended = 0;
+    let pending = 0;
     let totalRevenue = 0;
 
     allTenants.forEach(t => {
       const sub = t.subscription;
-      const isSusp = t.status === 'suspended' || sub?.status === 'suspended';
-      if (isSusp) {
+      const isPending = t.status === 'pending' || sub?.status === 'pending' || t.is_approved === false;
+      const isSusp = !isPending && (t.status === 'suspended' || sub?.status === 'suspended');
+      if (isPending) {
+        pending++;
+      } else if (isSusp) {
         suspended++;
       } else {
         if (sub) {
@@ -689,7 +758,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
       }
     });
 
-    return { total, active, expiring, expired, suspended, totalRevenue };
+    return { total, active, expiring, expired, suspended, pending, totalRevenue };
   }, [allTenants]);
 
   // Auto-generate code when typing name
@@ -864,11 +933,11 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   };
 
   // Direct In-App Delete Tenant (For Owner Admin, Co-Owner Admin, Admin)
-  const handleExecuteDeleteTenant = () => {
+  const handleExecuteDeleteTenant = async () => {
     if (!deleteConfirmTenant) return;
     setIsDeletingTenant(true);
     try {
-      deleteTenantSubscriber(deleteConfirmTenant.id);
+      await deleteTenantSubscriber(deleteConfirmTenant.id);
       setDeleteConfirmTenant(null);
       setApprovalFeedback('Subscriber deleted successfully.');
       setTimeout(() => setApprovalFeedback(null), 4000);
@@ -1520,7 +1589,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               >
                 <option value="all">{'All Status'}</option>
                 <option value="active">{'Active'}</option>
-                <option value="pending_approval">{`Pending Approval (${pendingRegRequestsCount})`}</option>
+                <option value="pending_approval">{`Pending Approval (${stats.pending || pendingRegRequestsCount})`}</option>
                 <option value="expired">{'Expired'}</option>
                 <option value="suspended">{'Suspended'}</option>
               </select>
@@ -1566,17 +1635,20 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
               const daysRemaining = sub ? getDaysRemaining(sub.end_date) : 0;
               const isExpired = daysRemaining < 0 || sub?.status === 'expired';
               const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 7;
-              const isSuspended = tenant.status === 'suspended' || sub?.status === 'suspended';
+              const isPending = tenant.status === 'pending' || sub?.status === 'pending' || tenant.is_approved === false;
+              const isSuspended = !isPending && (tenant.status === 'suspended' || sub?.status === 'suspended');
               const showPass = visiblePasswords[tenant.id];
 
-              const superAdminUsername = sub?.super_admin_username || 'admin_' + tenant.code.toLowerCase();
+              const superAdminUsername = sub?.super_admin_username || 'admin_' + (tenant.code || '').toLowerCase();
               const superAdminPassword = sub?.super_admin_password || 'pass1234';
 
               return (
                 <div
                   key={tenant.id}
                   className={`rounded-2xl p-5 bg-white dark:bg-[#0c162d] border transition-all flex flex-col justify-between shadow-sm hover:shadow-md ${
-                    isSuspended
+                    isPending
+                      ? 'border-2 border-amber-500 bg-amber-500/[0.05] shadow-amber-500/10 ring-1 ring-amber-500/30'
+                      : isSuspended
                       ? 'border-2 border-amber-500/60 bg-amber-500/[0.03] shadow-amber-500/10'
                       : isExpired
                       ? 'border-red-300 dark:border-red-900/60 bg-red-50/20'
@@ -1608,7 +1680,9 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       <div className="flex flex-col items-end gap-1">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                            isSuspended
+                            isPending
+                              ? 'bg-amber-500 text-slate-950 font-black border border-amber-400 animate-pulse'
+                              : isSuspended
                               ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse'
                               : isExpired
                               ? 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 border border-red-300'
@@ -1617,7 +1691,9 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                               : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300'
                           }`}
                         >
-                          {isSuspended
+                          {isPending
+                            ? ('Pending Approval')
+                            : isSuspended
                             ? ('Suspended (Awaiting Activation)')
                             : isExpired
                             ? ('Expired')
@@ -1762,7 +1838,50 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
                   {/* Actions Footer */}
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 mt-4">
-                    {isSuspended ? (
+                    {isPending ? (
+                      <div className="space-y-2">
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[11px] font-bold flex items-center gap-2">
+                          <Clock className="w-4 h-4 shrink-0 animate-pulse text-amber-400" />
+                          <span>New registration in PENDING status. Click below to approve plan & enable login.</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveTenantPlan(tenant)}
+                            disabled={actionLoadingId === tenant.id}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                          >
+                            {actionLoadingId === tenant.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Approving Plan...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-white" />
+                                <span>Approve Plan</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isModerator) {
+                                setModRequestModal({ type: 'DELETE_SUBSCRIBER', tenant });
+                                setModRequestReason('');
+                              } else {
+                                setDeleteConfirmTenant(tenant);
+                              }
+                            }}
+                            className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 cursor-pointer"
+                            title="Delete Subscriber"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : isSuspended ? (
                       <div className="space-y-2">
                         <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[11px] font-bold flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
