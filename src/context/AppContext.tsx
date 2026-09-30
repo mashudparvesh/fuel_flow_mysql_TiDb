@@ -327,16 +327,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEY_PREFIX + 'saas_control_open', String(open));
   };
 
-  // Tenants & Subscribers (Stateful & Dynamic)
+  // Tenants & Subscribers (Stateful & Dynamic - Server Authoritative)
   const [tenants, setTenants] = useState<Tenant[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'tenants');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return INITIAL_TENANTS.length > 0 ? INITIAL_TENANTS : [DEFAULT_FALLBACK_TENANT];
+    return [];
   });
 
   const [users, setUsers] = useState<User[]>(() => {
@@ -344,10 +344,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'users');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return INITIAL_USERS.length > 0 ? INITIAL_USERS : [DEFAULT_FALLBACK_USER];
+    return [];
   });
 
   const [currentTenantId, setCurrentTenantIdState] = useState<string>(() => {
@@ -569,19 +569,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tenantSuspensionNotice, setTenantSuspensionNotice] = useState<string>('');
   const clearTenantSuspensionNotice = () => setTenantSuspensionNotice('');
 
-  // Cross-browser & server-side tenant fetch (Safe merge with persistent storage and self-healing auto-push)
+  // Cross-browser & server-side tenant fetch (Server Authoritative)
   const refreshTenantsFromServer = async () => {
     try {
-      const getDeletedIds = (): string[] => {
-        try {
-          const raw = localStorage.getItem('fuelflow_deleted_tenants');
-          return raw ? JSON.parse(raw) : [];
-        } catch {
-          return [];
-        }
-      };
-      const deletedIds = getDeletedIds();
-
       const res = await fetch(`/api/tenants/all?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
@@ -595,66 +585,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? json
           : (json.success && Array.isArray(json.data) ? json.data : []);
 
-        // Server is authoritative: include all valid non-deleted tenants from server
         const serverTenants: Tenant[] = serverList.filter(t => t && t.id && !t.deleted_at);
 
-        if (serverTenants.length > 0) {
-          // If server returns tenants that were in deletedIds tombstone, purge them from tombstone
-          if (deletedIds.length > 0) {
-            const liveIds = new Set(serverTenants.map(t => t.id));
-            const cleanedDeleted = deletedIds.filter(id => !liveIds.has(id));
-            if (cleanedDeleted.length !== deletedIds.length) {
-              try {
-                localStorage.setItem('fuelflow_deleted_tenants', JSON.stringify(cleanedDeleted));
-              } catch {}
-            }
-          }
-
-          setTenants(prev => {
-            const safePrev = Array.isArray(prev) ? prev.filter(pt => pt && pt.id) : [];
-            const merged = [...serverTenants];
-            // Retain any locally created subscribers that are NOT on server and NOT deleted
-            safePrev.filter(pt => !deletedIds.includes(pt.id) && !pt.deleted_at).forEach(pt => {
-              const existingIdx = merged.findIndex(st => st && st.id === pt.id);
-              if (existingIdx === -1) {
-                merged.push(pt);
-                // Self-healing: sync subscriber present locally to the server backend
-                try {
-                  fetch('/api/tenants', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(pt)
-                  }).catch(() => {});
-                } catch (e) {}
-              } else {
-                // Merge fields like logo or subscription credentials if missing on server
-                const st = merged[existingIdx];
-                if (st) {
-                  merged[existingIdx] = {
-                    ...pt,
-                    ...st,
-                    logo: st?.logo || pt?.logo || '',
-                    subscription: (st?.subscription || pt?.subscription) ? ({
-                      ...(pt?.subscription || {}),
-                      ...(st?.subscription || {})
-                    } as TenantSubscription) : undefined
-                  };
-                }
-              }
-            });
-            try {
-              localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(merged));
-            } catch (e) {}
-            return merged;
-          });
-        }
+        setTenants(serverTenants);
+        try {
+          localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(serverTenants));
+          localStorage.removeItem('fuelflow_deleted_tenants');
+        } catch (e) {}
       }
     } catch (e) {
       // Server offline or initializing
     }
   };
 
-  // Cross-browser & server-side users fetch (Safe merge and self-healing auto-push)
+  // Cross-browser & server-side users fetch (Server Authoritative)
   const refreshUsersFromServer = async () => {
     try {
       const res = await fetch(`/api/users?t=${Date.now()}`, {
@@ -666,27 +610,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setUsers(prev => {
-            const safePrev = Array.isArray(prev) ? prev.filter(pu => pu && pu.id) : [];
-            const serverUsers: User[] = (json.data || []).filter((su: any) => su && su.id);
-            const merged = [...serverUsers];
-            safePrev.forEach(pu => {
-              if (!merged.some(su => su && (su.id === pu.id || (su.tenant_id === pu.tenant_id && (su.username || '').toLowerCase() === (pu.username || '').toLowerCase())))) {
-                merged.push(pu);
-                // Self-healing: automatically sync locally saved user credentials to the server backend
-                try {
-                  fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(pu)
-                  }).catch(() => {});
-                } catch (e) {}
-              }
-            });
-            return merged;
-          });
-        }
+        const serverList: User[] = json.success && Array.isArray(json.data) 
+          ? json.data 
+          : (Array.isArray(json) ? json : []);
+        const serverUsers: User[] = serverList.filter((su: any) => su && su.id);
+
+        setUsers(serverUsers);
+        try {
+          localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(serverUsers));
+        } catch (e) {}
       }
     } catch (e) {
       // Server offline or initializing
@@ -2223,17 +2155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTenantSubscriber = async (tenantId: string) => {
-    // 1. Immediately record in persistent tombstone set
-    try {
-      const deletedRaw = localStorage.getItem('fuelflow_deleted_tenants');
-      const deletedArr: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
-      if (!deletedArr.includes(tenantId)) {
-        deletedArr.push(tenantId);
-        localStorage.setItem('fuelflow_deleted_tenants', JSON.stringify(deletedArr));
-      }
-    } catch (e) {}
-
-    // 2. Immediately remove from local state & localStorage so UI updates instantaneously
+    // 1. Immediately remove from local state & localStorage so UI updates instantaneously
     setTenants(prev => {
       const updated = prev.filter(t => t.id !== tenantId);
       try { localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(updated)); } catch (e) {}

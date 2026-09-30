@@ -21,7 +21,8 @@ import {
   deletePumpInDB,
   deletePaymentInDB,
   deleteCategoryInDB,
-  deleteTankerInDB
+  deleteTankerInDB,
+  wipeAllDataFromDB
 } from "./server/mysql.ts";
 import { verifyPassword, hashPassword } from "./src/utils/authSecurity.ts";
 
@@ -976,19 +977,52 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // 2. GET /api/tenants/all - Full subscriber list for SaaS Master Control Panel (Includes Active & Suspended)
   app.get('/api/tenants/all', async (req: Request, res: Response) => {
     const dbTenants = await fetchTenantsFromDB().catch(() => null);
-    const fileTenants = loadTenants();
-    const combined = Array.isArray(dbTenants) && dbTenants.length > 0 ? [...dbTenants] : [...fileTenants];
-    fileTenants.forEach(ft => {
-      if (ft && ft.id && !combined.some(ct => ct.id === ft.id)) {
-        combined.unshift(ft);
-      }
-    });
-    activeTenants = combined;
+    if (dbTenants !== null) {
+      activeTenants = dbTenants;
+      saveTenants(activeTenants);
+    } else {
+      activeTenants = loadTenants();
+    }
     res.json({
       success: true,
       data: activeTenants.filter(t => t && !t.deleted_at),
       timestamp: new Date().toISOString()
     });
+  });
+
+  // 2.b POST /api/saas/wipe-all-subscribers - Complete wipe of all subscribers and database data
+  app.post('/api/saas/wipe-all-subscribers', async (req: Request, res: Response) => {
+    try {
+      await wipeAllDataFromDB().catch(e => console.warn('[MySQL wipe warning]:', e));
+      activeTenants = [];
+      saveTenants([]);
+      activeUsers = [];
+      saveUsers([]);
+      const emptyFleet = {
+        vehicles: [],
+        fuelEntries: [],
+        pumps: [],
+        payments: [],
+        categories: [],
+        companies: [],
+        vendors: [],
+        fuelTypes: [],
+        tankers: [],
+        tankerLogs: []
+      };
+      saveFleetData(emptyFleet);
+      saveRegistrationRequests([]);
+      try {
+        fs.writeFileSync(path.join(DATA_DIR, 'email_logs.json'), JSON.stringify([], null, 2), 'utf-8');
+      } catch (e) {}
+
+      res.json({
+        success: true,
+        message: 'All subscriber accounts, demo data, and associated database records completely deleted.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error wiping subscribers' });
+    }
   });
 
   // 3. POST /api/tenants - Create new subscriber (SaaS Super Admin / Owner)
@@ -1156,6 +1190,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== id);
       fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
       saveFleetData(fleet);
+      saveRegistrationRequests(loadRegistrationRequests().filter(r => r.tenant_id !== id));
 
       await deleteTenantInDB(id).catch(async (e) => {
         console.warn('[MySQL] Cascade delete fallback to soft delete:', e);
@@ -1204,6 +1239,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       fleet.tankers = (fleet.tankers || []).filter(tk => tk.tenant_id !== id);
       fleet.tankerLogs = (fleet.tankerLogs || []).filter(tl => tl.tenant_id !== id);
       saveFleetData(fleet);
+      saveRegistrationRequests(loadRegistrationRequests().filter(r => r.tenant_id !== id));
 
       await deleteTenantInDB(id).catch(async (e) => {
         console.warn('[MySQL] Cascade delete fallback to soft delete:', e);
@@ -1518,7 +1554,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
       const origin = req.protocol + '://' + req.get('host');
 
-      // 1. Immediately provision the tenant subscription and user in SUSPENDED state
+      // 1. Immediately provision the tenant subscription and user in ACTIVE state
       const provisionResult = await provisionNewTenant({
         company_name: String(company_name).trim(),
         admin_name: String(admin_name || company_name + ' Admin').trim(),
@@ -1529,8 +1565,8 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         payment_method: payment_method || (isTrial ? 'Free Trial' : 'Online Payment'),
         transaction_id: transaction_id ? String(transaction_id).trim() : '',
         origin,
-        send_email: false, // Access not sent until unsuspended/activated by Master Control
-        initial_status: 'suspended' // CREATED IN SUSPENDED STATE
+        send_email: false,
+        initial_status: 'active' // ACTIVE STATE: IMMEDIATELY AVAILABLE IN SUBSCRIBER LIST
       });
 
       const reqId = `reg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1547,7 +1583,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         payment_completed: Boolean(payment_completed || isTrial),
         payment_method: payment_method || (isTrial ? 'Free Trial' : 'Online Payment'),
         transaction_id: transaction_id ? String(transaction_id).trim() : '',
-        status: 'pending', // 'pending' | 'approved' | 'rejected'
+        status: 'approved', // Immediately active
         tenant_id: provisionResult.tenant.id,
         super_admin_username: provisionResult.super_admin_username,
         temporary_password: provisionResult.temporary_password,
@@ -1562,10 +1598,10 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       // Return confirmation of submission
       res.status(201).json({
         success: true,
-        pending_approval: true,
+        pending_approval: false,
         tenant_id: provisionResult.tenant.id,
         tenant: provisionResult.tenant,
-        message: 'Registration application submitted successfully. Workspace created in suspended state awaiting Master Control review & activation.',
+        message: 'Registration application submitted successfully. Workspace created and ready.',
         request: {
           id: newRequest.id,
           company_name: newRequest.company_name,

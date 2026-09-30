@@ -550,6 +550,35 @@ export async function deleteTenantInDB(id: string): Promise<boolean> {
   }
 }
 
+export async function wipeAllDataFromDB(): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    const tables = [
+      'fuel_entries',
+      'pump_payments',
+      'vehicles',
+      'fuel_pumps',
+      'vehicle_categories',
+      'companies',
+      'vendors',
+      'fuel_types',
+      'tanker_logs',
+      'tanker_inventories',
+      'users',
+      'tenants'
+    ];
+    for (const table of tables) {
+      await pool.query(`DELETE FROM \`${table}\``).catch(() => {});
+    }
+    await updateTableCounts().catch(() => {});
+    console.log('[MySQL] Completely wiped all subscriber and tenant data from DB tables.');
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error wiping DB tables:', err);
+    return false;
+  }
+}
+
 export async function fetchUsersFromDB(): Promise<any[] | null> {
   if (!pool || !lastStatus.connected) return null;
   try {

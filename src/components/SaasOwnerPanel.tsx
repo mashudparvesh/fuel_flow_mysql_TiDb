@@ -1537,9 +1537,6 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 <option value="plan_6months">6 Months Plan (3,999 BDT)</option>
                 <option value="plan_12months">VIP Plan (7,999 BDT)</option>
                 <option value="custom">Custom Enterprise</option>
-                <option value="starter">Starter (Legacy)</option>
-                <option value="professional">Professional (Legacy)</option>
-                <option value="enterprise">Enterprise (Legacy)</option>
               </select>
             </div>
           </div>
