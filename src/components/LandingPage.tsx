@@ -37,11 +37,13 @@ import { OFFICIAL_SUBSCRIPTION_PLANS, SubscriptionPlanId, SubscriptionPlanConfig
 interface LandingPageProps {
   onNavigateToLogin: () => void;
   onNavigateToDashboard: () => void;
+  onNavigateToPublicPage?: (page: 'about' | 'contact' | 'privacy' | 'terms' | 'faq') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateToLogin,
-  onNavigateToDashboard
+  onNavigateToDashboard,
+  onNavigateToPublicPage
 }) => {
   const { isAuthenticated, activeTenants, refreshTenantsFromServer } = useApp();
 
@@ -283,12 +285,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-300">
+          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-slate-300">
             <a href="#features" className="hover:text-amber-400 transition-colors">
               Features
             </a>
             <a href="#dual-metrics" className="hover:text-amber-400 transition-colors">
-              Dual Metrics (LPH/KMPL)
+              Dual Metrics
             </a>
             <a href="#bowzer-depot" className="hover:text-amber-400 transition-colors">
               Bowzer Depot
@@ -296,6 +298,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#pricing" className="hover:text-amber-400 transition-colors">
               Pricing
             </a>
+            <button
+              type="button"
+              onClick={() => onNavigateToPublicPage?.('about')}
+              className="hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              About
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateToPublicPage?.('contact')}
+              className="hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              Contact
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateToPublicPage?.('faq')}
+              className="hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              FAQ
+            </button>
           </nav>
 
           {/* Desktop Header Action Buttons */}
@@ -397,6 +420,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               >
                 Subscription Pricing
               </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onNavigateToPublicPage?.('about');
+                }}
+                className="text-left px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                About FuelNest
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onNavigateToPublicPage?.('contact');
+                }}
+                className="text-left px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                Contact & Support
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onNavigateToPublicPage?.('faq');
+                }}
+                className="text-left px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors cursor-pointer"
+              >
+                FAQ & Help
+              </button>
             </div>
 
             <div className="pt-3 border-t border-slate-800/80 space-y-2">
@@ -805,14 +858,126 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* COMPREHENSIVE SAAS PUBLIC FOOTER */}
       <footer className="w-full py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <Fuel className="w-4 h-4 text-amber-400" />
-            <span className="font-bold text-slate-200">FuelNest Fleet Intelligence Platform</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand Info */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black">
+                  <Fuel className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-white text-base">FuelNest</span>
+              </div>
+              <p className="text-slate-400 leading-relaxed text-[11px]">
+                Heavy equipment telemetry & commercial fleet intelligence. Engineered for construction contractors, site bowzer depots, and transport logistics in Bangladesh.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div className="space-y-2">
+              <span className="font-bold text-white uppercase tracking-wider block text-[11px] mb-2 font-mono">Platform & Info</span>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToPublicPage?.('about')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                >
+                  About FuelNest
+                </button>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToPublicPage?.('contact')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                >
+                  Contact & Support
+                </button>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToPublicPage?.('faq')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                >
+                  Frequently Asked Questions
+                </button>
+              </div>
+              <div>
+                <a href="#pricing" className="hover:text-amber-400 transition-colors">
+                  Subscription Plans & MFS
+                </a>
+              </div>
+            </div>
+
+            {/* Legal Links */}
+            <div className="space-y-2">
+              <span className="font-bold text-white uppercase tracking-wider block text-[11px] mb-2 font-mono">Legal & Compliance</span>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToPublicPage?.('privacy')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                >
+                  Privacy Policy
+                </button>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToPublicPage?.('terms')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                >
+                  Terms of Service
+                </button>
+              </div>
+              <div>
+                <a href="mailto:admin.fuelnest@gmail.com" className="hover:text-amber-400 font-mono text-[11px]">
+                  admin.fuelnest@gmail.com
+                </a>
+              </div>
+              <div>
+                <span className="text-slate-500">MFS: bKash (01903200907) & Nagad</span>
+              </div>
+            </div>
+
+            {/* Emergency Hotline & WhatsApp */}
+            <div className="space-y-3">
+              <span className="font-bold text-white uppercase tracking-wider block text-[11px] font-mono">Support & Hotline</span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                WhatsApp: <strong className="text-emerald-400 font-mono">+8801775316434</strong><br />
+                Hotline: <strong className="text-amber-400 font-mono">01775316434</strong> / <span className="font-mono">01903200907</span>
+              </p>
+              <a
+                href="https://wa.me/8801775316434?text=Hello%20FuelNest%2C%20I%20need%20assistance."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs hover:bg-emerald-600/30 transition-colors cursor-pointer"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>WhatsApp Live Chat</span>
+              </a>
+            </div>
           </div>
-          <p>&copy; {new Date().getFullYear()} FuelNest Technologies. All rights reserved.</p>
+
+          <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+            <div>
+              &copy; {new Date().getFullYear()} FuelNest Technologies. All rights reserved.
+            </div>
+            <div className="flex items-center gap-3">
+              <span>Ruppur Mor, Paksey, Ishwardi &bull; Gulshan-2, Dhaka</span>
+              <span>&bull;</span>
+              <button
+                type="button"
+                onClick={onNavigateToLogin}
+                className="hover:text-amber-400 font-semibold cursor-pointer"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
         </div>
       </footer>
 

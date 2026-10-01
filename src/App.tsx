@@ -16,6 +16,7 @@ import { CompanyUserManagementView } from './components/CompanyUserManagementVie
 import { AuthSwitcherModal } from './components/AuthSwitcherModal';
 import { LoginPage } from './components/LoginPage';
 import { LandingPage } from './components/LandingPage';
+import { PublicPages } from './components/public/PublicPages';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { DatabaseStatusModal } from './components/DatabaseStatusModal';
 import { BulkDataImportModal, BulkEntityType } from './components/BulkDataImportModal';
@@ -82,15 +83,20 @@ const AppContent: React.FC = () => {
     setIsBulkImportOpen(true);
   };
 
-  const [publicRoute, setPublicRoute] = useState<'landing' | 'login' | 'master_control'>(() => {
+  type PublicRouteType = 'landing' | 'about' | 'contact' | 'privacy' | 'terms' | 'faq' | 'login' | 'master_control';
+
+  const [publicRoute, setPublicRoute] = useState<PublicRouteType>(() => {
     if (typeof window !== 'undefined') {
       const p = window.location.pathname.toLowerCase();
       if (p.startsWith('/master-control') || p.startsWith('/master_control') || p.startsWith('/master')) {
         return 'master_control';
       }
-      if (p.startsWith('/login')) {
-        return 'login';
-      }
+      if (p.startsWith('/login')) return 'login';
+      if (p.startsWith('/about')) return 'about';
+      if (p.startsWith('/contact')) return 'contact';
+      if (p.startsWith('/privacy')) return 'privacy';
+      if (p.startsWith('/terms')) return 'terms';
+      if (p.startsWith('/faq')) return 'faq';
     }
     return 'landing';
   });
@@ -102,6 +108,16 @@ const AppContent: React.FC = () => {
         setPublicRoute('master_control');
       } else if (p.startsWith('/login')) {
         setPublicRoute('login');
+      } else if (p.startsWith('/about')) {
+        setPublicRoute('about');
+      } else if (p.startsWith('/contact')) {
+        setPublicRoute('contact');
+      } else if (p.startsWith('/privacy')) {
+        setPublicRoute('privacy');
+      } else if (p.startsWith('/terms')) {
+        setPublicRoute('terms');
+      } else if (p.startsWith('/faq')) {
+        setPublicRoute('faq');
       } else {
         setPublicRoute('landing');
       }
@@ -110,10 +126,10 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateTo = (route: 'landing' | 'login' | 'master_control') => {
+  const navigateTo = (route: PublicRouteType) => {
     setPublicRoute(route);
     if (typeof window !== 'undefined') {
-      const targetUrl = route === 'landing' ? '/' : route === 'login' ? '/login' : '/master-control';
+      const targetUrl = route === 'landing' ? '/' : `/${route.replace('_', '-')}`;
       window.history.pushState(null, '', targetUrl);
     }
   };
@@ -130,7 +146,7 @@ const AppContent: React.FC = () => {
     setCurrentView('fuel_entry');
   };
 
-  // If user is not authenticated, render Public Landing Page, Dedicated Subscriber Login, or Hidden Master Control Login
+  // If user is not authenticated, render Public Landing Page, SaaS Public Pages, Dedicated Subscriber Login, or Hidden Master Control Login
   if (!isAuthenticated) {
     if (publicRoute === 'master_control') {
       return (
@@ -149,10 +165,20 @@ const AppContent: React.FC = () => {
         />
       );
     }
+    if (publicRoute === 'about' || publicRoute === 'contact' || publicRoute === 'privacy' || publicRoute === 'terms' || publicRoute === 'faq') {
+      return (
+        <PublicPages
+          currentView={publicRoute}
+          onNavigate={(target) => navigateTo(target as PublicRouteType)}
+          onOpenRegister={() => navigateTo('landing')}
+        />
+      );
+    }
     return (
       <LandingPage
         onNavigateToLogin={() => navigateTo('login')}
         onNavigateToDashboard={() => navigateTo('login')}
+        onNavigateToPublicPage={(page) => navigateTo(page as PublicRouteType)}
       />
     );
   }

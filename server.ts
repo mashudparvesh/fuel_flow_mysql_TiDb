@@ -27,6 +27,7 @@ import {
   approveTenantWithTransaction
 } from "./server/mysql.ts";
 import { verifyPassword, hashPassword, isHashed } from "./src/utils/authSecurity.ts";
+import { DEFAULT_SITE_CONTENT, SiteContentConfig } from "./src/data/defaultSiteContent.ts";
 
 // Initial fallback tenant data (empty - clean production state)
 const DEFAULT_TENANTS: any[] = [];
@@ -36,6 +37,8 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.json');
+const CONTACT_MESSAGES_FILE = path.join(DATA_DIR, 'contact_messages.json');
+const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site_content.json');
 
 const DEFAULT_USERS: any[] = [];
 
@@ -51,6 +54,55 @@ function ensureDataDir() {
   }
   if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
     fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+}
+
+function loadContactMessages(): any[] {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(CONTACT_MESSAGES_FILE)) {
+      const raw = fs.readFileSync(CONTACT_MESSAGES_FILE, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveContactMessages(messages: any[]) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(CONTACT_MESSAGES_FILE, JSON.stringify(messages, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save contact messages:', e);
+  }
+}
+
+function loadSiteContent(): SiteContentConfig {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(SITE_CONTENT_FILE)) {
+      const raw = fs.readFileSync(SITE_CONTENT_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_SITE_CONTENT,
+        ...parsed,
+        contact: { ...DEFAULT_SITE_CONTENT.contact, ...(parsed.contact || {}) },
+        about: { ...DEFAULT_SITE_CONTENT.about, ...(parsed.about || {}) },
+        privacy: { ...DEFAULT_SITE_CONTENT.privacy, ...(parsed.privacy || {}) },
+        terms: { ...DEFAULT_SITE_CONTENT.terms, ...(parsed.terms || {}) },
+        faqs: Array.isArray(parsed.faqs) && parsed.faqs.length > 0 ? parsed.faqs : DEFAULT_SITE_CONTENT.faqs
+      };
+    }
+  } catch (e) {}
+  return DEFAULT_SITE_CONTENT;
+}
+
+function saveSiteContent(content: SiteContentConfig) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(content, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save site content:', e);
   }
 }
 
@@ -552,6 +604,106 @@ async function sendWelcomeEmail(data: {
     status: 'simulated_no_api_key'
   });
   return { dispatched: false, delivered: false, simulated: true, recipient: data.email };
+}
+
+// -------------------------------------------------------------
+// Master Admin Notification Email Dispatcher (admin.fuelnest@gmail.com)
+// -------------------------------------------------------------
+export async function sendAdminNotificationEmail({
+  subject,
+  html,
+  text
+}: {
+  subject: string;
+  html: string;
+  text?: string;
+}) {
+  const targetAdminEmail = 'admin.fuelnest@gmail.com';
+  const emailCfg = loadEmailConfig();
+  const resendApiKey = process.env.RESEND_API_KEY;
+
+  console.log(`[Admin Alert] Initiating alert email to ${targetAdminEmail}: "${subject}"`);
+
+  // 1. Try Custom SMTP if configured
+  if (emailCfg.smtp_enabled && emailCfg.smtp_host && emailCfg.smtp_user && emailCfg.smtp_pass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: emailCfg.smtp_host,
+        port: emailCfg.smtp_port || 587,
+        secure: Boolean(emailCfg.smtp_secure),
+        auth: {
+          user: emailCfg.smtp_user,
+          pass: emailCfg.smtp_pass
+        }
+      });
+      await transporter.sendMail({
+        from: emailCfg.smtp_from || `FuelNest System <${emailCfg.smtp_user}>`,
+        to: targetAdminEmail,
+        subject,
+        html,
+        text: text || subject
+      });
+      console.log(`[Admin Alert Success] Dispatched via SMTP to ${targetAdminEmail}`);
+      recordEmailLog({
+        recipient: targetAdminEmail,
+        company: 'FuelNest Admin Alert',
+        username: 'admin.fuelnest',
+        status: 'delivered',
+        method: 'smtp'
+      });
+      return { success: true, method: 'smtp' };
+    } catch (smtpErr: any) {
+      console.warn('[Admin Alert SMTP error]:', smtpErr?.message || smtpErr);
+    }
+  }
+
+  // 2. Try Resend API
+  if (resendApiKey) {
+    const resendSender = (emailCfg.resend_from && emailCfg.resend_from.trim().length > 0)
+      ? emailCfg.resend_from.trim()
+      : 'FuelNest Alert <onboarding@resend.dev>';
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: resendSender,
+          to: [targetAdminEmail],
+          subject,
+          html
+        })
+      });
+      if (res.ok) {
+        console.log(`[Admin Alert Success] Dispatched via Resend to ${targetAdminEmail}`);
+        recordEmailLog({
+          recipient: targetAdminEmail,
+          company: 'FuelNest Admin Alert',
+          username: 'admin.fuelnest',
+          status: 'delivered',
+          method: 'resend'
+        });
+        return { success: true, method: 'resend' };
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn('[Admin Alert Resend error]:', errJson);
+      }
+    } catch (e: any) {
+      console.warn('[Admin Alert Resend error]:', e?.message || e);
+    }
+  }
+
+  // 3. Fallback log
+  recordEmailLog({
+    recipient: targetAdminEmail,
+    company: 'FuelNest Admin Alert',
+    username: 'admin.fuelnest',
+    status: 'recorded_locally',
+    method: 'system_log'
+  });
+  return { success: true, method: 'system_log' };
 }
 
 // -------------------------------------------------------------
@@ -1617,6 +1769,71 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       requests.unshift(newRequest);
       saveRegistrationRequests(requests);
 
+      // 🚨 CRITICAL: Instant Notification Email to admin.fuelnest@gmail.com
+      // Allows Platform Owner to immediately review & activate the new subscriber's workspace
+      sendAdminNotificationEmail({
+        subject: `🚨 [New Subscriber Registered] ${newRequest.company_name} (${newRequest.plan_name})`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 18px 22px; border-radius: 10px; margin-bottom: 20px;">
+              <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">🚨 New Subscriber Registration</h2>
+              <p style="color: #451a03; margin: 4px 0 0 0; font-size: 13px; font-weight: 600;">FuelNest Cloud &bull; Immediate Approval Alert</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+              A new subscriber has just submitted registration on FuelNest. Please review the company information below and activate their workspace.
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; background-color: #f8fafc; border-radius: 8px; overflow: hidden;">
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b; width: 35%;">Company Name:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #0f172a; font-size: 14px;">${newRequest.company_name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Admin Contact:</td>
+                <td style="padding: 10px 12px; color: #0f172a; font-weight: 600;">${newRequest.admin_name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Email Address:</td>
+                <td style="padding: 10px 12px; color: #0284c7; font-weight: bold;"><a href="mailto:${newRequest.email}">${newRequest.email}</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Phone / WhatsApp:</td>
+                <td style="padding: 10px 12px; color: #0f172a;"><a href="tel:${newRequest.phone}">${newRequest.phone || 'N/A'}</a> &bull; <a href="https://wa.me/${String(newRequest.phone || '').replace(/[^0-9]/g, '')}" target="_blank">Chat WhatsApp</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Chosen Plan:</td>
+                <td style="padding: 10px 12px; color: #d97706; font-weight: 800;">${newRequest.plan_name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Payment Method:</td>
+                <td style="padding: 10px 12px; color: #0f172a;">${newRequest.payment_method || 'N/A'}</td>
+              </tr>
+              ${newRequest.transaction_id ? `
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Transaction ID (TrxID):</td>
+                <td style="padding: 10px 12px; font-family: monospace; font-weight: 800; color: #059669; font-size: 14px;">${newRequest.transaction_id}</td>
+              </tr>
+              ` : ''}
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Account Status:</td>
+                <td style="padding: 10px 12px; color: #ea580c; font-weight: 800;">PENDING MASTER APPROVAL</td>
+              </tr>
+            </table>
+
+            <div style="text-align: center; margin: 26px 0 16px 0;">
+              <a href="https://fuelnest.xyz/master-control" style="background: #0f172a; color: #f59e0b; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block;">
+                ⚡ Open Master Control Panel to Approve
+              </a>
+            </div>
+            
+            <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 22px;">
+              FuelNest Telemetry Cloud &bull; Auto-dispatched to admin.fuelnest@gmail.com
+            </p>
+          </div>
+        `
+      }).catch(err => console.warn('[Subscriber registration email notification error]:', err));
+
       // Return confirmation of submission
       return res.status(201).json({
         success: true,
@@ -1650,6 +1867,150 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
   app.post('/api/subscribers/register', handleSubscriberRegister);
   app.post('/api/register', handleSubscriberRegister);
+
+  // -------------------------------------------------------------
+  // Public Contact Form Endpoint (Dispatches to admin.fuelnest@gmail.com)
+  // -------------------------------------------------------------
+  app.post('/api/contact', async (req: Request, res: Response) => {
+    try {
+      const { name, email, phone, company_name, subject, message } = req.body || {};
+
+      if (!name || !email || !message) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name, email, and message are required fields.'
+        });
+      }
+
+      const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newMsg = {
+        id: msgId,
+        name: String(name).trim(),
+        email: String(email).trim().toLowerCase(),
+        phone: String(phone || '').trim(),
+        company_name: String(company_name || '').trim(),
+        subject: String(subject || 'General Inquiry').trim(),
+        message: String(message).trim(),
+        status: 'unread',
+        created_at: new Date().toISOString()
+      };
+
+      const messages = loadContactMessages();
+      messages.unshift(newMsg);
+      saveContactMessages(messages);
+
+      // Instant Email Dispatch to admin.fuelnest@gmail.com
+      sendAdminNotificationEmail({
+        subject: `📬 [Contact Inquiry] ${newMsg.name}: ${newMsg.subject}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); padding: 18px 22px; border-radius: 10px; margin-bottom: 20px;">
+              <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800;">📬 New Website Contact Message</h2>
+              <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">FuelNest Commercial Fleet Telemetry</p>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; background-color: #f8fafc; border-radius: 8px;">
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b; width: 30%;">From:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #0f172a;">${newMsg.name} ${newMsg.company_name ? `(${newMsg.company_name})` : ''}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Email:</td>
+                <td style="padding: 10px 12px; color: #0284c7; font-weight: bold;"><a href="mailto:${newMsg.email}">${newMsg.email}</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Phone / WhatsApp:</td>
+                <td style="padding: 10px 12px; color: #0f172a;"><a href="tel:${newMsg.phone}">${newMsg.phone || 'N/A'}</a> &bull; <a href="https://wa.me/${String(newMsg.phone || '').replace(/[^0-9]/g, '')}" target="_blank">WhatsApp Chat</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Subject:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #0f172a;">${newMsg.subject}</td>
+              </tr>
+            </table>
+
+            <div style="background-color: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <strong style="color: #334155; display: block; margin-bottom: 8px; font-size: 13px;">Message Content:</strong>
+              <p style="white-space: pre-wrap; margin: 0; color: #0f172a; font-size: 13px; line-height: 1.6;">${newMsg.message}</p>
+            </div>
+
+            <div style="text-align: center; margin: 24px 0 12px 0;">
+              <a href="mailto:${newMsg.email}?subject=${encodeURIComponent('Re: ' + newMsg.subject)}" style="background: #0284c7; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block;">
+                ✉️ Reply via Email to ${newMsg.email}
+              </a>
+            </div>
+
+            <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 20px;">
+              FuelNest Telemetry Cloud &bull; Auto-dispatched to admin.fuelnest@gmail.com
+            </p>
+          </div>
+        `
+      }).catch(e => console.warn('[Contact alert dispatch error]:', e));
+
+      return res.status(200).json({
+        success: true,
+        message: 'Thank you for reaching out! Your message has been sent to our team at admin.fuelnest@gmail.com. We will reply promptly.'
+      });
+    } catch (err: any) {
+      console.error('[Contact Error]:', err);
+      return res.status(500).json({
+        success: false,
+        message: err?.message || 'Error processing contact form submission'
+      });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Public CMS Content Endpoint (Dynamic content for Landing, About, Contact, Privacy, Terms, FAQ)
+  // -------------------------------------------------------------
+  app.get('/api/public/content', (req: Request, res: Response) => {
+    try {
+      const content = loadSiteContent();
+      res.json({ success: true, content });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Master Control CMS Content Update
+  app.post('/api/owner/content', (req: Request, res: Response) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== 'object') {
+        return res.status(400).json({ success: false, message: 'Valid content payload is required.' });
+      }
+      saveSiteContent(content);
+      res.json({
+        success: true,
+        message: 'Site content and page copywriting updated successfully.',
+        content
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Master Control Contact Messages Inbox
+  app.get('/api/owner/contact-messages', (req: Request, res: Response) => {
+    try {
+      const messages = loadContactMessages();
+      res.json({ success: true, messages });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Delete Contact Message
+  app.delete('/api/owner/contact-messages/:id', (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const messages = loadContactMessages();
+      const filtered = messages.filter((m: any) => m.id !== id);
+      saveContactMessages(filtered);
+      res.json({ success: true, message: 'Message removed successfully.' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message });
+    }
+  });
 
   // Direct Tenant Plan Approval Endpoint for Master Control Panel
   const handleApproveTenant = async (req: Request, res: Response) => {
@@ -3280,8 +3641,8 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // When compiled by esbuild for deployment, IS_BUNDLED is statically replaced with true
   // @ts-ignore
   const isBundled = typeof IS_BUNDLED !== "undefined" && Boolean(IS_BUNDLED);
-  const isDev = !isBundled && process.env.NODE_ENV === "development";
-  const isProduction = !isDev;
+  const isProduction = isBundled || process.env.NODE_ENV === "production";
+  const isDev = !isProduction;
 
   async function startServer() {
     if (isDev) {
@@ -3321,11 +3682,27 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
     // Port 3000 is the hardcoded entrypoint required by the platform infrastructure.
     // The nginx reverse proxy listens on 8080 and proxies all requests to port 3000.
-    const PORT = 3000;
+    const PORT = Number(process.env.PORT) || 3000;
 
-    app.listen(PORT, "0.0.0.0", () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`FuelNest Server running on http://0.0.0.0:${PORT} (${isProduction ? 'production' : 'development'})`);
     });
+
+    server.on("error", (err: any) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(`Port ${PORT} is already in use.`);
+      } else {
+        console.error("Server listen error:", err);
+      }
+    });
+
+    const gracefulExit = () => {
+      server.close(() => {
+        process.exit(0);
+      });
+    };
+    process.on("SIGTERM", gracefulExit);
+    process.on("SIGINT", gracefulExit);
   }
 
   // Only start standalone HTTP server when not running in Vercel Serverless environment
