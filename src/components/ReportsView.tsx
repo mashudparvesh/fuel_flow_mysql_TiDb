@@ -496,7 +496,7 @@ export const ReportsView: React.FC = () => {
         name: saasOwner?.name || 'Md. Mashud (Master Admin)',
         roleTitle: 'Master System Administrator',
         roleTitleBn: 'Master System Administrator',
-        email: saasOwner?.email || 'mashudrus@gmail.com',
+        email: saasOwner?.email || 'admin.fuelnest@gmail.com',
         phone: saasOwner?.phone || '+880 1700-000000',
         username: saasOwner?.username || 'mashudalone',
         designation: 'Master Admin'

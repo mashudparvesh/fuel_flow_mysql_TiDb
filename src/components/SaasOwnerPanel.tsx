@@ -524,7 +524,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     resend_active: false,
     resend_from: '',
     verified_domain: 'fuelnest.xyz',
-    owner_email: 'mashudrus@gmail.com'
+    owner_email: 'admin.fuelnest@gmail.com'
   });
   const [emailConfigLoading, setEmailConfigLoading] = useState(false);
   const [emailConfigSaving, setEmailConfigSaving] = useState(false);
@@ -3253,7 +3253,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 <span>Email Delivery Diagnostics & Sandbox Notice:</span>
               </div>
               <p className="leading-relaxed">
-                Currently <strong>Resend API</strong> is active in test/sandbox mode. Using <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">onboarding@resend.dev</code> allows test delivery directly to the verified account owner email (<span className="underline font-mono">mashudrus@gmail.com</span>). To deliver emails directly to any external subscriber address, follow either method below:
+                Currently <strong>Resend API</strong> is active in test/sandbox mode. Using <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">onboarding@resend.dev</code> allows test delivery directly to the verified account owner email (<span className="underline font-mono">admin.fuelnest@gmail.com</span>). To deliver emails directly to any external subscriber address, follow either method below:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-900/80 border border-amber-500/20 text-slate-800 dark:text-slate-200">
@@ -3488,7 +3488,7 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       {emailTestResult.success
                         ? `Test Email Successfully Delivered via ${emailTestResult.result?.method || 'Direct Dispatch'}!`
                         : emailTestResult.result?.sandbox_restricted
-                        ? 'Sandbox Restriction: Relayed to verified owner (mashudrus@gmail.com)'
+                        ? 'Sandbox Restriction: Relayed to verified owner (admin.fuelnest@gmail.com)'
                         : 'Delivery Failed'}
                     </span>
                   </div>
@@ -4517,12 +4517,31 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
 
                     const mailtoUrl = `mailto:${selectedApprovalModalData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    window.location.href = mailtoUrl;
+                    try {
+                      const newWin = window.open(mailtoUrl, '_blank', 'noopener,noreferrer');
+                      if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+                        const a = document.createElement('a');
+                        a.href = mailtoUrl;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }
+                    } catch (e) {
+                      const a = document.createElement('a');
+                      a.href = mailtoUrl;
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }
                   }}
                   className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
                 >
                   <Mail className="w-4 h-4" />
-                  <span>Open Email App (Mailto)</span>
+                  <span>Open Email App (New Tab)</span>
                 </button>
 
                 {/* 2. Copy Full Email Message */}

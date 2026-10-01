@@ -894,7 +894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tenant_id: currentTenantId || 'tenant_default',
         name: saasOwner?.name || 'Md. Mashud (Platform Owner)',
         username: saasOwner?.username || 'mashudalone',
-        email: saasOwner?.email || 'mashudrus@gmail.com',
+        email: saasOwner?.email || 'admin.fuelnest@gmail.com',
         role: 'super_admin' as const,
         role_title_bn: 'Platform Owner',
         status: 'active' as const

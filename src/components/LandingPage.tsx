@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Calculator,
   Server,
+  Menu,
   X,
   ExternalLink,
   Sparkles,
@@ -83,6 +84,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [entPhone, setEntPhone] = useState('');
   const [entFleetSize, setEntFleetSize] = useState('50');
   const [entSuccess, setEntSuccess] = useState(false);
+
+  // Responsive Mobile Navigation Drawer State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Interactive Live Demo Simulator State
   const [simEquipmentType, setSimEquipmentType] = useState<'excavator' | 'truck'>('excavator');
@@ -252,23 +256,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950 flex flex-col font-sans overflow-x-hidden w-full max-w-full relative">
       {/* Background Ambience / Glows */}
       <div className="fixed top-0 left-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
 
       {/* TOP NAVBAR */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 transition-all">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30">
-              <Fuel className="w-6 h-6 text-slate-950" />
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30 flex-shrink-0">
+              <Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-white">FuelNest</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-lg sm:text-xl font-black tracking-tight text-white">FuelNest</span>
+                <span className="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
                   Enterprise Fleet
                 </span>
               </div>
@@ -278,8 +282,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-300">
             <a href="#features" className="hover:text-amber-400 transition-colors">
               Features
             </a>
@@ -294,12 +298,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </a>
           </nav>
 
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-2.5">
+          {/* Desktop Header Action Buttons */}
+          <div className="hidden md:flex items-center gap-2.5">
             {isAuthenticated ? (
               <button
                 onClick={onNavigateToDashboard}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer"
               >
                 <span>Go to Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
@@ -323,7 +327,120 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </>
             )}
           </div>
+
+          {/* Mobile Actions: Compact Quick Sign In + Hamburger Toggle */}
+          <div className="flex md:hidden items-center gap-1.5 flex-shrink-0">
+            {!isAuthenticated ? (
+              <button
+                type="button"
+                onClick={onNavigateToLogin}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 text-amber-400 border border-amber-500/30 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                title="Sign In"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onNavigateToDashboard}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+              >
+                <span>Dashboard</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 transition-colors cursor-pointer"
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu Drawer */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col space-y-1 text-sm font-semibold text-slate-300">
+              <a
+                href="#features"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors"
+              >
+                Features & Modules
+              </a>
+              <a
+                href="#dual-metrics"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors"
+              >
+                Dual Metrics (LPH & KMPL)
+              </a>
+              <a
+                href="#bowzer-depot"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors"
+              >
+                Site Bowzer Depot
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-slate-900 hover:text-amber-400 transition-colors"
+              >
+                Subscription Pricing
+              </a>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800/80 space-y-2">
+              {!isAuthenticated ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleOpenRegister('trial_3days');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 active:scale-98 cursor-pointer"
+                  >
+                    <Crown className="w-4 h-4" />
+                    <span>Register 3-Day Free Trial</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onNavigateToLogin();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 font-bold text-sm hover:border-slate-700 active:scale-98 cursor-pointer"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Sign In to Existing Workspace</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onNavigateToDashboard();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-500 text-slate-950 font-black text-sm active:scale-98 cursor-pointer"
+                >
+                  <span>Go to Fleet Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* HERO SECTION */}
@@ -1018,13 +1135,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <label className="block text-xs font-bold text-slate-300 mb-2">
                 Choose Payment Method:
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
                 {[
-                  { id: 'bkash', name: 'bKash', color: 'from-pink-500/20 to-rose-500/20 border-pink-500/40 text-pink-300' },
-                  { id: 'nagad', name: 'Nagad', color: 'from-orange-500/20 to-amber-500/20 border-orange-500/40 text-orange-300' },
-                  { id: 'rocket', name: 'Rocket', color: 'from-purple-500/20 to-indigo-500/20 border-purple-500/40 text-purple-300' },
-                  { id: 'card', name: 'Cards', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/40 text-blue-300' },
-                  { id: 'bank', name: 'Bank', color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40 text-emerald-300' }
+                  { id: 'bkash', name: 'bKash', isAvailable: true },
+                  { id: 'nagad', name: 'Nagad', isAvailable: true },
+                  { id: 'rocket', name: 'Rocket', isAvailable: false },
+                  { id: 'card', name: 'Cards', isAvailable: false },
+                  { id: 'bank', name: 'Bank', isAvailable: false }
                 ].map(m => {
                   const isSelected = selectedPaymentMethod === m.id;
                   return (
@@ -1032,13 +1149,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       key={m.id}
                       type="button"
                       onClick={() => setSelectedPaymentMethod(m.id as any)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
+                      className={`py-2 px-1.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                         isSelected
                           ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
                           : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
                       }`}
                     >
-                      {m.name}
+                      <span>{m.name}</span>
+                      {!m.isAvailable && (
+                        <span className={`text-[9px] font-mono leading-none ${isSelected ? 'text-slate-950 font-bold' : 'text-slate-500'}`}>
+                          Not Available
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -1050,11 +1172,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {selectedPaymentMethod === 'bkash' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-300">bKash Merchant / Personal:</span>
+                    <span className="text-xs font-bold text-slate-300">bKash Personal / Merchant:</span>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard?.writeText('01711892341');
+                        navigator.clipboard?.writeText('01903200907');
                         setCopiedNumber('bkash');
                         setTimeout(() => setCopiedNumber(null), 2000);
                       }}
@@ -1065,13 +1187,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </button>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-white flex items-center justify-between">
-                    <span>01711-892341</span>
-                    <span className="text-[10px] text-slate-400 font-sans font-medium">bKash Send Money / Payment</span>
+                    <span className="text-amber-400 text-sm">01903200907</span>
+                    <span className="text-[10px] text-pink-400 font-sans font-medium">bKash Send Money / Payment</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
                     1. Dial *247# or open the bKash App.<br />
-                    2. Send the exact plan amount to the number above.<br />
-                    3. Paste the Transaction ID (TrxID) below and click Confirm.
+                    2. Send the exact plan amount to <strong className="text-white font-mono">01903200907</strong>.<br />
+                    3. Enter your Transaction ID (TrxID) below and click Confirm.
                   </p>
                 </div>
               )}
@@ -1079,11 +1201,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {selectedPaymentMethod === 'nagad' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-300">Nagad Account:</span>
+                    <span className="text-xs font-bold text-slate-300">Nagad Personal / Account:</span>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard?.writeText('01711892341');
+                        navigator.clipboard?.writeText('01775316434');
                         setCopiedNumber('nagad');
                         setTimeout(() => setCopiedNumber(null), 2000);
                       }}
@@ -1094,66 +1216,107 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </button>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-white flex items-center justify-between">
-                    <span>01711-892341</span>
-                    <span className="text-[10px] text-slate-400 font-sans font-medium">Nagad Send Money</span>
+                    <span className="text-amber-400 text-sm">01775316434</span>
+                    <span className="text-[10px] text-orange-400 font-sans font-medium">Nagad Send Money</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                    Send plan amount to the Nagad number above and enter your TrxID below for automated instant provisioning.
+                    1. Dial *167# or open the Nagad App.<br />
+                    2. Send the exact plan amount to <strong className="text-white font-mono">01775316434</strong>.<br />
+                    3. Enter your Transaction ID (TrxID) below and click Confirm.
                   </p>
                 </div>
               )}
 
               {selectedPaymentMethod === 'rocket' && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-300">DBBL Rocket Account:</span>
+                <div className="py-3 px-2 text-center space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-bold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Not Available</span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-semibold">
+                    DBBL Rocket is currently Not Available.
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Please use{' '}
                     <button
                       type="button"
-                      onClick={() => {
-                        navigator.clipboard?.writeText('017118923418');
-                        setCopiedNumber('rocket');
-                        setTimeout(() => setCopiedNumber(null), 2000);
-                      }}
-                      className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-mono cursor-pointer"
+                      onClick={() => setSelectedPaymentMethod('bkash')}
+                      className="text-pink-400 font-bold underline hover:text-pink-300 cursor-pointer"
                     >
-                      {copiedNumber === 'rocket' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedNumber === 'rocket' ? 'Copied' : 'Copy Number'}</span>
-                    </button>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-white flex items-center justify-between">
-                    <span>01711-892341-8</span>
-                    <span className="text-[10px] text-slate-400 font-sans font-medium">Rocket Transfer</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                    Transfer plan amount via Rocket and input your 10-digit transaction reference below.
+                      bKash (01903200907)
+                    </button>{' '}
+                    or{' '}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('nagad')}
+                      className="text-amber-400 font-bold underline hover:text-amber-300 cursor-pointer"
+                    >
+                      Nagad (01775316434)
+                    </button>{' '}
+                    to complete your subscription.
                   </p>
                 </div>
               )}
 
               {selectedPaymentMethod === 'card' && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-300">
-                    <CreditCard className="w-4 h-4 text-amber-400" />
-                    <span>Visa / MasterCard / AMEX Online Gateway</span>
+                <div className="py-3 px-2 text-center space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-bold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Not Available</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1">
-                    <p className="font-semibold text-white">Direct Card Processing</p>
-                    <p className="text-[11px] text-slate-400">
-                      Supports all major Bangladeshi credit and debit cards with automated instant settlement.
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-300 font-semibold">
+                    Online Card payment is currently Not Available.
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Please use{' '}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('bkash')}
+                      className="text-pink-400 font-bold underline hover:text-pink-300 cursor-pointer"
+                    >
+                      bKash (01903200907)
+                    </button>{' '}
+                    or{' '}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('nagad')}
+                      className="text-amber-400 font-bold underline hover:text-amber-300 cursor-pointer"
+                    >
+                      Nagad (01775316434)
+                    </button>{' '}
+                    to complete your subscription.
+                  </p>
                 </div>
               )}
 
               {selectedPaymentMethod === 'bank' && (
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-300 block">Commercial Bank Deposit:</span>
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
-                    <p><span className="text-slate-500">Bank:</span> <strong className="text-white">City Bank PLC</strong></p>
-                    <p><span className="text-slate-500">Account Name:</span> <strong className="text-white">FuelNest Technologies</strong></p>
-                    <p><span className="text-slate-500">Account No:</span> <strong className="text-amber-400 font-mono">1102983746001</strong></p>
-                    <p><span className="text-slate-500">Branch:</span> <span className="text-slate-300">Gulshan-2, Dhaka</span></p>
+                <div className="py-3 px-2 text-center space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-bold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Not Available</span>
                   </div>
+                  <p className="text-xs text-slate-300 font-semibold">
+                    Direct Bank Transfer is currently Not Available.
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Please use{' '}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('bkash')}
+                      className="text-pink-400 font-bold underline hover:text-pink-300 cursor-pointer"
+                    >
+                      bKash (01903200907)
+                    </button>{' '}
+                    or{' '}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('nagad')}
+                      className="text-amber-400 font-bold underline hover:text-amber-300 cursor-pointer"
+                    >
+                      Nagad (01775316434)
+                    </button>{' '}
+                    to complete your subscription.
+                  </p>
                 </div>
               )}
 

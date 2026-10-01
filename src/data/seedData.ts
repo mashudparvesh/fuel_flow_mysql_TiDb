@@ -20,7 +20,7 @@ export const DEFAULT_SAAS_OWNER: SaasOwnerProfile = {
   username: 'mashudalone',
   password: '00000',
   name: 'Md. Mashud (Platform Owner)',
-  email: 'mashudrus@gmail.com',
+  email: 'admin.fuelnest@gmail.com',
   phone: '+880 1700-000000',
   role: 'platform_owner',
   owner_role: 'OWNER_ADMIN',

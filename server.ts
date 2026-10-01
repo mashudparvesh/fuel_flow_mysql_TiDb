@@ -474,8 +474,8 @@ async function sendWelcomeEmail(data: {
                                 errorMsg.toLowerCase().includes('verify a domain') ||
                                 errorMsg.toLowerCase().includes('resend.com/domains');
 
-    // Attempt sandbox relay to verified account owner (mashudrus@gmail.com) so credentials are preserved
-    const ownerEmail = 'mashudrus@gmail.com';
+    // Attempt sandbox relay to verified account owner (admin.fuelnest@gmail.com) so credentials are preserved
+    const ownerEmail = 'admin.fuelnest@gmail.com';
     let relayedOk = false;
     if (!directOk && data.email.toLowerCase() !== ownerEmail.toLowerCase()) {
       try {
@@ -1950,7 +1950,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
           resend_active: Boolean(process.env.RESEND_API_KEY),
           resend_from: cfg.resend_from || 'FuelNest Onboarding <onboarding@resend.dev>',
           verified_domain: cfg.verified_domain || 'fuelnest.xyz',
-          owner_email: 'mashudrus@gmail.com'
+          owner_email: 'admin.fuelnest@gmail.com'
         }
       });
     } catch (e: any) {
@@ -2010,7 +2010,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   app.post('/api/email/test', async (req: Request, res: Response) => {
     try {
       const { recipient_email } = req.body;
-      const targetEmail = String(recipient_email || 'mashudrus@gmail.com').trim();
+      const targetEmail = String(recipient_email || 'admin.fuelnest@gmail.com').trim();
 
       if (!targetEmail.includes('@')) {
         res.status(400).json({ success: false, message: 'Valid recipient email address is required.' });
