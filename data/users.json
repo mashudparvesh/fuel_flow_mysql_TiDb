@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "id": "usr_tenant_test_mupff3mc_4q9r_admin",
+    "tenant_id": "tenant_test_mupff3mc_4q9r",
+    "name": "Rahim Ahmed",
+    "email": "testlogistics@uberip.com",
+    "username": "test_admin",
+    "password": "$2y$10$fuelflowSecuredSaltXX.466cecdbVGVzdCU0MDEyMzQ1",
+    "phone": "01775316434",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "suspended",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-10-01"
+  }
+]

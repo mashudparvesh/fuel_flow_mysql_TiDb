@@ -33,18 +33,33 @@ import { DEFAULT_SITE_CONTENT, SiteContentConfig } from "./src/data/defaultSiteC
 const DEFAULT_TENANTS: any[] = [];
 
 // Persistent File Path for Tenants & Users
-const DATA_DIR = path.join(process.cwd(), 'data');
+// On Vercel serverless, root filesystem is read-only; /tmp is the writable storage location.
+const SEED_DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.VERCEL ? path.join('/tmp', 'fuelnest_data') : SEED_DATA_DIR;
 const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.json');
 const CONTACT_MESSAGES_FILE = path.join(DATA_DIR, 'contact_messages.json');
 const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site_content.json');
+const ADMIN_NOTIFICATIONS_FILE = path.join(DATA_DIR, 'admin_notifications.json');
 
 const DEFAULT_USERS: any[] = [];
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  // On Vercel, copy initial seed files from repo to writable /tmp
+  if (process.env.VERCEL && fs.existsSync(SEED_DATA_DIR)) {
+    try {
+      const files = fs.readdirSync(SEED_DATA_DIR);
+      for (const file of files) {
+        const dest = path.join(DATA_DIR, file);
+        if (!fs.existsSync(dest)) {
+          fs.copyFileSync(path.join(SEED_DATA_DIR, file), dest);
+        }
+      }
+    } catch (e) {}
   }
   if (!fs.existsSync(TENANTS_FILE)) {
     fs.writeFileSync(TENANTS_FILE, JSON.stringify(DEFAULT_TENANTS, null, 2), 'utf-8');
@@ -54,6 +69,9 @@ function ensureDataDir() {
   }
   if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
     fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(ADMIN_NOTIFICATIONS_FILE)) {
+    fs.writeFileSync(ADMIN_NOTIFICATIONS_FILE, JSON.stringify([], null, 2), 'utf-8');
   }
 }
 
@@ -317,13 +335,13 @@ function loadEmailConfig(): EmailSettingsConfig {
   ensureDataDir();
   let config: EmailSettingsConfig = {
     smtp_enabled: process.env.SMTP_ENABLED === 'true',
-    smtp_host: process.env.SMTP_HOST || '',
-    smtp_port: Number(process.env.SMTP_PORT) || 587,
-    smtp_secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-    smtp_user: process.env.SMTP_USER || '',
+    smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    smtp_port: Number(process.env.SMTP_PORT) || 465,
+    smtp_secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465' || !process.env.SMTP_PORT,
+    smtp_user: process.env.SMTP_USER || 'admin.fuelnest@gmail.com',
     smtp_pass: process.env.SMTP_PASS || '',
-    smtp_from: process.env.SMTP_FROM || '',
-    resend_from: process.env.RESEND_FROM || '',
+    smtp_from: process.env.SMTP_FROM || 'FuelNest Intelligence <admin.fuelnest@gmail.com>',
+    resend_from: process.env.RESEND_FROM || 'FuelNest <admin.fuelnest@gmail.com>',
     verified_domain: process.env.EMAIL_DOMAIN || 'fuelnest.xyz'
   };
 
@@ -344,6 +362,27 @@ function saveEmailConfig(cfg: Partial<EmailSettingsConfig>) {
   const updated = { ...current, ...cfg };
   fs.writeFileSync(EMAIL_CONFIG_FILE, JSON.stringify(updated, null, 2), 'utf-8');
   return updated;
+}
+
+function recordAdminNotification(notification: any) {
+  try {
+    ensureDataDir();
+    let notifs: any[] = [];
+    if (fs.existsSync(ADMIN_NOTIFICATIONS_FILE)) {
+      try {
+        notifs = JSON.parse(fs.readFileSync(ADMIN_NOTIFICATIONS_FILE, 'utf-8'));
+      } catch {}
+    }
+    notifs.unshift({
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      ...notification
+    });
+    if (notifs.length > 50) notifs = notifs.slice(0, 50);
+    fs.writeFileSync(ADMIN_NOTIFICATIONS_FILE, JSON.stringify(notifs, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[Admin Notification Log Error]:', e);
+  }
 }
 
 function recordEmailLog(entry: any) {
@@ -623,6 +662,14 @@ export async function sendAdminNotificationEmail({
   const resendApiKey = process.env.RESEND_API_KEY;
 
   console.log(`[Admin Alert] Initiating alert email to ${targetAdminEmail}: "${subject}"`);
+
+  // Record into persistent Admin Notification Queue
+  recordAdminNotification({
+    subject,
+    recipient: targetAdminEmail,
+    text: text || subject,
+    created_at: new Date().toISOString()
+  });
 
   // 1. Try Custom SMTP if configured
   if (emailCfg.smtp_enabled && emailCfg.smtp_host && emailCfg.smtp_user && emailCfg.smtp_pass) {
@@ -1225,6 +1272,58 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       saveTenants(activeTenants);
       // Persist to MySQL
       await upsertTenantInDB(tenantRecord).catch(e => console.warn('[MySQL] Background tenant save error:', e));
+
+      // 🚨 CRITICAL: Instant Notification Email to admin.fuelnest@gmail.com
+      sendAdminNotificationEmail({
+        subject: `🚨 [New Subscriber Added] ${tenantRecord.name} (${tenantRecord.code})`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 18px 22px; border-radius: 10px; margin-bottom: 20px;">
+              <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">🚨 New Subscriber Workspace Created</h2>
+              <p style="color: #451a03; margin: 4px 0 0 0; font-size: 13px; font-weight: 600;">FuelNest Telemetry Cloud &bull; Alert for admin.fuelnest@gmail.com</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+              A new subscriber has been added to FuelNest. Here are the subscriber details:
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; background-color: #f8fafc; border-radius: 8px; overflow: hidden;">
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b; width: 35%;">Company Name:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #0f172a; font-size: 14px;">${tenantRecord.name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Workspace Code:</td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #0284c7;">${tenantRecord.code}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Contact Person:</td>
+                <td style="padding: 10px 12px; color: #0f172a; font-weight: 600;">${tenantRecord.contact_person || 'N/A'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Email Address:</td>
+                <td style="padding: 10px 12px; color: #0284c7; font-weight: bold;">${tenantRecord.email || 'N/A'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Phone / WhatsApp:</td>
+                <td style="padding: 10px 12px; color: #0f172a;">${tenantRecord.phone || 'N/A'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Plan:</td>
+                <td style="padding: 10px 12px; color: #d97706; font-weight: 800;">${tenantRecord.subscription?.plan_name_bn || tenantRecord.subscription?.plan || 'Active Plan'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #64748b;">Status:</td>
+                <td style="padding: 10px 12px; color: #16a34a; font-weight: 800;">${(tenantRecord.status || 'active').toUpperCase()}</td>
+              </tr>
+            </table>
+
+            <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 22px;">
+              FuelNest Telemetry Cloud &bull; Auto-dispatched to admin.fuelnest@gmail.com
+            </p>
+          </div>
+        `
+      }).catch(err => console.warn('[Subscriber create admin notification error]:', err));
 
       res.status(201).json({
         success: true,
@@ -2193,6 +2292,25 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       requests[index] = item;
       saveRegistrationRequests(requests);
 
+      // Notify admin.fuelnest@gmail.com about activation
+      sendAdminNotificationEmail({
+        subject: `✅ [Subscriber Activated] ${item.company_name} - Workspace Ready`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 18px 22px; border-radius: 10px; margin-bottom: 20px;">
+              <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800;">✅ Subscriber Workspace Activated</h2>
+              <p style="color: #d1fae5; margin: 4px 0 0 0; font-size: 13px;">FuelNest Platform Administration &bull; admin.fuelnest@gmail.com</p>
+            </div>
+            <p style="font-size: 14px; color: #334155;">The workspace for <strong>${item.company_name}</strong> (${item.plan_name}) has been approved and activated.</p>
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; margin: 16px 0;">
+              <p style="margin: 4px 0;"><strong>Username:</strong> <code style="font-family: monospace;">${superAdminUsername}</code></p>
+              <p style="margin: 4px 0;"><strong>Password:</strong> <code style="font-family: monospace;">${temporaryPassword}</code></p>
+              <p style="margin: 4px 0;"><strong>Portal Login:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+            </div>
+          </div>
+        `
+      }).catch(err => console.warn('[Admin alert error on approval]:', err));
+
       res.json({
         success: true,
         message: `Subscriber workspace for "${item.company_name}" has been unsuspended and activated!`,
@@ -2291,6 +2409,20 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       res.json({ success: true, count: logs.length, logs });
     } catch (e: any) {
       res.status(500).json({ success: false, message: e?.message });
+    }
+  });
+
+  // Admin Notification Queue endpoint
+  app.get('/api/admin-notifications', (req: Request, res: Response) => {
+    try {
+      ensureDataDir();
+      let notifs: any[] = [];
+      if (fs.existsSync(ADMIN_NOTIFICATIONS_FILE)) {
+        notifs = JSON.parse(fs.readFileSync(ADMIN_NOTIFICATIONS_FILE, 'utf-8'));
+      }
+      res.json({ success: true, notifications: notifs });
+    } catch (e: any) {
+      res.json({ success: true, notifications: [] });
     }
   });
 

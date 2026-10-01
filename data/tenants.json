@@ -1,1 +1,78 @@
-[]
+[
+  {
+    "id": "tenant_halima_mupexrjy_n3bp",
+    "name": "Halima Traders",
+    "code": "HT948",
+    "logo": null,
+    "currency": "BDT",
+    "phone": "+8801775316434",
+    "address": "Dhaka, Bangladesh",
+    "contact_person": "Halima Akter",
+    "email": "5891lime@uberip.com",
+    "status": "active",
+    "is_approved": true,
+    "deleted_at": null,
+    "created_at": "2026-10-01",
+    "subscription": {
+      "end_date": "2026-10-04",
+      "features": {
+        "anomaly_ai": true,
+        "custom_categories": true,
+        "qr_scanner": true,
+        "reports_export": true,
+        "tanker_bowzer": true
+      },
+      "is_approved": false,
+      "max_pumps": 15,
+      "max_users": 25,
+      "max_vehicles": 100,
+      "notes": "3-Day Free Trial (Landing Page Registration - Pending Master Control approval)",
+      "payment_status": "trial",
+      "plan": "trial_3days",
+      "plan_name_bn": "3 Days Free Trial",
+      "price_bdt": 0,
+      "start_date": "2026-10-01",
+      "status": "active",
+      "super_admin_password": "Halima@12345",
+      "super_admin_username": "halima_admin"
+    }
+  },
+  {
+    "id": "tenant_ms_muo4wk5v_8abb",
+    "name": "M/S Biswas Traders",
+    "code": "MBT228",
+    "logo": null,
+    "currency": "BDT",
+    "phone": "+8801713628082",
+    "address": "Dhaka, Bangladesh",
+    "contact_person": "Md Shohanur Rahman",
+    "email": "biswastradersnpp@gmail.com",
+    "status": "active",
+    "is_approved": true,
+    "deleted_at": null,
+    "created_at": "2026-09-30",
+    "subscription": {
+      "end_date": "2027-03-30",
+      "features": {
+        "anomaly_ai": true,
+        "custom_categories": true,
+        "qr_scanner": true,
+        "reports_export": true,
+        "tanker_bowzer": true
+      },
+      "is_approved": false,
+      "max_pumps": 15,
+      "max_users": 25,
+      "max_vehicles": 100,
+      "notes": "Subscription - 6 Months Plan (3,999 BDT) (Pending Master Control approval)",
+      "payment_status": "paid",
+      "plan": "plan_6months",
+      "plan_name_bn": "6 Months Plan (3,999 BDT)",
+      "price_bdt": 3999,
+      "start_date": "2026-09-30",
+      "status": "active",
+      "super_admin_password": "Ms@12345",
+      "super_admin_username": "ms_admin"
+    }
+  }
+]

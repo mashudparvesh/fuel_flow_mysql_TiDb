@@ -514,15 +514,15 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   // Email & SMTP configuration states
   const [emailConfig, setEmailConfig] = useState<any>({
     smtp_enabled: false,
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_secure: false,
-    smtp_user: '',
+    smtp_host: 'smtp.gmail.com',
+    smtp_port: 465,
+    smtp_secure: true,
+    smtp_user: 'admin.fuelnest@gmail.com',
     smtp_pass: '',
     smtp_pass_configured: false,
-    smtp_from: '',
+    smtp_from: 'FuelNest Intelligence <admin.fuelnest@gmail.com>',
     resend_active: false,
-    resend_from: '',
+    resend_from: 'FuelNest <admin.fuelnest@gmail.com>',
     verified_domain: 'fuelnest.xyz',
     owner_email: 'admin.fuelnest@gmail.com'
   });
@@ -1458,7 +1458,17 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <a
+                    href="https://mail.google.com/mail/u/admin.fuelnest@gmail.com/#search/FuelNest"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    title="Open Gmail for admin.fuelnest@gmail.com"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Gmail (admin.fuelnest)</span>
+                  </a>
                   <button
                     type="button"
                     onClick={fetchRegistrationRequests}
@@ -4502,24 +4512,64 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                 </span>
               </div>
 
+              {/* Sender Account Confirmation */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-[11px]">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Sender Account:</span>
+                </div>
+                <span className="font-mono text-emerald-300 font-extrabold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  admin.fuelnest@gmail.com
+                </span>
+              </div>
+
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                You can directly open your default email app with the pre-filled message, copy the formatted email to paste into Gmail/Webmail, or send it automatically through the system.
+                Choose an option below to dispatch credentials. Opening via Gmail Web explicitly uses <strong className="text-amber-400">admin.fuelnest@gmail.com</strong> as the sender:
               </p>
 
               {/* Action Buttons for Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* 1. Open Email Client (Mailto) */}
+              <div className="grid grid-cols-1 gap-2.5">
+                {/* 1. Open in Gmail Web Compose (Forced authuser=admin.fuelnest@gmail.com) */}
                 <button
                   type="button"
                   onClick={() => {
                     const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
                     const subject = `FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`;
-                    const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+                    const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
 
-                    const mailtoUrl = `mailto:${selectedApprovalModalData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    try {
-                      const newWin = window.open(mailtoUrl, '_blank', 'noopener,noreferrer');
-                      if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+                    // Enforce Gmail Web Compose with authuser=admin.fuelnest@gmail.com
+                    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(selectedApprovalModalData.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&authuser=admin.fuelnest@gmail.com`;
+                    
+                    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all"
+                >
+                  <Mail className="w-4 h-4 text-white" />
+                  <span>Send via Gmail Web (from admin.fuelnest@gmail.com)</span>
+                </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* 2. Open Default Mail App (Mailto with from=admin.fuelnest@gmail.com) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
+                      const subject = `FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`;
+                      const body = `From: admin.fuelnest@gmail.com (FuelNest Administration)\nReply-To: admin.fuelnest@gmail.com\n\nDear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+
+                      const mailtoUrl = `mailto:${selectedApprovalModalData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&from=admin.fuelnest@gmail.com&reply-to=admin.fuelnest@gmail.com`;
+                      try {
+                        const newWin = window.open(mailtoUrl, '_blank', 'noopener,noreferrer');
+                        if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+                          const a = document.createElement('a');
+                          a.href = mailtoUrl;
+                          a.target = '_blank';
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }
+                      } catch (e) {
                         const a = document.createElement('a');
                         a.href = mailtoUrl;
                         a.target = '_blank';
@@ -4528,53 +4578,46 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                         a.click();
                         document.body.removeChild(a);
                       }
-                    } catch (e) {
-                      const a = document.createElement('a');
-                      a.href = mailtoUrl;
-                      a.target = '_blank';
-                      a.rel = 'noopener noreferrer';
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                    }
-                  }}
-                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Open Email App (New Tab)</span>
-                </button>
+                    }}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Default Mail App (mailto)</span>
+                  </button>
 
-                {/* 2. Copy Full Email Message */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
-                    const emailMessage = `Subject: FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}\n\nDear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+                  {/* 3. Copy Full Email Message */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
+                      const emailMessage = `From: admin.fuelnest@gmail.com (FuelNest Administration)\nReply-To: admin.fuelnest@gmail.com\nSubject: FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}\n\nDear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
 
-                    navigator.clipboard?.writeText(emailMessage);
-                    setCopiedEmailText(true);
-                    setTimeout(() => setCopiedEmailText(false), 2500);
-                  }}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
-                >
-                  {copiedEmailText ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span className="text-emerald-400">Email Text Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 text-amber-400" />
-                      <span>Copy Full Email Text</span>
-                    </>
-                  )}
-                </button>
+                      navigator.clipboard?.writeText(emailMessage);
+                      setCopiedEmailText(true);
+                      setTimeout(() => setCopiedEmailText(false), 2500);
+                    }}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer transition-all"
+                  >
+                    {copiedEmailText ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="text-emerald-400">Email Text Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-amber-400" />
+                        <span>Copy Full Email Text</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {/* 3. Send Email via System */}
+              {/* 4. Send Email via System */}
               <div className="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-400">
-                  Or dispatch through server email service:
+                <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                  From: admin.fuelnest@gmail.com (Server Dispatch)
                 </span>
                 <button
                   type="button"

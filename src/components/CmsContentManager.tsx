@@ -389,13 +389,14 @@ export const CmsContentManager: React.FC = () => {
 
                     <div className="flex items-center gap-2">
                       <a
-                        href={`mailto:${msg.email}?subject=${encodeURIComponent('Re: ' + msg.subject)}`}
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(msg.email)}&su=${encodeURIComponent('Re: ' + msg.subject)}&authuser=admin.fuelnest@gmail.com`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-bold hover:bg-blue-500/20 transition-colors flex items-center gap-1"
+                        title="Compose from admin.fuelnest@gmail.com"
                       >
                         <Mail className="w-3 h-3" />
-                        <span>Reply Email</span>
+                        <span>Reply (admin.fuelnest)</span>
                       </a>
                       {msg.phone && (
                         <a

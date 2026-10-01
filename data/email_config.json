@@ -1,0 +1,11 @@
+{
+  "smtp_enabled": false,
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 465,
+  "smtp_secure": true,
+  "smtp_user": "admin.fuelnest@gmail.com",
+  "smtp_pass": "",
+  "smtp_from": "FuelNest Intelligence <admin.fuelnest@gmail.com>",
+  "resend_from": "FuelNest <admin.fuelnest@gmail.com>",
+  "verified_domain": "fuelnest.xyz"
+}
