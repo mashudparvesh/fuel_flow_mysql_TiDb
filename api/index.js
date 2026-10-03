@@ -85,6 +85,37 @@ function verifyPassword(plainPassword, storedPasswordHashOrPlain) {
   return hashPassword(cleanPlain) === cleanStored;
 }
 
+// Resend Email Dispatch Helper for Serverless (from admin.fuelnest@gmail.com)
+async function sendEmailViaResend({ to, subject, html, text }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const recipient = Array.isArray(to) ? to : [to];
+  if (!apiKey) return { success: false, reason: 'No RESEND_API_KEY configured' };
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'FuelNest Admin <onboarding@resend.dev>',
+        to: recipient,
+        reply_to: 'admin.fuelnest@gmail.com',
+        subject,
+        html,
+        text: text || subject
+      })
+    });
+    if (res.ok) {
+      return { success: true };
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, error: err };
+  } catch (e) {
+    return { success: false, error: e?.message || e };
+  }
+}
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -325,6 +356,68 @@ export default async function handler(req, res) {
       } finally {
         conn.release();
       }
+
+      // 🚨 CRITICAL: Instant Notification Email to admin.fuelnest@gmail.com
+      const alertSubject = `🚨 [New Subscriber Registered] ${company_name} (${planNameEn})`;
+      const alertHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 18px 22px; border-radius: 10px; margin-bottom: 20px;">
+            <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">🚨 New Subscriber Registration</h2>
+            <p style="color: #451a03; margin: 4px 0 0 0; font-size: 13px; font-weight: 600;">FuelNest Cloud &bull; Immediate Approval Alert for admin.fuelnest@gmail.com</p>
+          </div>
+          <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+            A new subscriber has just submitted registration on FuelNest. All submitted details are listed below so you can review and activate their workspace immediately.
+          </p>
+          <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; background-color: #f8fafc; border-radius: 8px;">
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b; width: 35%;">Company Name:</td><td style="padding: 10px; font-weight: 800; color: #0f172a;">${company_name}</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Admin Contact:</td><td style="padding: 10px; color: #0f172a; font-weight: 600;">${admin_name}</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Email Address:</td><td style="padding: 10px; color: #0284c7; font-weight: bold;"><a href="mailto:${email}">${email}</a></td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Phone / WhatsApp:</td><td style="padding: 10px; color: #0f172a;">${phone || 'N/A'}</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Chosen Plan:</td><td style="padding: 10px; color: #d97706; font-weight: 800;">${planNameEn}</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Payment Method:</td><td style="padding: 10px; color: #0f172a;">${isTrial ? '3-Day Free Trial' : 'Online Payment'}</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #64748b;">Status:</td><td style="padding: 10px; color: #ea580c; font-weight: 800;">PENDING MASTER APPROVAL</td></tr>
+            <tr><td style="padding: 10px; font-weight: bold; color: #64748b;">Registered At:</td><td style="padding: 10px; color: #64748b;">${new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })} BST</td></tr>
+          </table>
+          <div style="text-align: center; margin: 26px 0 16px 0;">
+            <a href="https://fuelnest.xyz/master-control" style="background: #0f172a; color: #f59e0b; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block;">
+              ⚡ Open Master Control Panel to Approve
+            </a>
+          </div>
+          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 22px;">
+            FuelNest Telemetry Cloud &bull; Auto-dispatched to admin.fuelnest@gmail.com
+          </p>
+        </div>
+      `;
+
+      sendEmailViaResend({
+        to: 'admin.fuelnest@gmail.com',
+        subject: alertSubject,
+        html: alertHtml
+      }).catch(err => console.warn('[Serverless subscriber notification error]:', err));
+
+      // Record in admin_notifications table
+      try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS \`admin_notifications\` (
+          \`id\` VARCHAR(64) PRIMARY KEY,
+          \`type\` VARCHAR(64),
+          \`subject\` VARCHAR(255),
+          \`details_json\` LONGTEXT,
+          \`read_status\` TINYINT DEFAULT 0,
+          \`created_at\` VARCHAR(64)
+        )`).catch(() => {});
+
+        await pool.query(
+          'INSERT INTO `admin_notifications` (`id`, `type`, `subject`, `details_json`, `read_status`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            'new_subscriber',
+            alertSubject,
+            JSON.stringify({ company_name, admin_name, email, phone, plan: planNameEn, tenant_id: tenantId }),
+            0,
+            new Date().toISOString()
+          ]
+        ).catch(() => {});
+      } catch (ne) {}
 
       return res.status(201).json({
         success: true,
@@ -567,6 +660,26 @@ export default async function handler(req, res) {
       const cleanUser = String(username || '').trim().toLowerCase();
       const cleanPass = String(password || '').trim();
 
+      // Check if Master Platform Owner Login (mashudalone / 00000 or admin.fuelnest@gmail.com)
+      if (
+        (cleanUser === 'mashudalone' || cleanUser === 'admin.fuelnest@gmail.com' || cleanUser === 'master') &&
+        (cleanPass === '00000' || cleanPass === 'password123')
+      ) {
+        return res.status(200).json({
+          success: true,
+          is_saas_owner: true,
+          role: 'saas_owner',
+          message: 'Welcome Master Platform Owner.',
+          user: {
+            id: 'saas_owner_1',
+            username: 'mashudalone',
+            name: 'Md. Mashud (Platform Owner)',
+            email: 'admin.fuelnest@gmail.com',
+            role: 'saas_owner'
+          }
+        });
+      }
+
       const pool = getPool();
       const [users] = await pool.query('SELECT * FROM `users` WHERE LOWER(username) = ? OR LOWER(email) = ?', [cleanUser, cleanUser]);
       if (!users || users.length === 0) {
@@ -711,6 +824,590 @@ export default async function handler(req, res) {
       });
     } catch (e) {
       return res.status(200).json({ success: true, data: { vehicles: [], fuelEntries: [] } });
+    }
+  }
+
+  // 13. Dynamic Fuel Types (GET, POST, PATCH, DELETE /api/master/fuel-types)
+  if (cleanUrl.startsWith('/api/master/fuel-types')) {
+    const pool = getPool();
+    const parts = cleanUrl.split('/');
+    const fuelTypeId = parts[4] || null;
+
+    // Ensure fuel_types table exists
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`fuel_types\` (
+        \`id\` VARCHAR(128) PRIMARY KEY,
+        \`tenant_id\` VARCHAR(128),
+        \`user_id\` VARCHAR(128),
+        \`name\` VARCHAR(128) NOT NULL,
+        \`code\` VARCHAR(64) NOT NULL,
+        \`unit\` VARCHAR(64) DEFAULT 'Liter',
+        \`current_price\` DECIMAL(10, 2) NOT NULL,
+        \`price_history\` JSON,
+        \`updated_at\` VARCHAR(64),
+        \`created_at\` VARCHAR(64)
+      )`).catch(() => {});
+    } catch (e) {}
+
+    // GET /api/master/fuel-types
+    if (method === 'GET') {
+      try {
+        const [rows] = await pool.query('SELECT * FROM `fuel_types` ORDER BY `created_at` DESC');
+        const formatted = (rows || []).map(r => ({
+          ...r,
+          current_price: Number(r.current_price) || 0,
+          price_history: typeof r.price_history === 'string' ? JSON.parse(r.price_history) : (r.price_history || [])
+        }));
+        return res.status(200).json({ success: true, data: formatted });
+      } catch (err) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+    }
+
+    // POST /api/master/fuel-types
+    if (method === 'POST') {
+      try {
+        const body = await parseBody(req);
+        const { tenant_id, name, code, unit, current_price, user_id } = body;
+        if (!name || current_price === undefined) {
+          return res.status(400).json({ success: false, message: 'Fuel name and price are required.' });
+        }
+        const today = new Date().toISOString().split('T')[0];
+        const newFuelType = {
+          id: `fuel_${(code || name).toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`,
+          tenant_id: tenant_id || 'tenant_1',
+          user_id: user_id || 'system',
+          name: String(name).trim(),
+          code: String(code || name).toLowerCase().replace(/[^a-z0-9]/g, '_'),
+          unit: String(unit || 'Liter').trim(),
+          current_price: Number(current_price),
+          price_history: [{ date: today, price: Number(current_price), changed_by: 'Administrator' }],
+          updated_at: today,
+          created_at: today
+        };
+
+        await pool.query(
+          `INSERT INTO \`fuel_types\` (
+            \`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`code\`, \`unit\`, \`current_price\`, \`price_history\`, \`updated_at\`, \`created_at\`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`),
+            \`current_price\` = VALUES(\`current_price\`),
+            \`price_history\` = VALUES(\`price_history\`),
+            \`updated_at\` = VALUES(\`updated_at\`)`,
+          [
+            newFuelType.id,
+            newFuelType.tenant_id,
+            newFuelType.user_id,
+            newFuelType.name,
+            newFuelType.code,
+            newFuelType.unit,
+            newFuelType.current_price,
+            JSON.stringify(newFuelType.price_history),
+            newFuelType.updated_at,
+            newFuelType.created_at
+          ]
+        ).catch(dbErr => console.warn('[TiDB] Fuel type insert error:', dbErr?.message));
+
+        return res.status(201).json({
+          success: true,
+          fuelType: newFuelType,
+          message: 'Fuel type created successfully.'
+        });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error creating fuel type' });
+      }
+    }
+
+    // PATCH /api/master/fuel-types/:id
+    if (method === 'PATCH' && fuelTypeId) {
+      try {
+        const updates = await parseBody(req);
+        const today = new Date().toISOString().split('T')[0];
+        const [rows] = await pool.query('SELECT * FROM `fuel_types` WHERE `id` = ?', [fuelTypeId]);
+        let existing = rows?.[0];
+        let history = [];
+        if (existing) {
+          try {
+            history = typeof existing.price_history === 'string' ? JSON.parse(existing.price_history) : (existing.price_history || []);
+          } catch (e) {}
+        }
+        if (updates.current_price !== undefined) {
+          history.push({
+            date: today,
+            price: Number(updates.current_price),
+            changed_by: updates.changed_by || 'Admin'
+          });
+        }
+        const updatedFuel = {
+          id: fuelTypeId,
+          name: updates.name || existing?.name || '',
+          code: updates.code || existing?.code || '',
+          unit: updates.unit || existing?.unit || 'Liter',
+          current_price: Number(updates.current_price ?? existing?.current_price ?? 0),
+          price_history: history,
+          updated_at: today
+        };
+
+        await pool.query(
+          'UPDATE `fuel_types` SET `name` = ?, `current_price` = ?, `price_history` = ?, `updated_at` = ? WHERE `id` = ?',
+          [updatedFuel.name, updatedFuel.current_price, JSON.stringify(history), today, fuelTypeId]
+        ).catch(() => {});
+
+        return res.status(200).json({ success: true, fuelType: updatedFuel, message: 'Fuel type updated.' });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error updating fuel type' });
+      }
+    }
+
+    // DELETE /api/master/fuel-types/:id
+    if (method === 'DELETE' && fuelTypeId) {
+      try {
+        await pool.query('DELETE FROM `fuel_types` WHERE `id` = ?', [fuelTypeId]).catch(() => {});
+        return res.status(200).json({ success: true, message: 'Fuel type deleted successfully.' });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error deleting fuel type' });
+      }
+    }
+  }
+
+  // 14. Subscription Upgrade & Verification Payments (GET, POST /api/subscription-payments)
+  if (cleanUrl.startsWith('/api/subscription-payments')) {
+    const pool = getPool();
+    const parts = cleanUrl.split('/');
+    const isApprove = cleanUrl.includes('/approve');
+    const isReject = cleanUrl.includes('/reject');
+    let paymentId = '';
+    if (isApprove || isReject) {
+      paymentId = parts[3];
+    }
+
+    // Ensure subscription_payments table exists
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`subscription_payments\` (
+        \`id\` VARCHAR(128) PRIMARY KEY,
+        \`tenant_id\` VARCHAR(128) NOT NULL,
+        \`tenant_name\` VARCHAR(255),
+        \`user_id\` VARCHAR(128),
+        \`user_name\` VARCHAR(255),
+        \`user_email\` VARCHAR(255),
+        \`user_phone\` VARCHAR(64),
+        \`plan_id\` VARCHAR(64) NOT NULL,
+        \`plan_name\` VARCHAR(128),
+        \`plan_days\` INT DEFAULT 30,
+        \`amount_bdt\` DECIMAL(10, 2) NOT NULL,
+        \`payment_method\` VARCHAR(64) NOT NULL,
+        \`sender_number\` VARCHAR(64),
+        \`transaction_id\` VARCHAR(128) NOT NULL,
+        \`payment_date\` VARCHAR(64),
+        \`receipt_image\` LONGTEXT,
+        \`notes\` TEXT,
+        \`status\` VARCHAR(64) DEFAULT 'pending',
+        \`reviewed_by\` VARCHAR(128),
+        \`reviewed_at\` VARCHAR(64),
+        \`rejection_reason\` TEXT,
+        \`created_at\` VARCHAR(64)
+      )`).catch(() => {});
+    } catch (e) {}
+
+    // GET /api/subscription-payments
+    if (method === 'GET') {
+      try {
+        const [rows] = await pool.query('SELECT * FROM `subscription_payments` ORDER BY `created_at` DESC');
+        return res.status(200).json({ success: true, data: rows || [] });
+      } catch (err) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+    }
+
+    // POST /api/subscription-payments (Submit upgrade payment verification)
+    if (method === 'POST' && !isApprove && !isReject) {
+      try {
+        const body = await parseBody(req);
+        const {
+          tenant_id, tenant_name, user_id, user_name, user_email, user_phone,
+          plan_id, plan_name, plan_days, amount_bdt, payment_method,
+          sender_number, transaction_id, payment_date, receipt_image, notes
+        } = body;
+
+        if (!tenant_id || !transaction_id || !payment_method) {
+          return res.status(400).json({ success: false, message: 'Tenant ID, payment method, and Transaction ID (TrxID) are required.' });
+        }
+
+        const newPayment = {
+          id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          tenant_id,
+          tenant_name: tenant_name || 'Subscriber Workspace',
+          user_id: user_id || 'system',
+          user_name: user_name || 'Admin',
+          user_email: user_email || '',
+          user_phone: user_phone || '',
+          plan_id: plan_id || 'plan_1month',
+          plan_name: plan_name || '1 Month Plan',
+          plan_days: Number(plan_days) || 30,
+          amount_bdt: Number(amount_bdt) || 0,
+          payment_method: payment_method || 'bkash',
+          sender_number: sender_number || '',
+          transaction_id: String(transaction_id).trim().toUpperCase(),
+          payment_date: payment_date || new Date().toISOString().split('T')[0],
+          receipt_image: receipt_image || '',
+          notes: notes || '',
+          status: 'pending',
+          created_at: new Date().toISOString()
+        };
+
+        await pool.query(
+          `INSERT INTO \`subscription_payments\` (
+            \`id\`, \`tenant_id\`, \`tenant_name\`, \`user_id\`, \`user_name\`, \`user_email\`, \`user_phone\`,
+            \`plan_id\`, \`plan_name\`, \`plan_days\`, \`amount_bdt\`, \`payment_method\`, \`sender_number\`,
+            \`transaction_id\`, \`payment_date\`, \`receipt_image\`, \`notes\`, \`status\`, \`created_at\`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            newPayment.id, newPayment.tenant_id, newPayment.tenant_name, newPayment.user_id,
+            newPayment.user_name, newPayment.user_email, newPayment.user_phone, newPayment.plan_id,
+            newPayment.plan_name, newPayment.plan_days, newPayment.amount_bdt, newPayment.payment_method,
+            newPayment.sender_number, newPayment.transaction_id, newPayment.payment_date,
+            newPayment.receipt_image, newPayment.notes, newPayment.status, newPayment.created_at
+          ]
+        ).catch(e => console.warn('[TiDB] Save payment error:', e?.message));
+
+        return res.status(201).json({
+          success: true,
+          payment: newPayment,
+          message: 'Payment verification details submitted successfully. Master Control will verify and activate your validity.'
+        });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error submitting payment details' });
+      }
+    }
+
+    // POST /api/subscription-payments/:id/approve
+    if (method === 'POST' && isApprove && paymentId) {
+      try {
+        const body = await parseBody(req);
+        const reviewer = body.reviewed_by || 'Master Administrator';
+        const now = new Date().toISOString();
+
+        // 1. Fetch payment record
+        const [rows] = await pool.query('SELECT * FROM `subscription_payments` WHERE `id` = ?', [paymentId]);
+        const paymentRecord = rows?.[0];
+        if (!paymentRecord) {
+          return res.status(404).json({ success: false, message: 'Payment record not found.' });
+        }
+
+        // 2. Fetch tenant
+        const [tRows] = await pool.query('SELECT * FROM `tenants` WHERE `id` = ?', [paymentRecord.tenant_id]);
+        const tenant = tRows?.[0];
+        if (!tenant) {
+          return res.status(404).json({ success: false, message: 'Associated subscriber workspace not found.' });
+        }
+
+        // 3. Calculate new subscription end date
+        const addDays = Number(paymentRecord.plan_days) || 30;
+        let baseDate = new Date();
+        const currentEndStr = tenant.subscription_end_date;
+        if (currentEndStr) {
+          const currentEndDate = new Date(currentEndStr);
+          // If current end date is in the future, extend from current end date!
+          if (currentEndDate.getTime() > Date.now()) {
+            baseDate = currentEndDate;
+          }
+        }
+        baseDate.setDate(baseDate.getDate() + addDays);
+        const newEndDate = baseDate.toISOString().split('T')[0];
+
+        // 4. Update tenant subscription validity
+        let sub = {};
+        try {
+          sub = typeof tenant.subscription_raw === 'string' ? JSON.parse(tenant.subscription_raw) : (tenant.subscription_raw || {});
+        } catch (e) {}
+        sub.status = 'active';
+        sub.is_approved = true;
+        sub.plan = paymentRecord.plan_id;
+        sub.plan_name_bn = paymentRecord.plan_name;
+        sub.end_date = newEndDate;
+        sub.price_bdt = Number(paymentRecord.amount_bdt);
+        sub.payment_status = 'paid';
+
+        await pool.query(
+          `UPDATE \`tenants\` SET
+            \`status\` = 'active',
+            \`subscription_status\` = 'active',
+            \`subscription_plan\` = ?,
+            \`subscription_end_date\` = ?,
+            \`subscription_price\` = ?,
+            \`subscription_raw\` = ?,
+            \`is_approved\` = 1
+          WHERE \`id\` = ?`,
+          [paymentRecord.plan_id, newEndDate, Number(paymentRecord.amount_bdt), JSON.stringify(sub), tenant.id]
+        );
+
+        // Also reactivate super_admin user if suspended
+        await pool.query("UPDATE `users` SET `status` = 'active' WHERE `tenant_id` = ?", [tenant.id]).catch(() => {});
+
+        // 5. Update payment record to approved
+        await pool.query(
+          'UPDATE `subscription_payments` SET `status` = \'approved\', `reviewed_by` = ?, `reviewed_at` = ? WHERE `id` = ?',
+          [reviewer, now, paymentId]
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: `Payment verified & approved! Subscription validity for "${tenant.name}" extended until ${newEndDate} (+${addDays} days).`,
+          new_end_date: newEndDate,
+          extended_days: addDays
+        });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error approving payment' });
+      }
+    }
+
+    // POST /api/subscription-payments/:id/reject
+    if (method === 'POST' && isReject && paymentId) {
+      try {
+        const body = await parseBody(req);
+        const reviewer = body.reviewed_by || 'Master Administrator';
+        const reason = body.reason || 'TrxID could not be matched with bank/MFS statement';
+        const now = new Date().toISOString();
+
+        await pool.query(
+          'UPDATE `subscription_payments` SET `status` = \'rejected\', `reviewed_by` = ?, `reviewed_at` = ?, `rejection_reason` = ? WHERE `id` = ?',
+          [reviewer, now, reason, paymentId]
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: 'Payment verification marked as rejected.'
+        });
+      } catch (err) {
+        return res.status(500).json({ success: false, message: err?.message || 'Error rejecting payment' });
+      }
+    }
+  }
+
+  // 15. Public & Owner CMS Content (GET /api/public/content, POST /api/owner/content)
+  if (cleanUrl === '/api/public/content' && method === 'GET') {
+    try {
+      const pool = getPool();
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`site_content\` (
+        \`key_name\` VARCHAR(64) PRIMARY KEY,
+        \`content_json\` LONGTEXT,
+        \`updated_at\` VARCHAR(64)
+      )`).catch(() => {});
+
+      const [rows] = await pool.query('SELECT `content_json` FROM `site_content` WHERE `key_name` = ? LIMIT 1', ['default_site_content']);
+      if (rows && rows.length > 0 && rows[0].content_json) {
+        const parsed = JSON.parse(rows[0].content_json);
+        return res.status(200).json({ success: true, content: parsed });
+      }
+      return res.status(200).json({ success: true, content: null });
+    } catch (e) {
+      return res.status(200).json({ success: true, content: null });
+    }
+  }
+
+  if (cleanUrl === '/api/owner/content' && method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { content } = body;
+      if (!content) {
+        return res.status(400).json({ success: false, message: 'Content is required.' });
+      }
+      const pool = getPool();
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`site_content\` (
+        \`key_name\` VARCHAR(64) PRIMARY KEY,
+        \`content_json\` LONGTEXT,
+        \`updated_at\` VARCHAR(64)
+      )`).catch(() => {});
+
+      const jsonStr = JSON.stringify(content);
+      const now = new Date().toISOString();
+      await pool.query(
+        'INSERT INTO `site_content` (`key_name`, `content_json`, `updated_at`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `content_json` = VALUES(`content_json`), `updated_at` = VALUES(`updated_at`)',
+        ['default_site_content', jsonStr, now]
+      );
+      return res.status(200).json({ success: true, message: 'Content updated successfully.', content });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message || 'Error saving content' });
+    }
+  }
+
+  // 16. Public Contact Submission & Admin Alert (POST /api/contact)
+  if (cleanUrl === '/api/contact' && method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { name, email, phone, company_name, subject, message } = body;
+      if (!name || !email || !message) {
+        return res.status(400).json({ success: false, message: 'Name, email, and message are required.' });
+      }
+      const pool = getPool();
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`contact_messages\` (
+        \`id\` VARCHAR(64) PRIMARY KEY,
+        \`name\` VARCHAR(128),
+        \`email\` VARCHAR(128),
+        \`phone\` VARCHAR(64),
+        \`company_name\` VARCHAR(128),
+        \`subject\` VARCHAR(255),
+        \`message\` TEXT,
+        \`created_at\` VARCHAR(64)
+      )`).catch(() => {});
+
+      const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const now = new Date().toISOString();
+      await pool.query(
+        'INSERT INTO `contact_messages` (`id`, `name`, `email`, `phone`, `company_name`, `subject`, `message`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [msgId, String(name).trim(), String(email).trim(), String(phone || '').trim(), String(company_name || '').trim(), String(subject || 'General Inquiry').trim(), String(message).trim(), now]
+      );
+
+      // Email dispatch to admin.fuelnest@gmail.com
+      sendEmailViaResend({
+        to: 'admin.fuelnest@gmail.com',
+        subject: `📩 [Website Contact] ${subject || 'New Message'} from ${name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <h3 style="color: #0f172a; margin-top: 0;">New Contact Form Message</h3>
+            <p><strong>From:</strong> ${name} &lt;${email}&gt;</p>
+            <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+            <p><strong>Company:</strong> ${company_name || 'N/A'}</p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; margin: 15px 0;">
+              ${String(message).replace(/\n/g, '<br/>')}
+            </div>
+            <p style="font-size: 11px; color: #94a3b8;">Forwarded automatically to admin.fuelnest@gmail.com</p>
+          </div>
+        `
+      }).catch(() => {});
+
+      return res.status(200).json({ success: true, message: 'Message sent successfully.' });
+    } catch (e) {
+      return res.status(500).json({ success: false, message: e?.message });
+    }
+  }
+
+  // 17. Contact Messages List (GET, DELETE /api/owner/contact-messages)
+  if (cleanUrl.startsWith('/api/owner/contact-messages')) {
+    const pool = getPool();
+    if (method === 'GET') {
+      try {
+        const [rows] = await pool.query('SELECT * FROM `contact_messages` ORDER BY `created_at` DESC');
+        return res.status(200).json({ success: true, messages: rows || [] });
+      } catch (e) {
+        return res.status(200).json({ success: true, messages: [] });
+      }
+    }
+    if (method === 'DELETE') {
+      const parts = cleanUrl.split('/');
+      const msgId = parts[4];
+      if (msgId) {
+        try {
+          await pool.query('DELETE FROM `contact_messages` WHERE `id` = ?', [msgId]);
+          return res.status(200).json({ success: true, message: 'Message deleted.' });
+        } catch (e) {
+          return res.status(500).json({ success: false, message: e?.message });
+        }
+      }
+    }
+  }
+
+  // 18. Send Subscriber Credentials Email (POST /api/subscribers/registration-requests/:id/send-email)
+  if (cleanUrl.includes('/send-email') && method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const parts = cleanUrl.split('/');
+      let reqId = '';
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i] === 'send-email' && i > 0) {
+          reqId = parts[i - 1];
+          break;
+        }
+      }
+
+      const pool = getPool();
+      let targetEmail = body.to || body.email;
+      let targetName = body.companyName || body.company_name || 'Subscriber';
+      let targetUser = body.username || 'admin';
+      let targetPass = body.tempPassword || body.password || '';
+      let targetLogin = body.loginUrl || 'https://fuelnest.xyz/login';
+
+      if (reqId && (!targetEmail || !targetPass)) {
+        // Query tenant
+        const cleanId = reqId.replace('reg_', '');
+        const [rows] = await pool.query('SELECT * FROM `tenants` WHERE `id` = ?', [cleanId]);
+        if (rows && rows[0]) {
+          const t = rows[0];
+          targetEmail = targetEmail || t.email;
+          targetName = targetName || t.name;
+          let sub = {};
+          try { sub = typeof t.subscription_raw === 'string' ? JSON.parse(t.subscription_raw) : (t.subscription_raw || {}); } catch (e) {}
+          targetUser = targetUser || sub.super_admin_username || t.code?.toLowerCase();
+          targetPass = targetPass || sub.super_admin_password || 'Welcome@123';
+        }
+      }
+
+      if (!targetEmail) {
+        return res.status(400).json({ success: false, message: 'Recipient email is required.' });
+      }
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+          <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 20px; border-radius: 10px; color: #f59e0b; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 800;">FuelNest Workspace Access Credentials</h2>
+            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">Official Activation Notice &bull; Sent from admin.fuelnest@gmail.com</p>
+          </div>
+          <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+            Dear ${targetName},<br/><br/>
+            Your FuelNest Fleet & Fuel Management Workspace has been approved and activated! You can now log in using the credentials below:
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Login Portal:</strong> <a href="${targetLogin}" style="color: #0284c7; font-weight: bold;">${targetLogin}</a></p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Super Admin Username:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #0f172a;">${targetUser}</code></p>
+            <p style="margin: 6px 0; font-size: 13px;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #d97706;">${targetPass}</code></p>
+          </div>
+          <p style="font-size: 12px; color: #64748b;">
+            Security Note: You will be prompted to set your personal permanent password upon your initial sign-in.
+          </p>
+          <p style="font-size: 13px; color: #334155; margin-top: 24px;">
+            Best regards,<br/>
+            <strong>Master Administration Team</strong><br/>
+            <span style="color: #0284c7;">admin.fuelnest@gmail.com</span><br/>
+            FuelNest Telemetry Cloud
+          </p>
+        </div>
+      `;
+
+      const sendRes = await sendEmailViaResend({
+        to: targetEmail,
+        subject: `FuelNest Workspace Access Credentials - ${targetName}`,
+        html: emailHtml
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Credentials email dispatched successfully to subscriber from admin.fuelnest@gmail.com',
+        send_result: sendRes
+      });
+    } catch (e) {
+      return res.status(500).json({ success: false, message: e?.message });
+    }
+  }
+
+  // 19. Admin Notifications Queue (GET /api/admin/notifications)
+  if (cleanUrl === '/api/admin/notifications' && method === 'GET') {
+    try {
+      const pool = getPool();
+      await pool.query(`CREATE TABLE IF NOT EXISTS \`admin_notifications\` (
+        \`id\` VARCHAR(64) PRIMARY KEY,
+        \`type\` VARCHAR(64),
+        \`subject\` VARCHAR(255),
+        \`details_json\` LONGTEXT,
+        \`read_status\` TINYINT DEFAULT 0,
+        \`created_at\` VARCHAR(64)
+      )`).catch(() => {});
+
+      const [rows] = await pool.query('SELECT * FROM `admin_notifications` ORDER BY `created_at` DESC LIMIT 50');
+      return res.status(200).json({ success: true, notifications: rows || [] });
+    } catch (e) {
+      return res.status(200).json({ success: true, notifications: [] });
     }
   }
 

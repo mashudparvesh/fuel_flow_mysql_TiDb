@@ -1,5 +1,89 @@
 [
   {
+    "id": "usr_tenant_desh_mus3971j_npu8_admin",
+    "tenant_id": "tenant_desh_mus3971j_npu8",
+    "name": "Engr. Rahman Chowdhury",
+    "email": "rahman.chowdhury@deshfleet.com",
+    "username": "desh_admin_2",
+    "password": "$2y$10$fuelflowSecuredSaltXX.05cec5d7RGVzaCU0MDEyMzQ1",
+    "phone": "+8801711998877",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-10-03"
+  },
+  {
+    "id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+    "tenant_id": "tenant_desh_mus38ms7_5rtb",
+    "name": "Engr. Rahman Chowdhury",
+    "email": "rahman.chowdhury@deshfleet.com",
+    "username": "desh_admin_1",
+    "password": "$2y$10$fuelflowSecuredSaltXX.05cec5d7RGVzaCU0MDEyMzQ1",
+    "phone": "+8801711998877",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-10-03"
+  },
+  {
+    "id": "usr_tenant_desh_mus371wo_yuzr_admin",
+    "tenant_id": "tenant_desh_mus371wo_yuzr",
+    "name": "Engr. Rahman Chowdhury",
+    "email": "rahman.chowdhury@deshfleet.com",
+    "username": "desh_admin",
+    "password": "$2y$10$fuelflowSecuredSaltXX.05cec5d7RGVzaCU0MDEyMzQ1",
+    "phone": "+8801711998877",
+    "role": "super_admin",
+    "role_title_bn": "Company Super Admin",
+    "status": "active",
+    "must_change_password": true,
+    "allowed_category_ids": [
+      "all"
+    ],
+    "allowed_pump_ids": [
+      "all"
+    ],
+    "permissions": {
+      "can_add_fuel": true,
+      "can_manage_vehicles": true,
+      "can_manage_pumps": true,
+      "can_view_reports": true,
+      "can_manage_users": true,
+      "can_edit_settings": true
+    },
+    "created_at": "2026-10-03"
+  },
+  {
     "id": "usr_tenant_test_mupff3mc_4q9r_admin",
     "tenant_id": "tenant_test_mupff3mc_4q9r",
     "name": "Rahim Ahmed",

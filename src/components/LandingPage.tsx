@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Fuel,
@@ -30,9 +30,12 @@ import {
   Check,
   Smartphone,
   QrCode,
-  Clock
+  Clock,
+  Video,
+  Play
 } from 'lucide-react';
 import { OFFICIAL_SUBSCRIPTION_PLANS, SubscriptionPlanId, SubscriptionPlanConfig } from '../types';
+import { DEFAULT_SITE_CONTENT, SiteContentConfig, formatVideoEmbedUrl } from '../data/defaultSiteContent';
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
@@ -46,6 +49,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateToPublicPage
 }) => {
   const { isAuthenticated, activeTenants, refreshTenantsFromServer } = useApp();
+
+  // Dynamic Site Content (Customizable from Master Control CMS: Branding, Video, Pages)
+  const [siteContent, setSiteContent] = useState<SiteContentConfig>(DEFAULT_SITE_CONTENT);
+
+  useEffect(() => {
+    fetch('/api/public/content')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.content) {
+          setSiteContent({
+            ...DEFAULT_SITE_CONTENT,
+            ...data.content,
+            branding: { ...DEFAULT_SITE_CONTENT.branding, ...(data.content.branding || {}) },
+            home: { ...DEFAULT_SITE_CONTENT.home, ...(data.content.home || {}) }
+          });
+        }
+      })
+      .catch(() => {});
+
+    try {
+      const ch = new BroadcastChannel('fuelflow_tenants_sync');
+      ch.onmessage = (e) => {
+        if (e.data?.type === 'CONTENT_UPDATED' && e.data.content) {
+          setSiteContent(prev => ({
+            ...prev,
+            ...e.data.content,
+            branding: { ...prev.branding, ...(e.data.content.branding || {}) },
+            home: { ...prev.home, ...(e.data.content.home || {}) }
+          }));
+        }
+      };
+      return () => ch.close();
+    } catch (e) {}
+  }, []);
 
   // Registration Modal State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -268,18 +305,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Logo & Brand */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30 flex-shrink-0">
-              <Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
-            </div>
+            {siteContent.branding?.logo_url ? (
+              <img
+                src={siteContent.branding.logo_url}
+                alt={siteContent.branding.app_name || 'FuelNest Logo'}
+                className="h-9 sm:h-11 max-w-[130px] sm:max-w-[170px] object-contain flex-shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30 flex-shrink-0">
+                <Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
+              </div>
+            )}
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-white">FuelNest</span>
+                <span className="text-lg sm:text-xl font-black tracking-tight text-white truncate">
+                  {siteContent.branding?.app_name || 'FuelNest'}
+                </span>
                 <span className="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
                   Enterprise Fleet
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Fleet & Fuel Commercial Intelligence
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate">
+                {siteContent.branding?.tagline || 'Fleet & Fuel Commercial Intelligence'}
               </p>
             </div>
           </div>
@@ -289,6 +336,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#features" className="hover:text-amber-400 transition-colors">
               Features
             </a>
+            {siteContent.home?.video_url && (
+              <a href="#demo-video" className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-300">
+                <Video className="w-3.5 h-3.5 text-amber-400" />
+                <span>Video Tour</span>
+              </a>
+            )}
             <a href="#dual-metrics" className="hover:text-amber-400 transition-colors">
               Dual Metrics
             </a>
@@ -504,19 +557,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="lg:col-span-7 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold mb-6 animate-pulse">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>3-Day Free Trial Available &bull; Instant Cloud Provisioning</span>
+                <span>{siteContent.home?.hero_badge || '3-Day Free Trial Available • Instant Cloud Provisioning'}</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
-                Fleet & Fuel Control Built for{' '}
-                <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">
-                  Heavy Equipment
-                </span>{' '}
-                Logistics.
+                {siteContent.home?.hero_title ? (
+                  <span>{siteContent.home.hero_title}</span>
+                ) : (
+                  <>
+                    Fleet & Fuel Control Built for{' '}
+                    <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+                      Heavy Equipment
+                    </span>{' '}
+                    Logistics.
+                  </>
+                )}
               </h1>
 
               <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Eliminate fuel theft and reconciliation guesswork. FuelNest delivers dual metric tracking (LPH for excavators and generators, KMPL for transport trucks), site bowzer depot stock logs, highway pump credit ledgers, and automated AI anomaly detection.
+                {siteContent.home?.hero_subtitle || 'Eliminate fuel theft and reconciliation guesswork. FuelNest delivers dual metric tracking (LPH for excavators and generators, KMPL for transport trucks), site bowzer depot stock logs, highway pump credit ledgers, and automated AI anomaly detection.'}
               </p>
 
               {/* Action Buttons */}
@@ -700,6 +759,97 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* PROMOTIONAL PRODUCT VIDEO SHOWCASE (Configured via Master Control CMS) */}
+      {(() => {
+        const videoUrl = siteContent.home?.video_url;
+        if (!videoUrl || !videoUrl.trim()) return null;
+        const videoData = formatVideoEmbedUrl(videoUrl);
+        if (videoData.type === 'none') return null;
+
+        return (
+          <section id="demo-video" className="py-16 md:py-24 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 border-y border-amber-500/25 relative overflow-hidden">
+            {/* Ambient Backlight Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[380px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+              <div className="text-center max-w-3xl mx-auto mb-10">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black tracking-wide uppercase mb-3 shadow-xs">
+                  <Video className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{siteContent.home?.video_badge || 'OFFICIAL PRODUCT WALKTHROUGH'}</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                  {siteContent.home?.video_title || 'See FuelNest Intelligence In Action'}
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                  {siteContent.home?.video_description || 'Watch our full operational walkthrough to discover how FuelNest safeguards diesel stocks, prevents equipment theft, and streamlines fleet accounting.'}
+                </p>
+              </div>
+
+              {/* Video Window Frame Container */}
+              <div className="rounded-3xl bg-slate-950 border-2 border-slate-800 hover:border-amber-500/40 shadow-2xl shadow-amber-500/5 transition-all overflow-hidden">
+                {/* Browser / Player Titlebar */}
+                <div className="px-4 py-3 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block shrink-0" />
+                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block shrink-0" />
+                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block shrink-0" />
+                    <span className="ml-2 text-xs font-mono text-slate-400 font-bold truncate">
+                      FuelNest HD Product Tour &bull; Click to Play
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 shrink-0">
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Non-Autoplay</span>
+                  </div>
+                </div>
+
+                {/* 16:9 Aspect Ratio Video Player Container */}
+                <div className="relative aspect-video w-full bg-black">
+                  {videoData.type === 'youtube' || videoData.type === 'vimeo' ? (
+                    <iframe
+                      src={videoData.embedUrl}
+                      title={siteContent.home?.video_title || 'FuelNest Promotional Video'}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  ) : videoData.type === 'mp4' ? (
+                    <video
+                      src={videoData.embedUrl}
+                      controls
+                      autoPlay={false}
+                      preload="metadata"
+                      poster={siteContent.home?.video_poster_url || undefined}
+                      className="w-full h-full object-contain"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Bottom Quick Call To Action */}
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-center">
+                <button
+                  onClick={() => handleOpenRegister('trial_3days')}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Ready to deploy? Start 3-Day Free Trial</span>
+                </button>
+                <a
+                  href="#pricing"
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm transition-all"
+                >
+                  Explore All Plans & Pricing
+                </a>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* CORE CAPABILITIES GRID */}
       <section id="features" className="py-20 bg-slate-900/50 border-t border-slate-800/80 relative">

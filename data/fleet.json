@@ -1188,6 +1188,156 @@
       "default_benchmark": 4.5,
       "icon_name": "Car",
       "description": "Personnel logistics"
+    },
+    {
+      "id": "cat_dump_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Dump Truck",
+      "metric_type": "kmpl",
+      "default_benchmark": 3.2,
+      "icon_name": "Truck",
+      "description": "Heavy material & sand hauling"
+    },
+    {
+      "id": "cat_excavator_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Hydraulic Excavator",
+      "metric_type": "lph",
+      "default_benchmark": 14,
+      "icon_name": "Excavator",
+      "description": "Earthmoving & construction"
+    },
+    {
+      "id": "cat_crane_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Crane & Rig",
+      "metric_type": "lph",
+      "default_benchmark": 18,
+      "icon_name": "Truck",
+      "description": "Heavy lifting & piling rig"
+    },
+    {
+      "id": "cat_generator_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Site Diesel Generator",
+      "metric_type": "lph",
+      "default_benchmark": 22,
+      "icon_name": "Fuel",
+      "description": "Power generation"
+    },
+    {
+      "id": "cat_bus_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "40-Seat Staff Bus",
+      "metric_type": "kmpl",
+      "default_benchmark": 4.5,
+      "icon_name": "Car",
+      "description": "Personnel logistics"
+    },
+    {
+      "id": "cat_dump_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Dump Truck",
+      "metric_type": "kmpl",
+      "default_benchmark": 3.2,
+      "icon_name": "Truck",
+      "description": "Heavy material & sand hauling"
+    },
+    {
+      "id": "cat_excavator_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Hydraulic Excavator",
+      "metric_type": "lph",
+      "default_benchmark": 14,
+      "icon_name": "Excavator",
+      "description": "Earthmoving & construction"
+    },
+    {
+      "id": "cat_crane_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Crane & Rig",
+      "metric_type": "lph",
+      "default_benchmark": 18,
+      "icon_name": "Truck",
+      "description": "Heavy lifting & piling rig"
+    },
+    {
+      "id": "cat_generator_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Site Diesel Generator",
+      "metric_type": "lph",
+      "default_benchmark": 22,
+      "icon_name": "Fuel",
+      "description": "Power generation"
+    },
+    {
+      "id": "cat_bus_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "40-Seat Staff Bus",
+      "metric_type": "kmpl",
+      "default_benchmark": 4.5,
+      "icon_name": "Car",
+      "description": "Personnel logistics"
+    },
+    {
+      "id": "cat_dump_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Dump Truck",
+      "metric_type": "kmpl",
+      "default_benchmark": 3.2,
+      "icon_name": "Truck",
+      "description": "Heavy material & sand hauling"
+    },
+    {
+      "id": "cat_excavator_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Hydraulic Excavator",
+      "metric_type": "lph",
+      "default_benchmark": 14,
+      "icon_name": "Excavator",
+      "description": "Earthmoving & construction"
+    },
+    {
+      "id": "cat_crane_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Crane & Rig",
+      "metric_type": "lph",
+      "default_benchmark": 18,
+      "icon_name": "Truck",
+      "description": "Heavy lifting & piling rig"
+    },
+    {
+      "id": "cat_generator_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Site Diesel Generator",
+      "metric_type": "lph",
+      "default_benchmark": 22,
+      "icon_name": "Fuel",
+      "description": "Power generation"
+    },
+    {
+      "id": "cat_bus_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "40-Seat Staff Bus",
+      "metric_type": "kmpl",
+      "default_benchmark": 4.5,
+      "icon_name": "Car",
+      "description": "Personnel logistics"
     }
   ],
   "companies": [
@@ -1630,6 +1780,278 @@
         }
       ],
       "updated_at": "2026-10-01"
+    },
+    {
+      "id": "fuel_bio_diesel_1791008835268",
+      "tenant_id": "tenant_1",
+      "user_id": "system",
+      "name": "Bio-Diesel Test",
+      "code": "bio_diesel",
+      "unit": "Liter",
+      "current_price": 112.5,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 112.5,
+          "changed_by": "Administrator"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_diesel_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Diesel",
+      "code": "diesel",
+      "unit": "Liter",
+      "current_price": 108.5,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 108.5,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_octane_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Octane",
+      "code": "octane",
+      "unit": "Liter",
+      "current_price": 131,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 131,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_petrol_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "Petrol",
+      "code": "petrol",
+      "unit": "Liter",
+      "current_price": 126,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 126,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_cng_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "CNG",
+      "code": "cng",
+      "unit": "m3",
+      "current_price": 43,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 43,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_lpg_tenant_desh_mus371wo_yuzr",
+      "tenant_id": "tenant_desh_mus371wo_yuzr",
+      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
+      "name": "LPG",
+      "code": "lpg",
+      "unit": "Kg",
+      "current_price": 115,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 115,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_diesel_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Diesel",
+      "code": "diesel",
+      "unit": "Liter",
+      "current_price": 108.5,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 108.5,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_octane_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Octane",
+      "code": "octane",
+      "unit": "Liter",
+      "current_price": 131,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 131,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_petrol_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "Petrol",
+      "code": "petrol",
+      "unit": "Liter",
+      "current_price": 126,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 126,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_cng_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "CNG",
+      "code": "cng",
+      "unit": "m3",
+      "current_price": 43,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 43,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_lpg_tenant_desh_mus38ms7_5rtb",
+      "tenant_id": "tenant_desh_mus38ms7_5rtb",
+      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
+      "name": "LPG",
+      "code": "lpg",
+      "unit": "Kg",
+      "current_price": 115,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 115,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_diesel_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Diesel",
+      "code": "diesel",
+      "unit": "Liter",
+      "current_price": 108.5,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 108.5,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_octane_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Octane",
+      "code": "octane",
+      "unit": "Liter",
+      "current_price": 131,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 131,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_petrol_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "Petrol",
+      "code": "petrol",
+      "unit": "Liter",
+      "current_price": 126,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 126,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_cng_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "CNG",
+      "code": "cng",
+      "unit": "m3",
+      "current_price": 43,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 43,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
+    },
+    {
+      "id": "fuel_lpg_tenant_desh_mus3971j_npu8",
+      "tenant_id": "tenant_desh_mus3971j_npu8",
+      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
+      "name": "LPG",
+      "code": "lpg",
+      "unit": "Kg",
+      "current_price": 115,
+      "price_history": [
+        {
+          "date": "2026-10-03",
+          "price": 115,
+          "changed_by": "Engr. Rahman Chowdhury"
+        }
+      ],
+      "updated_at": "2026-10-03"
     }
   ],
   "tankers": [],

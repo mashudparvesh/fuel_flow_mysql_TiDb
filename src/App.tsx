@@ -44,6 +44,8 @@ const AppContent: React.FC = () => {
     'dashboard' | 'fuel_entry' | 'vehicles' | 'pumps' | 'pump_credit' | 'tankers' | 'tanker_bowzer' | 'anomalies' | 'master_data' | 'reports' | 'saas_owner_panel' | 'company_users'
   >('dashboard');
 
+  const [saasOwnerTab, setSaasOwnerTab] = useState<any>('subscribers');
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('fuelflow_sidebar_open');
@@ -218,6 +220,17 @@ const AppContent: React.FC = () => {
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
           onOpenBulkImport={() => handleOpenBulkImport('vehicles')}
+          isMasterControlMode={isSaasControlOpen || activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator' || currentView === 'saas_owner_panel'}
+          saasActiveTab={saasOwnerTab}
+          onSelectSaasTab={(tab) => {
+            setSaasOwnerTab(tab);
+            setIsSaasControlOpen(true);
+            setCurrentView('saas_owner_panel');
+          }}
+          onSwitchToFleetView={() => {
+            setIsSaasControlOpen(false);
+            setCurrentView('dashboard');
+          }}
         />
 
         {/* Desktop Quick Reopen Floating Tab when Sidebar is Hidden */}
@@ -243,7 +256,11 @@ const AppContent: React.FC = () => {
           <div key={isSaasControlOpen ? 'saas' : currentView} className="w-full transition-opacity duration-150 ease-out">
             {/* If SaaS control panel mode is toggled by SaaS Owner/Moderator, show SaasOwnerPanel */}
             {isSaasControlOpen && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
-              <SaasOwnerPanel onSwitchToFleetView={() => setIsSaasControlOpen(false)} />
+              <SaasOwnerPanel
+                initialTab={saasOwnerTab}
+                onTabChange={(tab) => setSaasOwnerTab(tab)}
+                onSwitchToFleetView={() => setIsSaasControlOpen(false)}
+              />
             ) : (
               <>
                 {currentView === 'dashboard' && (
@@ -257,7 +274,11 @@ const AppContent: React.FC = () => {
                 )}
 
                 {currentView === 'saas_owner_panel' && (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') && (
-                  <SaasOwnerPanel onSwitchToFleetView={() => setCurrentView('dashboard')} />
+                  <SaasOwnerPanel
+                    initialTab={saasOwnerTab}
+                    onTabChange={(tab) => setSaasOwnerTab(tab)}
+                    onSwitchToFleetView={() => setCurrentView('dashboard')}
+                  />
                 )}
 
                 {currentView === 'company_users' && isSuperAdmin && (

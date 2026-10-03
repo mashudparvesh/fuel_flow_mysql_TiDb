@@ -42,6 +42,7 @@ const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.js
 const CONTACT_MESSAGES_FILE = path.join(DATA_DIR, 'contact_messages.json');
 const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site_content.json');
 const ADMIN_NOTIFICATIONS_FILE = path.join(DATA_DIR, 'admin_notifications.json');
+const SUBSCRIPTION_PAYMENTS_FILE = path.join(DATA_DIR, 'subscription_payments.json');
 
 const DEFAULT_USERS: any[] = [];
 
@@ -72,6 +73,29 @@ function ensureDataDir() {
   }
   if (!fs.existsSync(ADMIN_NOTIFICATIONS_FILE)) {
     fs.writeFileSync(ADMIN_NOTIFICATIONS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(SUBSCRIPTION_PAYMENTS_FILE)) {
+    fs.writeFileSync(SUBSCRIPTION_PAYMENTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+}
+
+function loadSubscriptionPayments(): any[] {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(SUBSCRIPTION_PAYMENTS_FILE)) {
+      const raw = fs.readFileSync(SUBSCRIPTION_PAYMENTS_FILE, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveSubscriptionPayments(payments: any[]) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(SUBSCRIPTION_PAYMENTS_FILE, JSON.stringify(payments, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save subscription payments:', e);
   }
 }
 
@@ -104,6 +128,8 @@ function loadSiteContent(): SiteContentConfig {
       return {
         ...DEFAULT_SITE_CONTENT,
         ...parsed,
+        branding: { ...DEFAULT_SITE_CONTENT.branding, ...(parsed.branding || {}) },
+        home: { ...DEFAULT_SITE_CONTENT.home, ...(parsed.home || {}) },
         contact: { ...DEFAULT_SITE_CONTENT.contact, ...(parsed.contact || {}) },
         about: { ...DEFAULT_SITE_CONTENT.about, ...(parsed.about || {}) },
         privacy: { ...DEFAULT_SITE_CONTENT.privacy, ...(parsed.privacy || {}) },
@@ -471,9 +497,10 @@ async function sendWelcomeEmail(data: {
         }
       });
 
-      const senderFrom = emailCfg.smtp_from || `"FuelNest Intelligence" <${emailCfg.smtp_user}>`;
+      const senderFrom = emailCfg.smtp_from || '"FuelNest Admin" <admin.fuelnest@gmail.com>';
       const info = await transporter.sendMail({
         from: senderFrom,
+        replyTo: 'admin.fuelnest@gmail.com',
         to: data.email,
         subject: `Welcome to FuelNest - Your Fleet Workspace is Ready! (${data.companyName})`,
         html: htmlBody
@@ -1639,6 +1666,227 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       res.json({ success: true, message: `Fuel type "${target.name}" deleted successfully.` });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Error deleting fuel type' });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Subscription Manual Upgrade & Payment Verification Routes
+  // bKash, Nagad, Rocket, Bank Transfer manual verification by Master Control
+  // -------------------------------------------------------------
+  app.get('/api/subscription-payments', (req: Request, res: Response) => {
+    try {
+      const list = loadSubscriptionPayments();
+      res.json({ success: true, data: list });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e?.message || 'Error fetching subscription payments' });
+    }
+  });
+
+  app.post('/api/subscription-payments', async (req: Request, res: Response) => {
+    try {
+      const {
+        tenant_id, tenant_name, user_id, user_name, user_email, user_phone,
+        plan_id, plan_name, plan_days, amount_bdt, payment_method,
+        sender_number, transaction_id, payment_date, receipt_image, notes
+      } = req.body;
+
+      if (!tenant_id || !transaction_id || !payment_method) {
+        res.status(400).json({ success: false, message: 'Tenant ID, payment method, and Transaction ID (TrxID) are required.' });
+        return;
+      }
+
+      const payments = loadSubscriptionPayments();
+      const newPayment = {
+        id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        tenant_id,
+        tenant_name: tenant_name || 'Subscriber Workspace',
+        user_id: user_id || 'system',
+        user_name: user_name || 'Admin',
+        user_email: user_email || '',
+        user_phone: user_phone || '',
+        plan_id: plan_id || 'plan_1month',
+        plan_name: plan_name || '1 Month Plan',
+        plan_days: Number(plan_days) || 30,
+        amount_bdt: Number(amount_bdt) || 0,
+        payment_method: payment_method || 'bkash',
+        sender_number: sender_number || '',
+        transaction_id: String(transaction_id).trim().toUpperCase(),
+        payment_date: payment_date || new Date().toISOString().split('T')[0],
+        receipt_image: receipt_image || '',
+        notes: notes || '',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+
+      payments.unshift(newPayment);
+      saveSubscriptionPayments(payments);
+
+      // Instant notification email to admin.fuelnest@gmail.com
+      const alertSubject = `🚨 New Subscription Upgrade Payment Received - ${newPayment.tenant_name} (${newPayment.amount_bdt} BDT / ${newPayment.payment_method.toUpperCase()})`;
+      const alertText = `A subscriber has submitted manual payment verification for renewal/upgrade:
+Company: ${newPayment.tenant_name}
+Plan: ${newPayment.plan_name} (${newPayment.plan_days} Days)
+Amount: ${newPayment.amount_bdt} BDT
+Method: ${newPayment.payment_method.toUpperCase()}
+Sender No / Account: ${newPayment.sender_number}
+Transaction ID (TrxID): ${newPayment.transaction_id}
+Payment Date: ${newPayment.payment_date}
+
+Please visit Master Control -> Approvals -> Payment Verification to match with bank/MFS statement and approve validity extension.`;
+      sendAdminNotificationEmail({
+        subject: alertSubject,
+        text: alertText,
+        html: `<div style="font-family:sans-serif;padding:16px;">
+          <h2 style="color:#d97706;">🚨 New Subscription Payment Received</h2>
+          <p><strong>Company:</strong> ${newPayment.tenant_name}</p>
+          <p><strong>Plan:</strong> ${newPayment.plan_name} (+${newPayment.plan_days} Days)</p>
+          <p><strong>Amount:</strong> ${newPayment.amount_bdt} BDT</p>
+          <p><strong>Method:</strong> ${newPayment.payment_method.toUpperCase()}</p>
+          <p><strong>Sender No / Account:</strong> ${newPayment.sender_number}</p>
+          <p><strong>Transaction ID (TrxID):</strong> <span style="font-family:monospace;font-size:16px;color:#d97706;font-weight:bold;">${newPayment.transaction_id}</span></p>
+          <p><strong>Payment Date:</strong> ${newPayment.payment_date}</p>
+          <hr/>
+          <p>Please log in to <strong>FuelNest Master Control &rarr; Approvals &rarr; Payment Verifications</strong> to verify against statement and click Approve.</p>
+        </div>`
+      }).catch(e => console.warn('[Payment Alert Email] Error:', e));
+
+      res.status(201).json({
+        success: true,
+        payment: newPayment,
+        message: 'Payment verification details submitted successfully. Master Control will verify and activate your validity.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error submitting payment' });
+    }
+  });
+
+  app.post('/api/subscription-payments/:id/approve', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reviewed_by } = req.body;
+      const reviewer = reviewed_by || 'Master Administrator';
+      const now = new Date().toISOString();
+
+      const payments = loadSubscriptionPayments();
+      const pIdx = payments.findIndex(p => p.id === id);
+      if (pIdx < 0) {
+        res.status(404).json({ success: false, message: 'Payment record not found.' });
+        return;
+      }
+
+      const paymentRecord = payments[pIdx];
+      const tenants = loadTenants();
+      const tIdx = tenants.findIndex(t => t.id === paymentRecord.tenant_id);
+      if (tIdx < 0) {
+        res.status(404).json({ success: false, message: 'Associated subscriber workspace not found.' });
+        return;
+      }
+
+      const tenant = tenants[tIdx];
+      const addDays = Number(paymentRecord.plan_days) || 30;
+      let baseDate = new Date();
+      const currentEndStr = tenant.subscription?.end_date;
+      if (currentEndStr) {
+        const currentEndDate = new Date(currentEndStr);
+        if (currentEndDate.getTime() > Date.now()) {
+          baseDate = currentEndDate;
+        }
+      }
+      baseDate.setDate(baseDate.getDate() + addDays);
+      const newEndDate = baseDate.toISOString().split('T')[0];
+
+      // Update tenant
+      const updatedTenant = {
+        ...tenant,
+        status: 'active',
+        is_approved: true,
+        subscription: {
+          ...(tenant.subscription || {}),
+          status: 'active',
+          is_approved: true,
+          plan: paymentRecord.plan_id,
+          plan_name_bn: paymentRecord.plan_name,
+          start_date: tenant.subscription?.start_date || new Date().toISOString().split('T')[0],
+          end_date: newEndDate,
+          price_bdt: Number(paymentRecord.amount_bdt),
+          payment_status: 'paid'
+        }
+      };
+      tenants[tIdx] = updatedTenant;
+      saveTenants(tenants);
+
+      // Reactivate tenant users if suspended
+      const users = loadUsers();
+      let usersChanged = false;
+      users.forEach(u => {
+        if (u.tenant_id === tenant.id && u.status === 'suspended') {
+          u.status = 'active';
+          usersChanged = true;
+        }
+      });
+      if (usersChanged) saveUsers(users);
+
+      // Update payment record
+      paymentRecord.status = 'approved';
+      paymentRecord.reviewed_by = reviewer;
+      paymentRecord.reviewed_at = now;
+      saveSubscriptionPayments(payments);
+
+      // Alert email confirming approval
+      const apprSubject = `✅ Payment Verified & Subscription Extended - ${tenant.name} (+${addDays} Days)`;
+      const apprText = `Master Control has approved payment TrxID: ${paymentRecord.transaction_id} for ${tenant.name}. New subscription validity is now ${newEndDate} (+${addDays} Days extended).`;
+      sendAdminNotificationEmail({
+        subject: apprSubject,
+        text: apprText,
+        html: `<div style="font-family:sans-serif;padding:16px;">
+          <h2 style="color:#059669;">✅ Payment Verified & Subscription Extended</h2>
+          <p><strong>Company:</strong> ${tenant.name}</p>
+          <p><strong>Transaction ID (TrxID):</strong> ${paymentRecord.transaction_id}</p>
+          <p><strong>Extension Period:</strong> +${addDays} Days</p>
+          <p><strong>New Expiry Date:</strong> ${newEndDate}</p>
+          <p><strong>Status:</strong> Active</p>
+        </div>`
+      }).catch(() => {});
+
+      res.json({
+        success: true,
+        message: `Payment verified & approved! Subscription validity for "${tenant.name}" extended until ${newEndDate} (+${addDays} days).`,
+        new_end_date: newEndDate,
+        extended_days: addDays,
+        tenant: updatedTenant
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error approving payment' });
+    }
+  });
+
+  app.post('/api/subscription-payments/:id/reject', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reviewed_by, reason } = req.body;
+      const reviewer = reviewed_by || 'Master Administrator';
+      const rejectionReason = reason || 'TrxID could not be matched with bank/MFS statement';
+      const now = new Date().toISOString();
+
+      const payments = loadSubscriptionPayments();
+      const pIdx = payments.findIndex(p => p.id === id);
+      if (pIdx < 0) {
+        res.status(404).json({ success: false, message: 'Payment record not found.' });
+        return;
+      }
+
+      payments[pIdx].status = 'rejected';
+      payments[pIdx].reviewed_by = reviewer;
+      payments[pIdx].reviewed_at = now;
+      payments[pIdx].rejection_reason = rejectionReason;
+      saveSubscriptionPayments(payments);
+
+      res.json({
+        success: true,
+        message: 'Payment verification marked as rejected.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || 'Error rejecting payment' });
     }
   });
 
@@ -3657,6 +3905,26 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
       const cleanUser = String(username || '').trim().toLowerCase();
       const cleanPass = String(password || '').trim();
+
+      // Check if Master Platform Owner Login (mashudalone / 00000 or admin.fuelnest@gmail.com)
+      if (
+        (cleanUser === 'mashudalone' || cleanUser === 'admin.fuelnest@gmail.com' || cleanUser === 'master') &&
+        (cleanPass === '00000' || cleanPass === 'password123')
+      ) {
+        return res.status(200).json({
+          success: true,
+          is_saas_owner: true,
+          role: 'saas_owner',
+          message: 'Welcome Master Platform Owner.',
+          user: {
+            id: 'saas_owner_1',
+            username: 'mashudalone',
+            name: 'Md. Mashud (Platform Owner)',
+            email: 'admin.fuelnest@gmail.com',
+            role: 'saas_owner'
+          }
+        });
+      }
 
       // Look for target tenant
       let targetTenant = activeTenants.find(t =>

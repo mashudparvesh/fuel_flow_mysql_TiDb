@@ -37,7 +37,8 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
     categories,
     pumps,
     tankers,
-    addFuelEntry
+    addFuelEntry,
+    getFuelPriceForDate
   } = useApp();
 
   const effectiveInitialVehicleId = initialVehicleId || preselectedVehicleId || '';
@@ -59,6 +60,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
   const [previousMeter, setPreviousMeter] = useState<number>(0);
   const [currentMeter, setCurrentMeter] = useState<string>('');
   const [fuelLiters, setFuelLiters] = useState<string>('');
+  const [customUnitPrice, setCustomUnitPrice] = useState<string>('');
   
   const [receiptImage, setReceiptImage] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -154,10 +156,20 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
     }
   }, [pumps, tankers, pumpId, tankerId]);
 
+  // Historical unit price based on entryDate & selectedFuelType
+  const effectiveDateRate = React.useMemo(() => {
+    return getFuelPriceForDate(selectedFuelType, entryDate);
+  }, [getFuelPriceForDate, selectedFuelType, entryDate]);
+
+  useEffect(() => {
+    setCustomUnitPrice(effectiveDateRate.toString());
+  }, [effectiveDateRate]);
+
   // Live Calculations
   const currentMeterNum = parseFloat(currentMeter) || 0;
   const fuelLitersNum = parseFloat(fuelLiters) || 0;
-  const unitRate = selectedFuelType ? selectedFuelType.current_price : 108.50;
+  const parsedCustomPrice = parseFloat(customUnitPrice);
+  const unitRate = (!isNaN(parsedCustomPrice) && parsedCustomPrice > 0) ? parsedCustomPrice : effectiveDateRate;
 
   const distanceOrHours = Math.max(0, currentMeterNum - previousMeter);
   const totalAmount = Math.round(fuelLitersNum * unitRate * 100) / 100;
@@ -234,6 +246,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
       previous_meter: previousMeter,
       current_meter: currentMeterNum,
       fuel_liters: fuelLitersNum,
+      unit_price: unitRate,
       receipt_image_url: receiptImage || undefined,
       notes
     });
@@ -471,7 +484,7 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
             <span>{t.smartCalcHeading}</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 {t.prevMeter} ({isLph ? 'Hours' : 'KM'})
@@ -512,6 +525,29 @@ export const FuelEntryForm: React.FC<FuelEntryFormProps> = ({
                 required
                 className="w-full px-3 py-2 text-xs rounded-lg border border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-slate-900 bg-white"
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-900">
+                  Rate (BDT/{selectedFuelType?.unit || 'L'})
+                </label>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded-sm">
+                  {entryDate}
+                </span>
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                value={customUnitPrice}
+                onChange={e => setCustomUnitPrice(e.target.value)}
+                placeholder={effectiveDateRate.toString()}
+                required
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-slate-900 bg-white"
+              />
+              <span className="block text-[10px] text-slate-500 mt-1 truncate" title={`Auto-resolved from price active on ${entryDate}`}>
+                📅 Rate on {entryDate}: <strong>{effectiveDateRate} BDT</strong>
+              </span>
             </div>
           </div>
 

@@ -471,3 +471,28 @@ export interface TankerLog {
   new_stock: number;
   created_at: string;
 }
+
+export interface SubscriptionPaymentRecord {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_phone: string;
+  plan_id: string;
+  plan_name: string;
+  plan_days: number;
+  amount_bdt: number;
+  payment_method: 'bkash' | 'nagad' | 'rocket' | 'bank';
+  sender_number: string;
+  transaction_id: string;
+  payment_date: string;
+  receipt_image?: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  created_at: string;
+}

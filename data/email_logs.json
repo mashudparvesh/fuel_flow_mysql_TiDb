@@ -1,1 +1,122 @@
-[]
+[
+  {
+    "id": "em_1791013602736_k5fk",
+    "timestamp": "2026-10-03T07:46:42.736Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013602382_6vqs",
+    "timestamp": "2026-10-03T07:46:42.382Z",
+    "recipient": "rahman.chowdhury@deshfleet.com",
+    "company": "Desh Fleet Heavy Logistics",
+    "username": "desh_admin_2",
+    "status": "sandbox_restricted",
+    "error": "The gmail.com domain is not verified. Please, add and verify your domain on https://resend.com/domains",
+    "reason": "Resend sandbox mode limitation: Testing emails can only be sent to owner. Verify domain at resend.com/domains or configure SMTP."
+  },
+  {
+    "id": "em_1791013602177_hp9e",
+    "timestamp": "2026-10-03T07:46:42.177Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013601996_8alr",
+    "timestamp": "2026-10-03T07:46:41.996Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013576529_tdlo",
+    "timestamp": "2026-10-03T07:46:16.529Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013576177_r5op",
+    "timestamp": "2026-10-03T07:46:16.177Z",
+    "recipient": "rahman.chowdhury@deshfleet.com",
+    "company": "Desh Fleet Heavy Logistics",
+    "username": "desh_admin_1",
+    "status": "sandbox_restricted",
+    "error": "The gmail.com domain is not verified. Please, add and verify your domain on https://resend.com/domains",
+    "reason": "Resend sandbox mode limitation: Testing emails can only be sent to owner. Verify domain at resend.com/domains or configure SMTP."
+  },
+  {
+    "id": "em_1791013575902_lpev",
+    "timestamp": "2026-10-03T07:46:15.902Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013575706_ohzs",
+    "timestamp": "2026-10-03T07:46:15.706Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013502870_ttgg",
+    "timestamp": "2026-10-03T07:45:02.870Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013502506_9vaz",
+    "timestamp": "2026-10-03T07:45:02.506Z",
+    "recipient": "rahman.chowdhury@deshfleet.com",
+    "company": "Desh Fleet Heavy Logistics",
+    "username": "desh_admin",
+    "status": "sandbox_restricted",
+    "error": "The gmail.com domain is not verified. Please, add and verify your domain on https://resend.com/domains",
+    "reason": "Resend sandbox mode limitation: Testing emails can only be sent to owner. Verify domain at resend.com/domains or configure SMTP."
+  },
+  {
+    "id": "em_1791013502257_czu2",
+    "timestamp": "2026-10-03T07:45:02.257Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791013502131_aljz",
+    "timestamp": "2026-10-03T07:45:02.131Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  },
+  {
+    "id": "em_1791008846377_urot",
+    "timestamp": "2026-10-03T06:27:26.377Z",
+    "recipient": "admin.fuelnest@gmail.com",
+    "company": "FuelNest Admin Alert",
+    "username": "admin.fuelnest",
+    "status": "recorded_locally",
+    "method": "system_log"
+  }
+]

@@ -1,5 +1,85 @@
 [
   {
+    "id": "notif_1791013602497_v33m",
+    "timestamp": "2026-10-03T07:46:42.497Z",
+    "subject": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "created_at": "2026-10-03T07:46:42.497Z"
+  },
+  {
+    "id": "notif_1791013601901_8t3s",
+    "timestamp": "2026-10-03T07:46:41.901Z",
+    "subject": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "created_at": "2026-10-03T07:46:41.901Z"
+  },
+  {
+    "id": "notif_1791013601704_orot",
+    "timestamp": "2026-10-03T07:46:41.704Z",
+    "subject": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "created_at": "2026-10-03T07:46:41.703Z"
+  },
+  {
+    "id": "notif_1791013576299_iglx",
+    "timestamp": "2026-10-03T07:46:16.299Z",
+    "subject": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "created_at": "2026-10-03T07:46:16.299Z"
+  },
+  {
+    "id": "notif_1791013575630_itxc",
+    "timestamp": "2026-10-03T07:46:15.630Z",
+    "subject": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "created_at": "2026-10-03T07:46:15.629Z"
+  },
+  {
+    "id": "notif_1791013575437_0rpg",
+    "timestamp": "2026-10-03T07:46:15.437Z",
+    "subject": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "created_at": "2026-10-03T07:46:15.437Z"
+  },
+  {
+    "id": "notif_1791013502619_ctqj",
+    "timestamp": "2026-10-03T07:45:02.619Z",
+    "subject": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "📬 [Contact Inquiry] Karim Ahmed: Fleet Telemetry Inquiry",
+    "created_at": "2026-10-03T07:45:02.619Z"
+  },
+  {
+    "id": "notif_1791013501999_mcvt",
+    "timestamp": "2026-10-03T07:45:01.999Z",
+    "subject": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "✅ [Subscriber Activated] Desh Fleet Heavy Logistics - Workspace Ready",
+    "created_at": "2026-10-03T07:45:01.999Z"
+  },
+  {
+    "id": "notif_1791013501791_9ed5",
+    "timestamp": "2026-10-03T07:45:01.791Z",
+    "subject": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "🚨 [New Subscriber Registered] Desh Fleet Heavy Logistics (3 Days Free Trial)",
+    "created_at": "2026-10-03T07:45:01.791Z"
+  },
+  {
+    "id": "notif_1791008845686_7117",
+    "timestamp": "2026-10-03T06:27:25.686Z",
+    "subject": "🚨 New Subscription Upgrade Payment Received - Test Fleet (749 BDT / BKASH)",
+    "recipient": "admin.fuelnest@gmail.com",
+    "text": "A subscriber has submitted manual payment verification for renewal/upgrade:\nCompany: Test Fleet\nPlan: 1 Month Plan (30 Days)\nAmount: 749 BDT\nMethod: BKASH\nSender No / Account: 01711223344\nTransaction ID (TrxID): BK99482103\nPayment Date: 2026-10-03\n\nPlease visit Master Control -> Approvals -> Payment Verification to match with bank/MFS statement and approve validity extension.",
+    "created_at": "2026-10-03T06:27:25.686Z"
+  },
+  {
     "id": "notif_1790852634323_gy4k",
     "timestamp": "2026-10-01T11:03:54.323Z",
     "subject": "🚨 [New Subscriber Registered] Test Logistics Ltd (3 Days Free Trial)",

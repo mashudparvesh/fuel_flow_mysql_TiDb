@@ -1,0 +1,35 @@
+[
+  {
+    "id": "msg_1791013602496_slmuj",
+    "name": "Karim Ahmed",
+    "email": "karim@example.com",
+    "phone": "01700112233",
+    "company_name": "",
+    "subject": "Fleet Telemetry Inquiry",
+    "message": "Testing public contact submission",
+    "status": "unread",
+    "created_at": "2026-10-03T07:46:42.496Z"
+  },
+  {
+    "id": "msg_1791013576298_yiubm",
+    "name": "Karim Ahmed",
+    "email": "karim@example.com",
+    "phone": "01700112233",
+    "company_name": "",
+    "subject": "Fleet Telemetry Inquiry",
+    "message": "Testing public contact submission",
+    "status": "unread",
+    "created_at": "2026-10-03T07:46:16.298Z"
+  },
+  {
+    "id": "msg_1791013502617_h0gx5",
+    "name": "Karim Ahmed",
+    "email": "karim@example.com",
+    "phone": "01700112233",
+    "company_name": "",
+    "subject": "Fleet Telemetry Inquiry",
+    "message": "Testing public contact submission",
+    "status": "unread",
+    "created_at": "2026-10-03T07:45:02.617Z"
+  }
+]

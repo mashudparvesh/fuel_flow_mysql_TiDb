@@ -1,3 +1,23 @@
+export interface SiteBrandingConfig {
+  app_name: string;
+  tagline: string;
+  logo_url: string;
+  favicon_url: string;
+}
+
+export interface SiteHomeConfig {
+  hero_badge: string;
+  hero_title: string;
+  hero_subtitle: string;
+  cta_primary: string;
+  cta_secondary: string;
+  video_url: string;
+  video_title: string;
+  video_description: string;
+  video_badge: string;
+  video_poster_url: string;
+}
+
 export interface SiteContactInfo {
   email: string;
   whatsapp: string;
@@ -35,6 +55,8 @@ export interface SiteFaqItem {
 }
 
 export interface SiteContentConfig {
+  branding: SiteBrandingConfig;
+  home: SiteHomeConfig;
   contact: SiteContactInfo;
   about: SiteAboutContent;
   privacy: {
@@ -53,6 +75,24 @@ export interface SiteContentConfig {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContentConfig = {
+  branding: {
+    app_name: 'FuelNest',
+    tagline: 'Commercial Fleet & Heavy Equipment Fuel Telemetry Cloud',
+    logo_url: '',
+    favicon_url: ''
+  },
+  home: {
+    hero_badge: 'Commercial Fleet Telemetry 2.0 &bull; Bangladesh Ready',
+    hero_title: 'Precision Commercial Fleet Fuel Intelligence & Equipment Telemetry Cloud',
+    hero_subtitle: 'Engineered specifically for construction contractors, industrial bowzer depots, and long-haul transport. Eliminates fuel leakage, unifies generator engine hours (LPH) with vehicle odometer (KMPL), and detects theft anomalies in real time.',
+    cta_primary: 'Start 3-Day Free Trial',
+    cta_secondary: 'Explore Live Interactive Demo',
+    video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Default demo video placeholder
+    video_title: 'FuelNest Overview & How Commercial Telemetry Works',
+    video_description: 'Watch a complete 3-minute walkthrough demonstrating dual-metric telemetry, site bowzer stock balancing, pump credit management, and AI fuel anomaly alerts.',
+    video_badge: 'FEATURED PRODUCT WALKTHROUGH',
+    video_poster_url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80'
+  },
   contact: {
     email: 'admin.fuelnest@gmail.com',
     whatsapp: '+8801775316434',
@@ -209,3 +249,62 @@ export const DEFAULT_SITE_CONTENT: SiteContentConfig = {
     }
   ]
 };
+
+/**
+ * Parses any user-pasted video link (YouTube watch URL, youtu.be, embed, Vimeo, or direct MP4)
+ * and returns a standard embed URL strictly configured with autoplay=0 so users must click play manually!
+ */
+export function formatVideoEmbedUrl(url: string | undefined): {
+  type: 'youtube' | 'vimeo' | 'mp4' | 'none';
+  embedUrl: string;
+  originalUrl: string;
+} {
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    return { type: 'none', embedUrl: '', originalUrl: '' };
+  }
+  const cleanUrl = url.trim();
+
+  // YouTube matchers:
+  // - https://www.youtube.com/watch?v=VIDEO_ID
+  // - https://youtu.be/VIDEO_ID
+  // - https://www.youtube.com/embed/VIDEO_ID
+  // - https://m.youtube.com/watch?v=VIDEO_ID
+  const ytMatch = cleanUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    // Strict non-autoplay: autoplay=0, rel=0, modestbranding=1
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`,
+      originalUrl: cleanUrl
+    };
+  }
+
+  // Vimeo matchers:
+  // - https://vimeo.com/VIDEO_ID
+  const vimeoMatch = cleanUrl.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    const vimeoId = vimeoMatch[1];
+    return {
+      type: 'vimeo',
+      embedUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=0`,
+      originalUrl: cleanUrl
+    };
+  }
+
+  // Direct MP4 / WebM video file
+  if (cleanUrl.match(/\.(mp4|webm|ogg|mov)($|\?)/i)) {
+    return {
+      type: 'mp4',
+      embedUrl: cleanUrl,
+      originalUrl: cleanUrl
+    };
+  }
+
+  // Fallback if already embed
+  return {
+    type: cleanUrl.includes('youtube') ? 'youtube' : 'none',
+    embedUrl: cleanUrl,
+    originalUrl: cleanUrl
+  };
+}

@@ -64,6 +64,16 @@ export const PublicPages: React.FC<PublicPagesProps> = ({
         }
       })
       .catch(() => {});
+
+    try {
+      const ch = new BroadcastChannel('fuelflow_tenants_sync');
+      ch.onmessage = (e) => {
+        if (e.data?.type === 'CONTENT_UPDATED' && e.data.content) {
+          setContent(e.data.content);
+        }
+      };
+      return () => ch.close();
+    } catch (e) {}
   }, []);
 
   const handleContactSubmit = async (e: React.FormEvent) => {

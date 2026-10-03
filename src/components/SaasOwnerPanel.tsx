@@ -50,10 +50,32 @@ import {
   FileText,
   Send,
   X,
-  UserCheck
+  UserCheck,
+  Globe,
+  Palette,
+  Video
 } from 'lucide-react';
+import { CmsContentManager } from './CmsContentManager';
 
-export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void; onSwitchToFleetView?: () => void }> = ({ onOpenCompanyUserManagement, onSwitchToFleetView }) => {
+export type SaasOwnerTabType =
+  | 'subscribers'
+  | 'registrations'
+  | 'moderators'
+  | 'approvals'
+  | 'owner_profile'
+  | 'packages'
+  | 'gateway'
+  | 'email'
+  | 'cms_pages'
+  | 'branding'
+  | 'promo_video';
+
+export const SaasOwnerPanel: React.FC<{
+  onOpenCompanyUserManagement?: () => void;
+  onSwitchToFleetView?: () => void;
+  initialTab?: SaasOwnerTabType;
+  onTabChange?: (tab: SaasOwnerTabType) => void;
+}> = ({ onOpenCompanyUserManagement, onSwitchToFleetView, initialTab = 'subscribers', onTabChange }) => {
   const {
     language,
     saasOwner,
@@ -82,7 +104,11 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
     approveAction,
     rejectAction,
     refreshTenantsFromServer,
-    refreshUsersFromServer
+    refreshUsersFromServer,
+    subscriptionPayments,
+    fetchSubscriptionPayments,
+    approveSubscriptionPayment,
+    rejectSubscriptionPayment
   } = useApp();
 
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
@@ -90,7 +116,72 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   useEffect(() => {
     refreshTenantsFromServer?.();
     refreshUsersFromServer?.();
+    fetchSubscriptionPayments?.();
   }, []);
+
+  const [paymentActionLoadingId, setPaymentActionLoadingId] = useState<string | null>(null);
+  const [paymentRejectModalItem, setPaymentRejectModalItem] = useState<any | null>(null);
+  const [paymentRejectReason, setPaymentRejectReason] = useState<string>('TrxID could not be matched with bank/MFS statement');
+  const [paymentTrxCopiedId, setPaymentTrxCopiedId] = useState<string | null>(null);
+
+  const pendingPaymentsCount = useMemo(() => {
+    return (subscriptionPayments || []).filter(p => p.status === 'pending').length;
+  }, [subscriptionPayments]);
+
+  const handleApprovePayment = async (paymentId: string) => {
+    setPaymentActionLoadingId(paymentId);
+    try {
+      const res = await approveSubscriptionPayment(paymentId, saasOwner.name || 'Master Admin');
+      if (res.success) {
+        setActionFeedbackMsg({
+          type: 'success',
+          text: res.message || 'Payment verified & subscription validity extended!'
+        });
+        await refreshTenantsFromServer?.();
+        await fetchSubscriptionPayments?.();
+      } else {
+        setActionFeedbackMsg({
+          type: 'error',
+          text: res.message || 'Failed to approve payment'
+        });
+      }
+    } catch (e: any) {
+      setActionFeedbackMsg({
+        type: 'error',
+        text: e?.message || 'Error approving payment'
+      });
+    } finally {
+      setPaymentActionLoadingId(null);
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!paymentRejectModalItem) return;
+    setPaymentActionLoadingId(paymentRejectModalItem.id);
+    try {
+      const res = await rejectSubscriptionPayment(paymentRejectModalItem.id, paymentRejectReason, saasOwner.name || 'Master Admin');
+      if (res.success) {
+        setActionFeedbackMsg({
+          type: 'success',
+          text: 'Payment verification marked as rejected.'
+        });
+        setPaymentRejectModalItem(null);
+        await fetchSubscriptionPayments?.();
+      } else {
+        setActionFeedbackMsg({
+          type: 'error',
+          text: res.message || 'Failed to reject payment'
+        });
+      }
+    } catch (e: any) {
+      setActionFeedbackMsg({
+        type: 'error',
+        text: e?.message || 'Error rejecting payment'
+      });
+    } finally {
+      setPaymentActionLoadingId(null);
+    }
+  };
 
   const handleManualRefresh = async () => {
     setIsManualRefreshing(true);
@@ -127,7 +218,19 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
   const canApproveRequests = effectiveRole === 'OWNER_ADMIN' || effectiveRole === 'CO_OWNER_ADMIN' || effectiveRole === 'ADMIN';
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'subscribers' | 'registrations' | 'moderators' | 'approvals' | 'owner_profile' | 'packages' | 'gateway' | 'email'>('subscribers');
+  const [activeTab, setActiveTab] = useState<SaasOwnerTabType>(initialTab);
+
+  const changeTab = (tab: SaasOwnerTabType) => {
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  };
+
+  // Sync if initialTab prop changes
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Enforce access control if tab is restricted
   useEffect(() => {
@@ -1322,13 +1425,13 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           >
             <ShieldCheck className="w-4 h-4" />
             <span>{'Approvals & Governance'}</span>
-            {(pendingApprovalsCount + pendingRegRequestsCount) > 0 ? (
+            {(pendingApprovalsCount + pendingRegRequestsCount + pendingPaymentsCount) > 0 ? (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
-                {pendingApprovalsCount + pendingRegRequestsCount} Pending
+                {pendingApprovalsCount + pendingRegRequestsCount + pendingPaymentsCount} Pending
               </span>
             ) : (
               <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-black/10">
-                {approvals.length + registrationRequests.length}
+                {approvals.length + registrationRequests.length + (subscriptionPayments || []).length}
               </span>
             )}
           </button>
@@ -1371,7 +1474,46 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             }`}
           >
             <Mail className="w-4 h-4" />
-            <span>{'Email & SMTP'}</span>
+            <span>{'Email & Alerts'}</span>
+          </button>
+
+          {/* Tab 7: Website Pages CMS */}
+          <button
+            onClick={() => setActiveTab('cms_pages')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'cms_pages'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>{'CMS & Pages'}</span>
+          </button>
+
+          {/* Tab 8: App Branding & Logo */}
+          <button
+            onClick={() => setActiveTab('branding')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'branding'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Palette className="w-4 h-4" />
+            <span>{'Logo & Favicon'}</span>
+          </button>
+
+          {/* Tab 9: Promotional Video */}
+          <button
+            onClick={() => setActiveTab('promo_video')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
+              activeTab === 'promo_video'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'bg-white dark:bg-[#0c162d] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Video className="w-4 h-4" />
+            <span>{'Promo Video'}</span>
           </button>
         </div>
 
@@ -1668,6 +1810,32 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   }`}
                 >
                   <div className="space-y-4">
+                    {/* Pending Upgrade Payment Alert */}
+                    {(() => {
+                      const matchPay = (subscriptionPayments || []).find(p => p.tenant_id === tenant.id && p.status === 'pending');
+                      if (!matchPay) return null;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/50 flex items-center justify-between gap-2 text-xs shadow-xs animate-pulse">
+                          <div className="min-w-0">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400 block text-[11px] truncate">
+                              💳 Payment Verification Pending ({matchPay.payment_method.toUpperCase()}: <span className="font-mono">{matchPay.transaction_id}</span>)
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              {matchPay.amount_bdt} BDT &bull; +{matchPay.plan_days} Days Extension
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleApprovePayment(matchPay.id)}
+                            disabled={paymentActionLoadingId === matchPay.id}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black shrink-0 cursor-pointer shadow-xs"
+                          >
+                            {paymentActionLoadingId === matchPay.id ? 'Approving...' : `Approve (+${matchPay.plan_days}d)`}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* Header: Company Name, Code & Plan */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -2292,17 +2460,28 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                           )}
 
                           {isApproved && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedApprovalModalData(item);
-                                setDirectEmailResult(null);
-                              }}
-                              className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Key className="w-3.5 h-3.5" />
-                              <span>View Credentials & Email</span>
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedApprovalModalData(item);
+                                  setDirectEmailResult(null);
+                                }}
+                                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Key className="w-3.5 h-3.5" />
+                                <span>View Credentials & Email</span>
+                              </button>
+
+                              <a
+                                href={`mailto:${item.email}?cc=admin.fuelnest@gmail.com&subject=${encodeURIComponent(`FuelNest Workspace Access Credentials - ${item.company_name}`)}&body=${encodeURIComponent(`From: admin.fuelnest@gmail.com (FuelNest Administration)\nReply-To: admin.fuelnest@gmail.com\nTo: ${item.email}\n\nDear ${item.admin_name || item.company_name},\nYour FuelNest Fleet & Fuel Management Workspace is active.\n\nPortal: ${item.login_url || 'https://fuelnest.xyz/login'}\nUsername: ${item.super_admin_username}\nPassword: ${item.temporary_password}\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com`)}`}
+                                className="px-3 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                                title="Mail to subscriber (from admin.fuelnest@gmail.com)"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                <span>Mail To</span>
+                              </a>
+                            </>
                           )}
 
                           <button
@@ -2732,7 +2911,232 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
             )}
           </div>
 
-          {/* SECTION 2: DUAL-CONTROL INTERNAL GOVERNANCE & SENSITIVE OPERATIONS */}
+          {/* SECTION 2: SUBSCRIBER RENEWAL & UPGRADE PAYMENT VERIFICATIONS (bKash / Nagad / Bank / Rocket) */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0c162d] border-2 border-emerald-500/40 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-500 shrink-0">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                      Subscription Payment Verifications (ম্যানুয়াল পেমেন্ট ভেরিফিকেশন)
+                    </h3>
+                    {pendingPaymentsCount > 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-600 text-white animate-pulse">
+                        {pendingPaymentsCount} Awaiting Verification
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/20 text-slate-400 border border-slate-500/30">
+                        All Cleared ({(subscriptionPayments || []).length} Total)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Subscribers upgrading or renewing via bKash, Nagad, Rocket or Bank transfer appear here. Match the TrxID with statement and click "Verify & Approve" to automatically extend their subscription validity.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchSubscriptionPayments}
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#080e1e] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Refresh Payments</span>
+                </button>
+              </div>
+            </div>
+
+            {/* List of Payments */}
+            {(!subscriptionPayments || subscriptionPayments.length === 0) ? (
+              <div className="p-6 text-center rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-dashed border-slate-200 dark:border-slate-800">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  No Payment Verifications Pending
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  When existing subscribers submit renewal or upgrade payment slips (bKash/Nagad/Bank), their verification requests will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                {subscriptionPayments.map(payItem => {
+                  const isPending = payItem.status === 'pending';
+                  const isApproved = payItem.status === 'approved';
+
+                  const methodBadge =
+                    payItem.payment_method === 'bkash'
+                      ? 'bg-pink-500/20 text-pink-600 dark:text-pink-400 border-pink-500/30'
+                      : payItem.payment_method === 'nagad'
+                      ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                      : payItem.payment_method === 'rocket'
+                      ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                      : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+
+                  return (
+                    <div
+                      key={payItem.id}
+                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 shadow-xs ${
+                        isPending
+                          ? 'bg-slate-50 dark:bg-[#080e1e] border-2 border-emerald-500/50 hover:border-emerald-400'
+                          : isApproved
+                          ? 'bg-emerald-50/20 dark:bg-emerald-950/10 border-slate-200 dark:border-slate-800 opacity-90'
+                          : 'bg-rose-50/20 dark:bg-rose-950/10 border-slate-200 dark:border-slate-800 opacity-80'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-black text-sm text-slate-900 dark:text-white">
+                                {payItem.tenant_name}
+                              </h4>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${methodBadge}`}>
+                                {payItem.payment_method}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500">
+                              By: <strong>{payItem.user_name}</strong> &bull; {payItem.user_phone || 'No phone'}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border ${
+                              isPending
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border-amber-400/50 animate-pulse'
+                                : isApproved
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border-emerald-400/50'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 border-red-400/50'
+                            }`}
+                          >
+                            {isPending ? '⏳ Awaiting Review' : isApproved ? '✓ Approved' : '✗ Rejected'}
+                          </span>
+                        </div>
+
+                        {/* Payment Data Grid */}
+                        <div className="p-3 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                              Transaction ID (TrxID)
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
+                                {payItem.transaction_id}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(payItem.transaction_id);
+                                  setPaymentTrxCopiedId(payItem.id);
+                                  setTimeout(() => setPaymentTrxCopiedId(null), 2000);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                                title="Copy TrxID"
+                              >
+                                {paymentTrxCopiedId === payItem.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                              Amount & Plan
+                            </span>
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm block">
+                              {payItem.amount_bdt} BDT
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              {payItem.plan_name} (+{payItem.plan_days} Days)
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                              Sender Number / A/C
+                            </span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {payItem.sender_number || 'N/A'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                              Payment Date
+                            </span>
+                            <span className="font-mono text-slate-700 dark:text-slate-300">
+                              {payItem.payment_date || payItem.created_at?.slice(0, 10)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {payItem.notes && (
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                            Note: "{payItem.notes}"
+                          </div>
+                        )}
+
+                        {payItem.reviewed_by && (
+                          <div className="text-[11px] text-slate-500">
+                            Reviewed by: <strong>{payItem.reviewed_by}</strong> on {payItem.reviewed_at ? new Date(payItem.reviewed_at).toLocaleDateString() : ''}
+                            {payItem.rejection_reason && (
+                              <span className="text-red-500 block font-medium">Reason: {payItem.rejection_reason}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons for Pending Payments */}
+                      {isPending && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => handleApprovePayment(payItem.id)}
+                            disabled={paymentActionLoadingId === payItem.id}
+                            className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                          >
+                            {paymentActionLoadingId === payItem.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Verifying & Extending...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Verify & Approve (+{payItem.plan_days} Days)</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentRejectModalItem(payItem);
+                              setPaymentRejectReason('TrxID could not be matched with bank/MFS statement');
+                            }}
+                            disabled={paymentActionLoadingId === payItem.id}
+                            className="py-2 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 3: DUAL-CONTROL INTERNAL GOVERNANCE & SENSITIVE OPERATIONS */}
           <div className="space-y-4 pt-2">
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
               <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -4417,6 +4821,22 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
           </div>
         </div>
       )}
+
+      {/* Website Pages CMS Tab */}
+      {activeTab === 'cms_pages' && (
+        <CmsContentManager initialSection="home" />
+      )}
+
+      {/* App Branding & Logo Tab */}
+      {activeTab === 'branding' && (
+        <CmsContentManager initialSection="branding" />
+      )}
+
+      {/* Promotional Video Tab */}
+      {activeTab === 'promo_video' && (
+        <CmsContentManager initialSection="video" />
+      )}
+
       {/* ================= MODAL: WORKSPACE APPROVED & CREDENTIAL / EMAIL DISPATCH ================= */}
       {selectedApprovalModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
@@ -4529,63 +4949,96 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
 
               {/* Action Buttons for Email */}
               <div className="grid grid-cols-1 gap-2.5">
-                {/* 1. Open in Gmail Web Compose (Forced authuser=admin.fuelnest@gmail.com) */}
+                {/* 1. Primary: 1-Click Direct Server Dispatch (Guaranteed from admin.fuelnest@gmail.com) */}
                 <button
                   type="button"
-                  onClick={() => {
-                    const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
-                    const subject = `FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`;
-                    const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
-
-                    // Enforce Gmail Web Compose with authuser=admin.fuelnest@gmail.com
-                    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(selectedApprovalModalData.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&authuser=admin.fuelnest@gmail.com`;
-                    
-                    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-                  }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all"
+                  onClick={() => handleSendDirectEmail(selectedApprovalModalData.id)}
+                  disabled={sendingEmailDirectly}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer disabled:opacity-50 transition-all transform active:scale-98"
                 >
-                  <Mail className="w-4 h-4 text-white" />
-                  <span>Send via Gmail Web (from admin.fuelnest@gmail.com)</span>
+                  {sendingEmailDirectly ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Dispatching from admin.fuelnest@gmail.com...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 text-white" />
+                      <span>⚡ 1-Click Send Email (Directly from admin.fuelnest@gmail.com)</span>
+                    </>
+                  )}
                 </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {/* 2. Open Default Mail App (Mailto with from=admin.fuelnest@gmail.com) */}
+                {directEmailResult && (
+                  <div
+                    className={`p-2.5 rounded-xl text-[11px] font-bold ${
+                      directEmailResult.delivered
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-200 border border-amber-500/30'
+                    }`}
+                  >
+                    {directEmailResult.delivered
+                      ? '✅ Email successfully delivered from admin.fuelnest@gmail.com to subscriber!'
+                      : `ℹ️ ${directEmailResult.error || 'Server email recorded. You can also send via Gmail Web below.'}`}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-amber-500/20">
+                  {/* 2. Open in Gmail Web specifically targeting admin.fuelnest@gmail.com */}
                   <button
                     type="button"
                     onClick={() => {
                       const portal = selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login';
                       const subject = `FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`;
-                      const body = `From: admin.fuelnest@gmail.com (FuelNest Administration)\nReply-To: admin.fuelnest@gmail.com\n\nDear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
+                      const body = `Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},\n\nWe are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!\n\nHere are your Super Admin sign-in credentials:\n----------------------------------------------------\nPortal Login URL: ${portal}\nSuper Admin Username: ${selectedApprovalModalData.super_admin_username}\nTemporary Password: ${selectedApprovalModalData.temporary_password}\nSubscription Plan: ${selectedApprovalModalData.plan_name}\n----------------------------------------------------\n\nSecurity Notice:\nUpon your initial login, you will be prompted to set your personal permanent password.\n\nIf you have any questions or require deployment assistance, our team is always ready to assist you.\n\nBest regards,\nMaster Administration Team\nadmin.fuelnest@gmail.com\nFuelNest Intelligence\nhttps://fuelnest.xyz`;
 
-                      const mailtoUrl = `mailto:${selectedApprovalModalData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&from=admin.fuelnest@gmail.com&reply-to=admin.fuelnest@gmail.com`;
-                      try {
-                        const newWin = window.open(mailtoUrl, '_blank', 'noopener,noreferrer');
-                        if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
-                          const a = document.createElement('a');
-                          a.href = mailtoUrl;
-                          a.target = '_blank';
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                        }
-                      } catch (e) {
-                        const a = document.createElement('a');
-                        a.href = mailtoUrl;
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                      }
+                      // Target admin.fuelnest@gmail.com profile specifically
+                      const gmailUrl = `https://mail.google.com/mail/u/admin.fuelnest@gmail.com/?view=cm&fs=1&to=${encodeURIComponent(selectedApprovalModalData.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&authuser=admin.fuelnest@gmail.com`;
+                      window.open(gmailUrl, '_blank', 'noopener,noreferrer');
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer transition-all"
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer transition-all"
+                    title="Opens Gmail Web specifically with admin.fuelnest@gmail.com profile"
                   >
-                    <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Default Mail App (mailto)</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-red-400" />
+                    <span>Gmail (admin.fuelnest)</span>
                   </button>
 
-                  {/* 3. Copy Full Email Message */}
+                  {/* 3. Mail To Client App (with From/CC admin.fuelnest@gmail.com) */}
+                  <a
+                    href={`mailto:${selectedApprovalModalData.email}?cc=admin.fuelnest@gmail.com&subject=${encodeURIComponent(`FuelNest Workspace Access Credentials - ${selectedApprovalModalData.company_name}`)}&body=${encodeURIComponent(
+`From: admin.fuelnest@gmail.com (FuelNest Administration)
+Reply-To: admin.fuelnest@gmail.com
+To: ${selectedApprovalModalData.email}
+
+Dear ${selectedApprovalModalData.admin_name || selectedApprovalModalData.company_name},
+
+We are pleased to inform you that your FuelNest Fleet & Fuel Management Workspace for "${selectedApprovalModalData.company_name}" has been approved and activated!
+
+Here are your Super Admin sign-in credentials:
+----------------------------------------------------
+Portal Login URL: ${selectedApprovalModalData.login_url || 'https://fuelnest.xyz/login'}
+Super Admin Username: ${selectedApprovalModalData.super_admin_username}
+Temporary Password: ${selectedApprovalModalData.temporary_password}
+Subscription Plan: ${selectedApprovalModalData.plan_name}
+----------------------------------------------------
+
+Security Notice:
+Upon your initial login, you will be prompted to set your personal permanent password.
+
+Best regards,
+Master Administration Team
+admin.fuelnest@gmail.com
+FuelNest Intelligence
+https://fuelnest.xyz`
+                    )}`}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer transition-all"
+                    title="Opens your local email client with admin.fuelnest@gmail.com prefilled"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Mail To (Client)</span>
+                  </a>
+
+                  {/* 4. Copy Full Email Message */}
                   <button
                     type="button"
                     onClick={() => {
@@ -4596,62 +5049,22 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                       setCopiedEmailText(true);
                       setTimeout(() => setCopiedEmailText(false), 2500);
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer transition-all"
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer transition-all"
                   >
                     {copiedEmailText ? (
                       <>
                         <Check className="w-4 h-4 text-emerald-400" />
-                        <span className="text-emerald-400">Email Text Copied!</span>
+                        <span className="text-emerald-400">Copied!</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-4 h-4 text-amber-400" />
-                        <span>Copy Full Email Text</span>
+                        <span>Copy Email Text</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
-
-              {/* 4. Send Email via System */}
-              <div className="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-                  From: admin.fuelnest@gmail.com (Server Dispatch)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleSendDirectEmail(selectedApprovalModalData.id)}
-                  disabled={sendingEmailDirectly}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  {sendingEmailDirectly ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Dispatching...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Send via System</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {directEmailResult && (
-                <div
-                  className={`p-2.5 rounded-xl text-[11px] ${
-                    directEmailResult.delivered
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-200 border border-amber-500/30'
-                  }`}
-                >
-                  {directEmailResult.delivered
-                    ? '✅ Email successfully delivered to recipient inbox!'
-                    : `⚠️ ${directEmailResult.error || 'Server email dispatch limited. Please use "Open Email App" or "Copy Full Email Text" above.'}`}
-                </div>
-              )}
             </div>
 
             <div className="pt-2">
@@ -4784,6 +5197,74 @@ export const SaasOwnerPanel: React.FC<{ onOpenCompanyUserManagement?: () => void
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete Record</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REJECT PAYMENT VERIFICATION ================= */}
+      {paymentRejectModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c162d] border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Reject Payment Verification
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentRejectModalItem(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              Decline payment verification for{' '}
+              <strong className="text-slate-900 dark:text-white">{paymentRejectModalItem.tenant_name}</strong> (TrxID: <span className="font-mono text-amber-500 font-bold">{paymentRejectModalItem.transaction_id}</span>)?
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Reason for Rejection *
+              </label>
+              <textarea
+                rows={3}
+                value={paymentRejectReason}
+                onChange={e => setPaymentRejectReason(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPaymentRejectModalItem(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectPayment}
+                disabled={paymentActionLoadingId === paymentRejectModalItem.id}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {paymentActionLoadingId === paymentRejectModalItem.id ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rejecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-3.5 h-3.5" />
+                    <span>Confirm Rejection</span>
                   </>
                 )}
               </button>

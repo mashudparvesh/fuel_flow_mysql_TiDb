@@ -16,7 +16,14 @@ import {
   PanelLeftClose,
   Crown,
   Users,
-  LogOut
+  LogOut,
+  Globe,
+  Palette,
+  Video,
+  UserCheck,
+  Key,
+  Mail,
+  Sparkles
 } from 'lucide-react';
 
 export type NavTab = 
@@ -40,6 +47,10 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   onClose?: () => void;
   onOpenBulkImport?: () => void;
+  isMasterControlMode?: boolean;
+  saasActiveTab?: string;
+  onSelectSaasTab?: (tab: string) => void;
+  onSwitchToFleetView?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -51,7 +62,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onCloseMobile,
   onClose,
-  onOpenBulkImport
+  onOpenBulkImport,
+  isMasterControlMode,
+  saasActiveTab = 'subscribers',
+  onSelectSaasTab,
+  onSwitchToFleetView
 }) => {
   // Normalize currentView if it was 'pumps' or 'tankers'
   const normalizedView = currentView === 'pumps' ? 'pump_credit' : currentView === 'tankers' ? 'tanker_bowzer' : currentView;
@@ -89,6 +104,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isSuperAdmin = currentUser?.role === 'super_admin' || activeAuthRole === 'saas_owner';
   const isViewer = currentUser?.role === 'client_viewer';
+  const isMasterMode = Boolean(
+    isMasterControlMode ||
+    activeAuthRole === 'saas_owner' ||
+    activeAuthRole === 'saas_moderator' ||
+    currentView === 'saas_owner_panel'
+  );
+
+  const saasNavItems = [
+    {
+      id: 'subscribers',
+      label: 'Subscribers & Workspaces',
+      icon: <Building2 className="w-5 h-5" />
+    },
+    {
+      id: 'registrations',
+      label: 'Subscriber Approvals',
+      icon: <UserCheck className="w-5 h-5" />,
+      badge: 'New',
+      badgeColor: 'bg-amber-500 text-slate-950 font-black'
+    },
+    {
+      id: 'approvals',
+      label: 'Payment Verifications',
+      icon: <CreditCard className="w-5 h-5" />,
+      badge: 'bKash/Bank',
+      badgeColor: 'bg-emerald-500/20 text-emerald-400 font-bold'
+    },
+    {
+      id: 'cms_pages',
+      label: 'Website Pages CMS',
+      icon: <Globe className="w-5 h-5" />,
+      badge: 'Home/About/Contact'
+    },
+    {
+      id: 'branding',
+      label: 'App Logo & Favicon',
+      icon: <Palette className="w-5 h-5" />,
+      badge: 'Branding'
+    },
+    {
+      id: 'promo_video',
+      label: 'Promotional Video',
+      icon: <Video className="w-5 h-5" />,
+      badge: 'Landing Video'
+    },
+    {
+      id: 'moderators',
+      label: 'Roles & Master Team',
+      icon: <Users className="w-5 h-5" />
+    },
+    {
+      id: 'email',
+      label: 'Email & Alerts Dispatch',
+      icon: <Mail className="w-5 h-5" />,
+      badge: 'admin.fuelnest'
+    },
+    {
+      id: 'owner_profile',
+      label: 'Security & Access',
+      icon: <Key className="w-5 h-5" />
+    }
+  ];
 
   const navItems: {
     id: NavTab;
@@ -235,44 +312,112 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Navigation Links */}
           <nav className="space-y-1">
-            {navItems.map(item => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  id={`nav-item-${item.id}`}
-                  onClick={() => handleNavClick(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 ease-out ${
-                    isActive
-                      ? item.highlight
-                        ? 'bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-950 dark:font-black shadow-xs font-bold'
-                        : 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 dark:font-black shadow-xs'
-                      : item.highlight
-                      ? 'bg-amber-50 text-amber-900 dark:bg-amber-400/15 dark:text-amber-300 hover:bg-amber-100/80 dark:hover:bg-amber-400/25 border border-amber-200 dark:border-amber-400/30'
-                      : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#142247] hover:text-slate-900 dark:hover:text-amber-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={isActive ? 'text-white dark:text-slate-950' : item.highlight ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}>
-                      {item.icon}
-                    </span>
-                    <span className="text-left leading-tight">{item.label}</span>
-                  </div>
-
-                  {item.badge !== undefined && (
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+            {isMasterMode ? (
+              <>
+                {saasNavItems.map(item => {
+                  const isActive = saasActiveTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      id={`saas-nav-${item.id}`}
+                      type="button"
+                      onClick={() => {
+                        if (onSelectSaasTab) onSelectSaasTab(item.id);
+                        if (onNavigate) onNavigate('saas_owner_panel');
+                        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                          handleClose();
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 ease-out cursor-pointer ${
                         isActive
-                          ? 'bg-white/20 text-white dark:bg-slate-950/20 dark:text-slate-950'
-                          : item.badgeColor || 'bg-slate-100 dark:bg-[#142247] text-slate-600 dark:text-amber-300'
+                          ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                          : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#142247] hover:text-slate-900 dark:hover:text-amber-300'
                       }`}
                     >
-                      {item.badge}
+                      <div className="flex items-center gap-3">
+                        <span className={isActive ? 'text-slate-950' : 'text-slate-500 dark:text-slate-400'}>
+                          {item.icon}
+                        </span>
+                        <span className="text-left leading-tight font-bold">{item.label}</span>
+                      </div>
+
+                      {item.badge !== undefined && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                            isActive
+                              ? 'bg-black/10 text-slate-950 font-black'
+                              : item.badgeColor || 'bg-slate-100 dark:bg-[#142247] text-slate-600 dark:text-amber-300'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                <div className="pt-3 px-1 border-t border-slate-200 dark:border-blue-900/60 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onSwitchToFleetView) onSwitchToFleetView();
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                        handleClose();
+                      }
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-all cursor-pointer shadow-2xs"
+                    title="Switch from Master Control to Tenant Fleet View"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-amber-500" />
+                      <span className="text-left font-bold">Inspect Fleet Ops</span>
+                    </div>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400">
+                      Tenant View
                     </span>
-                  )}
-                </button>
-              );
-            })}
+                  </button>
+                </div>
+              </>
+            ) : (
+              navItems.map(item => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    id={`nav-item-${item.id}`}
+                    onClick={() => handleNavClick(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 ease-out ${
+                      isActive
+                        ? item.highlight
+                          ? 'bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-950 dark:font-black shadow-xs font-bold'
+                          : 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 dark:font-black shadow-xs'
+                        : item.highlight
+                        ? 'bg-amber-50 text-amber-900 dark:bg-amber-400/15 dark:text-amber-300 hover:bg-amber-100/80 dark:hover:bg-amber-400/25 border border-amber-200 dark:border-amber-400/30'
+                        : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#142247] hover:text-slate-900 dark:hover:text-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={isActive ? 'text-white dark:text-slate-950' : item.highlight ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}>
+                        {item.icon}
+                      </span>
+                      <span className="text-left leading-tight">{item.label}</span>
+                    </div>
+
+                    {item.badge !== undefined && (
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                          isActive
+                            ? 'bg-white/20 text-white dark:bg-slate-950/20 dark:text-slate-950'
+                            : item.badgeColor || 'bg-slate-100 dark:bg-[#142247] text-slate-600 dark:text-amber-300'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
           </nav>
 
           {/* Bulk Import Shortcut for Subscribers */}

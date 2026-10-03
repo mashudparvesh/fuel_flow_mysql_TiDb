@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { Company, FuelPump, FuelType } from '../types';
+import { STANDARD_FUEL_SUGGESTIONS, StandardFuelSuggestion } from '../utils/fuelPricing';
 
 interface MasterDataViewProps {
   onOpenBulkImport?: (entity?: any) => void;
@@ -64,6 +65,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
   const [deleteConfirmFuelType, setDeleteConfirmFuelType] = useState<FuelType | null>(null);
   const [fuelActionError, setFuelActionError] = useState<string | null>(null);
   const [isSubmittingFuel, setIsSubmittingFuel] = useState(false);
+  const [showFuelSuggestionsDropdown, setShowFuelSuggestionsDropdown] = useState(false);
+
+  // Filtered standard fuel suggestions for auto-fill & spelling mistake prevention
+  const fuelSuggestions = useMemo(() => {
+    if (!newFuelName.trim()) return STANDARD_FUEL_SUGGESTIONS;
+    const query = newFuelName.toLowerCase().trim();
+    return STANDARD_FUEL_SUGGESTIONS.filter(
+      s => s.name.toLowerCase().includes(query) ||
+           s.nameBn.toLowerCase().includes(query) ||
+           s.code.toLowerCase().includes(query)
+    );
+  }, [newFuelName]);
+
+  const selectFuelSuggestion = (sug: StandardFuelSuggestion) => {
+    setNewFuelName(sug.name);
+    setNewFuelCode(sug.code);
+    setNewFuelUnit(sug.unit);
+    setNewFuelPrice(sug.defaultPrice.toString());
+    setShowFuelSuggestionsDropdown(false);
+  };
 
   // Pagination states (10 items max per list)
   const pageSize = 10;
@@ -1044,19 +1065,82 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
               </div>
             )}
 
+            {/* Quick Suggestion Pills */}
+            <div className="mb-4">
+              <span className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                <span>💡 Quick Suggestions (ক্লিক করে অটো-ফিল করুন):</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {STANDARD_FUEL_SUGGESTIONS.map(sug => {
+                  const isCurrent = newFuelName.toLowerCase() === sug.name.toLowerCase();
+                  return (
+                    <button
+                      key={sug.code}
+                      type="button"
+                      onClick={() => selectFuelSuggestion(sug)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+                        isCurrent
+                          ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:border-amber-400'
+                      }`}
+                    >
+                      {sug.name} <span className="opacity-70 text-[10px]">({sug.nameBn})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <form onSubmit={handleAddFuelType} className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Fuel Name *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. CNG, LPG Autogas, High-Octane 98"
+                  placeholder="e.g. Diesel, Octane, CNG, LPG Autogas"
                   value={newFuelName}
-                  onChange={e => setNewFuelName(e.target.value)}
+                  onFocus={() => setShowFuelSuggestionsDropdown(true)}
+                  onChange={e => {
+                    setNewFuelName(e.target.value);
+                    setShowFuelSuggestionsDropdown(true);
+                  }}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-semibold"
                 />
+
+                {/* Autocomplete Dropdown */}
+                {showFuelSuggestionsDropdown && fuelSuggestions.length > 0 && newFuelName.trim().length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {fuelSuggestions.map(sug => (
+                      <div
+                        key={sug.code}
+                        onMouseDown={() => selectFuelSuggestion(sug)}
+                        className="p-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer transition-colors flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {sug.name}
+                          </span>
+                          <span className="text-[11px] text-amber-600 dark:text-amber-400 ml-1.5 font-medium">
+                            ({sug.nameBn})
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">
+                            {sug.description}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-[11px]">
+                            {sug.defaultPrice} BDT
+                          </span>
+                          <span className="text-[10px] text-slate-400 block font-mono">
+                            /{sug.unit}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1066,7 +1150,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. cng, lpg"
+                    placeholder="e.g. diesel, cng, lpg"
                     value={newFuelCode}
                     onChange={e => setNewFuelCode(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono uppercase"
@@ -1097,7 +1181,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                   type="number"
                   step="0.01"
                   required
-                  placeholder="e.g. 52.50"
+                  placeholder="e.g. 105.00"
                   value={newFuelPrice}
                   onChange={e => setNewFuelPrice(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono font-bold"
