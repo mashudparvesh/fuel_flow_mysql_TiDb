@@ -477,40 +477,161 @@ export default async function handler(req, res) {
       }
 
       const pool = getPool();
-      // If targetId is a registration request ID (reg_...), look up tenant
+      let targetTenantId = targetId;
+      let regItem = null;
+
+      // If targetId is a registration request ID (reg_...), look up request details
       if (targetId.startsWith('reg_')) {
-        // Look up by id or activate first pending tenant
-        const [pRows] = await pool.query("SELECT id FROM `tenants` WHERE `status` = 'pending' LIMIT 1");
-        if (pRows && pRows[0]) targetId = pRows[0].id;
+        const [regRows] = await pool.query("SELECT * FROM `registration_requests` WHERE `id` = ?", [targetId]).catch(() => [[]]);
+        if (regRows && regRows[0]) {
+          regItem = regRows[0];
+          targetTenantId = regItem.tenant_id || `tenant_${Date.now()}`;
+          // Mark registration request as approved
+          await pool.query("UPDATE `registration_requests` SET `status` = 'approved', `approved_at` = NOW() WHERE `id` = ?", [targetId]).catch(() => {});
+        } else {
+          const [pRows] = await pool.query("SELECT id FROM `tenants` WHERE `status` = 'pending' LIMIT 1").catch(() => [[]]);
+          if (pRows && pRows[0]) targetTenantId = pRows[0].id;
+        }
+      }
+
+      // If tenant doesn't exist yet but we have registration request data, provision tenant & user immediately
+      const [existingTenants] = await pool.query("SELECT * FROM `tenants` WHERE `id` = ?", [targetTenantId]).catch(() => [[]]);
+      if (!existingTenants || existingTenants.length === 0) {
+        if (regItem) {
+          const code = String(regItem.company_name || 'CO').replace(/[^A-Za-z0-9]/g, '').substring(0, 8).toUpperCase() || 'TENANT';
+          const today = new Date().toISOString().split('T')[0];
+          const expDate = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+          await pool.query(
+            `INSERT INTO \`tenants\` (\`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`, \`status\`, \`is_approved\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`, \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`)
+             VALUES (?, ?, ?, 'BDT', ?, 'Dhaka, Bangladesh', ?, ?, 'active', 1, ?, ?, 'active', ?, ?, 0, ?)
+             ON DUPLICATE KEY UPDATE \`status\` = 'active', \`is_approved\` = 1, \`subscription_status\` = 'active'`,
+            [
+              targetTenantId, regItem.company_name, code, regItem.phone || '',
+              regItem.admin_name || 'Admin', regItem.email || '', today,
+              regItem.plan_name || 'starter', today, expDate,
+              JSON.stringify({ plan: regItem.plan_name, status: 'active', payment_status: 'paid', super_admin_username: regItem.super_admin_username || 'admin' })
+            ]
+          ).catch(() => {});
+
+          const rawPass = regItem.temporary_password || `${code}@12345`;
+          const passHash = isHashed(rawPass) ? rawPass : hashPassword(rawPass);
+          await pool.query(
+            `INSERT INTO \`users\` (\`id\`, \`tenant_id\`, \`name\`, \`email\`, \`username\`, \`password_hash\`, \`phone\`, \`role\`, \`role_title_bn\`, \`status\`, \`allowed_categories\`, \`allowed_pumps\`, \`permissions\`)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'super_admin', 'Company Super Admin', 'active', '["all"]', '["all"]', '{"can_add_fuel":true,"can_manage_vehicles":true,"can_manage_pumps":true,"can_view_reports":true,"can_manage_users":true,"can_edit_settings":true}')
+             ON DUPLICATE KEY UPDATE \`status\` = 'active'`,
+            [`usr_${Date.now()}`, targetTenantId, regItem.admin_name || 'Admin', regItem.email || '', regItem.super_admin_username || 'admin', passHash, regItem.phone || '']
+          ).catch(() => {});
+        }
       }
 
       await pool.query(
         "UPDATE `tenants` SET `status` = 'active', `subscription_status` = 'active', `is_approved` = 1 WHERE `id` = ?",
-        [targetId]
-      );
+        [targetTenantId]
+      ).catch(() => {});
       await pool.query(
         "UPDATE `users` SET `status` = 'active' WHERE `tenant_id` = ?",
-        [targetId]
-      );
+        [targetTenantId]
+      ).catch(() => {});
 
-      const [tenantRows] = await pool.query("SELECT * FROM `tenants` WHERE `id` = ?", [targetId]);
-      const [userRows] = await pool.query("SELECT * FROM `users` WHERE `tenant_id` = ? AND `role` = 'super_admin' LIMIT 1", [targetId]);
+      const [tenantRows] = await pool.query("SELECT * FROM `tenants` WHERE `id` = ?", [targetTenantId]).catch(() => [[]]);
+      const [userRows] = await pool.query("SELECT * FROM `users` WHERE `tenant_id` = ? AND `role` = 'super_admin' LIMIT 1", [targetTenantId]).catch(() => [[]]);
 
       return res.status(200).json({
         success: true,
-        tenant_id: targetId,
+        tenant_id: targetTenantId,
         status: 'active',
         is_approved: true,
-        message: `Plan approved for "${tenantRows?.[0]?.name || targetId}". Workspace is now ACTIVE and login access is enabled.`,
+        message: `Plan approved for "${tenantRows?.[0]?.name || targetTenantId}". Workspace is now ACTIVE and login access is enabled.`,
         tenant: tenantRows?.[0] || null,
         user: userRows?.[0] || null,
-        super_admin_username: userRows?.[0]?.username,
-        temporary_password: `${tenantRows?.[0]?.code || 'User'}@12345`,
+        super_admin_username: userRows?.[0]?.username || regItem?.super_admin_username || 'admin',
+        temporary_password: regItem?.temporary_password || `${tenantRows?.[0]?.code || 'User'}@12345`,
         login_url: 'https://fuelnest.xyz/login'
       });
     } catch (apprErr) {
       console.error('[TiDB Approve Error]:', apprErr);
       return res.status(500).json({ success: false, message: apprErr?.message || 'Approval failed' });
+    }
+  }
+
+  // 4b. Create / Onboard New Subscriber Manually (POST /api/tenants or /api/owner/subscribers/create) - Always ACTIVE
+  if ((cleanUrl === '/api/tenants' || cleanUrl === '/api/owner/subscribers/create') && method === 'POST') {
+    try {
+      const pool = getPool();
+      const payload = req.body || {};
+      const tenantId = payload.id || `tenant_${Date.now()}`;
+      const name = String(payload.name || 'Fleet Company').trim();
+      const code = String(payload.code || name.replace(/[^A-Za-z0-9]/g, '').substring(0, 8)).toUpperCase();
+      const phone = payload.phone || '';
+      const email = payload.email || '';
+      const contactPerson = payload.contact_person || '';
+      const address = payload.address || '';
+      const sub = payload.subscription || {};
+      const plan = sub.plan || payload.plan || 'starter';
+      const startDate = sub.start_date || new Date().toISOString().split('T')[0];
+      const endDate = sub.end_date || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+      const price = Number(sub.price_bdt || payload.price_bdt) || 0;
+
+      // Ensure tenants table has is_approved column
+      await pool.query("ALTER TABLE `tenants` ADD COLUMN IF NOT EXISTS `is_approved` TINYINT(1) DEFAULT 1").catch(() => {});
+
+      // Manual onboarding is ALWAYS ACTIVE and APPROVED immediately!
+      await pool.query(
+        `INSERT INTO \`tenants\` (\`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`, \`status\`, \`is_approved\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`, \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`)
+         VALUES (?, ?, ?, 'BDT', ?, ?, ?, ?, 'active', 1, ?, ?, 'active', ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`), \`status\` = 'active', \`is_approved\` = 1, \`subscription_status\` = 'active'`,
+        [
+          tenantId, name, code, phone, address, contactPerson, email,
+          startDate, plan, startDate, endDate, price,
+          JSON.stringify({ ...sub, status: 'active', is_approved: true, payment_status: 'paid' })
+        ]
+      );
+
+      // Create super admin user if username provided
+      const rawUser = payload.super_admin_username || sub.super_admin_username || 'admin';
+      const rawPass = payload.super_admin_password || sub.super_admin_password || `${code}@12345`;
+      const passHash = isHashed(rawPass) ? rawPass : hashPassword(rawPass);
+      const userId = `usr_${Date.now()}`;
+      await pool.query(
+        `INSERT INTO \`users\` (\`id\`, \`tenant_id\`, \`name\`, \`email\`, \`username\`, \`password_hash\`, \`phone\`, \`role\`, \`role_title_bn\`, \`status\`, \`allowed_categories\`, \`allowed_pumps\`, \`permissions\`)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'super_admin', 'Company Super Admin', 'active', '["all"]', '["all"]', '{"can_add_fuel":true,"can_manage_vehicles":true,"can_manage_pumps":true,"can_view_reports":true,"can_manage_users":true,"can_edit_settings":true}')
+         ON DUPLICATE KEY UPDATE \`status\` = 'active'`,
+        [userId, tenantId, payload.super_admin_name || `${name} Admin`, email, rawUser, passHash, phone]
+      ).catch(() => {});
+
+      // Create default primary company
+      await pool.query(
+        `INSERT INTO \`companies\` (\`id\`, \`tenant_id\`, \`name\`, \`code\`, \`contact_person\`, \`phone\`, \`email\`, \`address\`)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [`comp_${tenantId}`, tenantId, name, code, contactPerson, phone, email, address]
+      ).catch(() => {});
+
+      // Send telegram alert
+      sendTelegramAlert(`🏢 <b>Manual Subscriber Created (ACTIVE)</b>\n\n<b>Company:</b> ${name}\n<b>Tenant Code:</b> ${code}\n<b>Plan:</b> ${plan}\n<b>Status:</b> ACTIVE (Approved Immediately)\n<b>Super Admin:</b> ${rawUser}\n<b>Valid Until:</b> ${endDate}\n\n👉 <a href="https://fuelnest.xyz/control-panel/subscribers">Manage in Control Panel</a>`).catch(() => {});
+
+      return res.status(201).json({
+        success: true,
+        message: `Subscriber company "${name}" created successfully with ACTIVE status. No approval needed!`,
+        tenant: {
+          id: tenantId,
+          name,
+          code,
+          status: 'active',
+          is_approved: true,
+          subscription: {
+            plan,
+            status: 'active',
+            is_approved: true,
+            start_date: startDate,
+            end_date: endDate,
+            price_bdt: price,
+            super_admin_username: rawUser
+          }
+        }
+      });
+    } catch (createErr) {
+      console.error('[Create Tenant Error]:', createErr);
+      return res.status(500).json({ success: false, message: createErr?.message || 'Failed to create subscriber' });
     }
   }
 
@@ -824,6 +945,293 @@ export default async function handler(req, res) {
       });
     } catch (e) {
       return res.status(200).json({ success: true, data: { vehicles: [], fuelEntries: [] } });
+    }
+  }
+
+  // 12b. Bulk Excel / CSV Data Import & Auto Setup (POST /api/fleet/bulk-import)
+  if (cleanUrl === '/api/fleet/bulk-import' && method === 'POST') {
+    try {
+      const pool = getPool();
+      const { tenant_id, entity_type, rows } = req.body || {};
+      if (!tenant_id || !entity_type || !Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'tenant_id, entity_type, and rows array required' });
+      }
+
+      if (entity_type === 'vehicles') {
+        const categoryMap = new Map();
+        const companyMap = new Map();
+        const vendorMap = new Map();
+        const pumpMap = new Map();
+        const fuelMap = new Map();
+
+        // 1. Auto-extract Categories, Companies, Vendors, Pumps, Fuel Types
+        for (const r of rows) {
+          const rawCat = r.category || r.vehicle_category || r.category_name;
+          if (rawCat && String(rawCat).trim() && String(rawCat).trim() !== 'N/A') {
+            const catName = String(rawCat).trim();
+            const lower = catName.toLowerCase();
+            if (!categoryMap.has(lower)) {
+              const catId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+              categoryMap.set(lower, catId);
+              const isLph = /excavator|generator|crane|earthmover|dozer|loader|bowzer/i.test(catName);
+              const bench = Number(r.benchmark_mileage || r.benchmark || r.expected_benchmark) || (isLph ? 18.0 : 8.0);
+              await pool.query(
+                `INSERT INTO \`vehicle_categories\` (\`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`metric_type\`, \`default_benchmark\`, \`tolerance_percentage\`, \`icon_name\`, \`description\`)
+                 VALUES (?, ?, 'user_1', ?, ?, ?, 15, ?, 'Auto-imported from fleet sheet')
+                 ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`)`,
+                [catId, tenant_id, catName, isLph ? 'lph' : 'kmpl', bench, isLph ? 'Excavator' : 'Truck']
+              ).catch(() => {});
+            }
+          }
+
+          const rawComp = r.assigned_company || r.company || r.company_name;
+          if (rawComp && String(rawComp).trim() && String(rawComp).trim() !== 'N/A') {
+            const compName = String(rawComp).trim();
+            const lower = compName.toLowerCase();
+            if (!companyMap.has(lower)) {
+              const compId = `comp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+              companyMap.set(lower, compId);
+              const code = compName.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase() || 'COMP';
+              await pool.query(
+                `INSERT INTO \`companies\` (\`id\`, \`tenant_id\`, \`name\`, \`code\`, \`contact_person\`, \`phone\`, \`email\`, \`address\`)
+                 VALUES (?, ?, ?, ?, 'N/A', 'N/A', '', 'N/A')
+                 ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`)`,
+                [compId, tenant_id, compName, code]
+              ).catch(() => {});
+            }
+          }
+
+          const rawVen = r.vehicle_vendor || r.vendor_name || r.vendor || r.supplier;
+          if (rawVen && String(rawVen).trim() && String(rawVen).trim() !== 'N/A' && String(rawVen).trim().toLowerCase() !== 'own' && String(rawVen).trim().toLowerCase() !== 'none') {
+            const venName = String(rawVen).trim();
+            const lower = venName.toLowerCase();
+            if (!vendorMap.has(lower)) {
+              const venId = `ven_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+              vendorMap.set(lower, venId);
+              await pool.query(
+                `INSERT INTO \`vendors\` (\`id\`, \`tenant_id\`, \`name\`, \`phone\`, \`address\`)
+                 VALUES (?, ?, ?, ?, 'N/A')
+                 ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`)`,
+                [venId, tenant_id, venName, r.vendor_contact || r.vendor_phone || 'N/A']
+              ).catch(() => {});
+            }
+          }
+
+          const rawPump = r.fuel_pumps || r.fuel_pump || r.fuel_pump_station || r.pump;
+          if (rawPump && String(rawPump).trim() && String(rawPump).trim() !== 'N/A' && String(rawPump).trim().toLowerCase() !== 'none') {
+            const pumpName = String(rawPump).trim();
+            const lower = pumpName.toLowerCase();
+            if (!pumpMap.has(lower)) {
+              const pumpId = `pump_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+              pumpMap.set(lower, pumpId);
+              await pool.query(
+                `INSERT INTO \`fuel_pumps\` (\`id\`, \`tenant_id\`, \`name\`, \`location\`, \`credit_limit\`, \`current_balance\`, \`status\`)
+                 VALUES (?, ?, ?, ?, 500000, 0, 'active')
+                 ON DUPLICATE KEY UPDATE \`name\` = VALUES(\`name\`)`,
+                [pumpId, tenant_id, pumpName, r.pump_location || 'N/A']
+              ).catch(() => {});
+            }
+          }
+
+          // Fuel Type & Pricing Auto-Setup
+          const rawFuel = r.fuel_type || r.fuel;
+          if (rawFuel && String(rawFuel).trim() && String(rawFuel).trim() !== 'N/A') {
+            const fuelName = String(rawFuel).trim();
+            const lower = fuelName.toLowerCase();
+            if (!fuelMap.has(lower)) {
+              const fuelId = `fuel_${lower}_${tenant_id}`;
+              fuelMap.set(lower, fuelName);
+              const price = Number(r.fuel_price || r.price) || (lower === 'cng' ? 43.00 : lower === 'octane' ? 131.00 : lower === 'petrol' ? 126.00 : 108.50);
+              const unit = lower === 'cng' ? 'm3' : 'Liter';
+              await pool.query(
+                `INSERT INTO \`fuel_types\` (\`id\`, \`tenant_id\`, \`user_id\`, \`name\`, \`code\`, \`unit\`, \`current_price\`, \`status\`)
+                 VALUES (?, ?, 'user_1', ?, ?, ?, ?, 'active')
+                 ON DUPLICATE KEY UPDATE \`current_price\` = VALUES(\`current_price\`)`,
+                [fuelId, tenant_id, fuelName, lower, unit, price]
+              ).catch(() => {});
+            }
+          }
+        }
+
+        // 2. Insert / Update Vehicles
+        for (const r of rows) {
+          const rawNum = r.vehicle_reg_no || r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
+          if (!rawNum) continue;
+          const plate = String(rawNum).trim();
+          const vehId = r.id || `veh_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          const catKey = (r.category || r.vehicle_category || '').toLowerCase().trim();
+          const matchedCat = categoryMap.get(catKey) || 'cat_1';
+          const compKey = (r.assigned_company || r.company || '').toLowerCase().trim();
+          const matchedComp = companyMap.get(compKey) || 'comp_1';
+          const venKey = (r.vendor_name || r.vendor || '').toLowerCase().trim();
+          const matchedVen = vendorMap.get(venKey) || null;
+          const isRented = matchedVen !== null || (r.ownership && String(r.ownership).toLowerCase() === 'rental');
+
+          let driverName = r.driver_name;
+          let driverPhone = r.driver_contact || r.driver_phone;
+          const combinedDriver = r['driver_&_contact'] || r.driver_and_contact || r['diver_&_contact'] || r.diver_and_contact;
+          if (combinedDriver && typeof combinedDriver === 'string' && combinedDriver.trim() && combinedDriver.trim() !== 'N/A') {
+            const phoneMatch = combinedDriver.match(/(?:\+?88)?01[3-9]\d{8}/);
+            if (phoneMatch) {
+              if (!driverPhone || driverPhone === 'N/A') driverPhone = phoneMatch[0];
+              if (!driverName || driverName === 'N/A') driverName = combinedDriver.replace(phoneMatch[0], '').replace(/[()\-:,]/g, '').trim();
+            } else if (!driverName || driverName === 'N/A') {
+              driverName = combinedDriver.trim();
+            }
+          }
+
+          await pool.query(
+            `INSERT INTO \`vehicles\` (\`id\`, \`tenant_id\`, \`vehicle_number\`, \`plate_number\`, \`model\`, \`category_id\`, \`company_id\`, \`vendor_id\`, \`ownership\`, \`fuel_type\`, \`expected_benchmark\`, \`current_odometer\`, \`driver_name\`, \`driver_phone\`, \`fuel_tank_capacity\`, \`status\`)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+             ON DUPLICATE KEY UPDATE \`vehicle_number\` = VALUES(\`vehicle_number\`), \`current_odometer\` = VALUES(\`current_odometer\`), \`driver_name\` = VALUES(\`driver_name\`), \`driver_phone\` = VALUES(\`driver_phone\`)`,
+            [
+              vehId, tenant_id, plate, plate, r.model || 'N/A',
+              matchedCat, matchedComp, matchedVen,
+              isRented ? 'rented' : 'owned',
+              r.fuel_type || 'Diesel',
+              Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0,
+              Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0,
+              (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A',
+              (driverPhone && String(driverPhone).trim()) ? String(driverPhone).trim() : 'N/A',
+              Number(r.fuel_tank_capacity || r.capacity) || 100
+            ]
+          ).catch(() => {});
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        count: rows.length,
+        new_count: rows.length,
+        updated_count: 0,
+        message: `Bulk import completed! ${rows.length} records processed and registered.`
+      });
+    } catch (bulkErr) {
+      console.error('[Bulk Import Error]:', bulkErr);
+      return res.status(500).json({ success: false, message: bulkErr?.message || 'Bulk import failed' });
+    }
+  }
+
+  // 12c. Fleet Entities PATCH & DELETE endpoints
+  if (cleanUrl.startsWith('/api/fleet/fuel-entries/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`fuel_entries\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Fuel entry updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/fuel-entries/') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      await pool.query('DELETE FROM `fuel_entries` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Fuel entry deleted' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/categories/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`vehicle_categories\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Category updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/vendors/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`vendors\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Vendor updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/pumps/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`fuel_pumps\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Pump updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/payments/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`pump_payments\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Payment updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
     }
   }
 

@@ -701,56 +701,91 @@ export const CompanyUserManagementView: React.FC = () => {
                 </div>
               </div>
 
-              {/* CATEGORY-BASED ACCESS CONTROL (The Core Requirement!) */}
-              <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-300/80 dark:border-amber-900/40 space-y-2.5">
+              {/* CATEGORY-BASED ACCESS CONTROL (Dropdown UX - Update 3) */}
+              <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-300/80 dark:border-amber-900/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-black text-amber-950 dark:text-amber-400 flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-amber-600" />
                     <span>Vehicle Category Access *</span>
                   </label>
-                  <span className="text-[10px] text-slate-500">
-                    {formAllowedCategories.includes('all') ? 'Can view all vehicles' : `${formAllowedCategories.length} Categories Selected`}
+                  <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/50 px-2 py-0.5 rounded-full border border-amber-300/60 dark:border-amber-700/60">
+                    {formAllowedCategories.includes('all') ? '⭐ All Categories Assigned' : `${formAllowedCategories.length} Category Selected`}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-                  This user can only view, monitor, and log fuel entries for vehicles in the checked categories:
+                  Select which vehicle category this user has permission to manage and monitor:
                 </p>
 
-                <div className="space-y-2 pt-1">
-                  {/* Option: ALL */}
-                  <label className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-[#0c162d] border border-amber-200 dark:border-amber-900/50 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={formAllowedCategories.includes('all')}
-                      onChange={() => handleToggleCategory('all')}
-                      className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
-                    />
-                    <span>⭐ All Vehicle Categories (No Restrictions)</span>
-                  </label>
+                {/* The Dropdown with "All Categories" as first option and registered categories from master data */}
+                <div className="space-y-2">
+                  <select
+                    value={formAllowedCategories.includes('all') ? 'all' : (formAllowedCategories[0] || 'all')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'all') {
+                        setFormAllowedCategories(['all']);
+                      } else {
+                        setFormAllowedCategories(prev => {
+                          const withoutAll = prev.filter(c => c !== 'all');
+                          if (!withoutAll.includes(val)) {
+                            return [...withoutAll, val];
+                          }
+                          return withoutAll;
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-[#0c162d] text-slate-900 dark:text-white shadow-xs focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer"
+                  >
+                    <option value="all">⭐ All Categories (Full Fleet Access)</option>
+                    <optgroup label="Registered Vehicle Categories">
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          📁 {cat.name} ({cat.metric_type.toUpperCase()} • Benchmark: {cat.default_benchmark})
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
 
-                  {/* Individual Categories */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {categories.map(cat => {
-                      const isChecked = formAllowedCategories.includes('all') || formAllowedCategories.includes(cat.id);
-                      return (
-                        <label
-                          key={cat.id}
-                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                            isChecked
-                              ? 'bg-amber-100/60 dark:bg-amber-900/20 border-amber-300 dark:border-amber-800 text-slate-900 dark:text-white font-bold'
-                              : 'bg-white dark:bg-[#0c162d] border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}
+                  {/* Active Selected Category Badges with 1-click removal */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {formAllowedCategories.includes('all') ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>All Categories Assigned (No Restrictions)</span>
+                      </span>
+                    ) : (
+                      <>
+                        {formAllowedCategories.map(catId => {
+                          const catObj = categories.find(c => c.id === catId);
+                          return (
+                            <span
+                              key={catId}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30"
+                            >
+                              <span>📁 {catObj?.name || catId}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const remaining = formAllowedCategories.filter(c => c !== catId);
+                                  setFormAllowedCategories(remaining.length === 0 ? ['all'] : remaining);
+                                }}
+                                className="text-amber-700 hover:text-red-600 dark:text-amber-300 dark:hover:text-red-400 p-0.5 rounded cursor-pointer"
+                                title="Remove this category"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => setFormAllowedCategories(['all'])}
+                          className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline pl-1 cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleToggleCategory(cat.id)}
-                            className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
-                          />
-                          <span className="truncate">{cat.name}</span>
-                        </label>
-                      );
-                    })}
+                          Reset to All Categories
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

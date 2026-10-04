@@ -879,20 +879,21 @@ export const SaasOwnerPanel: React.FC<{
     }));
   };
 
-  // Submit New Subscriber
-  const handleCreateSubscriber = (e: React.FormEvent) => {
+  // Submit New Subscriber (Always ACTIVE immediately - No approval required)
+  const handleCreateSubscriber = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubForm.name || !newSubForm.super_admin_username || !newSubForm.super_admin_password) {
       alert('Please provide Company Name, Super Admin Username and Password.');
       return;
     }
 
-    addTenantSubscriber({
-      name: newSubForm.name,
+    const companyName = newSubForm.name;
+    const subResult = await addTenantSubscriber({
+      name: companyName,
       code: newSubForm.code || 'CO_' + Date.now().toString().slice(-4),
-      contact_person: newSubForm.contact_person || newSubForm.name + ' Representative',
+      contact_person: newSubForm.contact_person || companyName + ' Representative',
       phone: newSubForm.phone || '01700000000',
-      email: newSubForm.email || 'info@' + newSubForm.name.toLowerCase().replace(/\s+/g, '') + '.com',
+      email: newSubForm.email || 'info@' + companyName.toLowerCase().replace(/\s+/g, '') + '.com',
       address: newSubForm.address || 'Dhaka, Bangladesh',
       currency: newSubForm.currency || 'BDT',
       plan: newSubForm.plan,
@@ -913,6 +914,33 @@ export const SaasOwnerPanel: React.FC<{
     });
 
     setIsAddSubscriberModalOpen(false);
+    setActionFeedbackMsg({
+      text: `✅ Subscriber workspace "${companyName}" created and activated immediately! No approval needed.`,
+      type: 'success'
+    });
+    setTimeout(() => setActionFeedbackMsg(null), 6000);
+
+    // Refresh tenants & users list
+    await refreshTenantsFromServer?.();
+    await refreshUsersFromServer?.();
+
+    // Show credentials modal for direct handoff
+    if (subResult?.tenant) {
+      setSelectedApprovalModalData({
+        id: subResult.tenant.id,
+        company_name: subResult.tenant.name,
+        admin_name: subResult.tenant.contact_person,
+        email: subResult.tenant.email,
+        phone: subResult.tenant.phone,
+        plan_name: subResult.tenant.subscription?.plan_name_bn || subResult.tenant.subscription?.plan,
+        tenant_id: subResult.tenant.id,
+        super_admin_username: newSubForm.super_admin_username,
+        temporary_password: newSubForm.super_admin_password,
+        login_url: 'https://fuelnest.xyz/login'
+      });
+      setDirectEmailResult(null);
+    }
+
     // Reset form
     setNewSubForm({
       name: '',

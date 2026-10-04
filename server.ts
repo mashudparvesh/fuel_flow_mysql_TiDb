@@ -1352,6 +1352,9 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
         `
       }).catch(err => console.warn('[Subscriber create admin notification error]:', err));
 
+      // Telegram alert
+      sendTelegramAlert(`🏢 <b>Manual Subscriber Created (ACTIVE)</b>\n\n<b>Company:</b> ${tenantRecord.name}\n<b>Tenant Code:</b> ${tenantRecord.code}\n<b>Plan:</b> ${tenantRecord.subscription?.plan || 'Active Plan'}\n<b>Status:</b> ACTIVE (Approved Immediately)\n<b>Valid Until:</b> ${tenantRecord.subscription?.end_date || 'N/A'}\n\n👉 <a href="https://fuelnest.xyz/control-panel/subscribers">Manage in Control Panel</a>`).catch(() => {});
+
       res.status(201).json({
         success: true,
         message: 'Subscriber created and synchronized across all sessions successfully.',
@@ -1360,7 +1363,10 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err?.message || 'Server error creating tenant' });
     }
-  });
+  };
+
+  app.post('/api/tenants', handleCreateTenantRecord);
+  app.post('/api/owner/subscribers/create', handleCreateTenantRecord);
 
   // 4. PATCH /api/tenants/:id/status - Suspend, Activate, or Inactivate Tenant (ISSUE 2 Fix)
   app.patch('/api/tenants/:id/status', async (req: Request, res: Response) => {
@@ -3131,8 +3137,152 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
 
       if (entity_type === 'vehicles') {
         fleet.vehicles = Array.isArray(fleet.vehicles) ? fleet.vehicles : [];
+        fleet.categories = Array.isArray(fleet.categories) ? fleet.categories : [];
+        fleet.companies = Array.isArray(fleet.companies) ? fleet.companies : [];
+        fleet.vendors = Array.isArray(fleet.vendors) ? fleet.vendors : [];
+        fleet.pumps = Array.isArray(fleet.pumps) ? fleet.pumps : [];
+        fleet.fuelTypes = Array.isArray(fleet.fuelTypes) ? fleet.fuelTypes : [];
+
+        // 1. Auto-discover Categories, Companies, Vendors, Pumps, Fuel Types
+        const categoryMap = new Map<string, string>();
+        fleet.categories.forEach(c => c && c.name && categoryMap.set(String(c.name).toLowerCase().trim(), c.id));
+
+        const companyMap = new Map<string, string>();
+        fleet.companies.forEach(c => c && c.name && companyMap.set(String(c.name).toLowerCase().trim(), c.id));
+
+        const vendorMap = new Map<string, string>();
+        fleet.vendors.forEach(v => v && v.name && vendorMap.set(String(v.name).toLowerCase().trim(), v.id));
+
+        const pumpMap = new Map<string, string>();
+        fleet.pumps.forEach(p => p && p.name && pumpMap.set(String(p.name).toLowerCase().trim(), p.id));
+
+        const fuelMap = new Map<string, string>();
+        fleet.fuelTypes.forEach(f => f && f.name && fuelMap.set(String(f.name).toLowerCase().trim(), f.name));
+
         for (const r of rows) {
-          const rawNum = r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
+          // Category Auto-Setup
+          const rawCat = r.category || r.vehicle_category || r.category_name;
+          if (rawCat && String(rawCat).trim() && String(rawCat).trim() !== 'N/A') {
+            const catName = String(rawCat).trim();
+            const lower = catName.toLowerCase();
+            if (!categoryMap.has(lower)) {
+              const isLph = /excavator|generator|crane|earthmover|dozer|loader|bowzer/i.test(catName);
+              const bench = Number(r.benchmark_mileage || r.benchmark || r.expected_benchmark) || (isLph ? 18.0 : 8.0);
+              const newCat = {
+                id: `cat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                tenant_id,
+                user_id: r.user_id || 'user_1',
+                name: catName,
+                metric_type: isLph ? 'lph' : 'kmpl',
+                default_benchmark: bench,
+                tolerance_percentage: 15,
+                icon_name: isLph ? 'Excavator' : 'Truck',
+                description: 'Auto-configured from fleet sheet upload'
+              };
+              categoryMap.set(lower, newCat.id);
+              fleet.categories.unshift(newCat);
+            }
+          }
+
+          // Company Auto-Setup
+          const rawComp = r.assigned_company || r.company || r.company_name;
+          if (rawComp && String(rawComp).trim() && String(rawComp).trim() !== 'N/A') {
+            const compName = String(rawComp).trim();
+            const lower = compName.toLowerCase();
+            if (!companyMap.has(lower)) {
+              const cleanCode = compName.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase() || 'COMP';
+              const newComp = {
+                id: `comp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                tenant_id,
+                user_id: r.user_id || 'user_1',
+                name: compName,
+                code: cleanCode,
+                contact_person: 'N/A',
+                phone: 'N/A',
+                email: '',
+                address: 'N/A',
+                created_at: todayStr
+              };
+              companyMap.set(lower, newComp.id);
+              fleet.companies.unshift(newComp);
+            }
+          }
+
+          // Vendor Auto-Setup
+          const rawVen = r.vehicle_vendor || r.vendor_name || r.vendor || r.supplier;
+          if (rawVen && String(rawVen).trim() && String(rawVen).trim() !== 'N/A' && String(rawVen).trim().toLowerCase() !== 'own' && String(rawVen).trim().toLowerCase() !== 'none') {
+            const venName = String(rawVen).trim();
+            const lower = venName.toLowerCase();
+            if (!vendorMap.has(lower)) {
+              const newVen = {
+                id: `ven_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                tenant_id,
+                user_id: r.user_id || 'user_1',
+                name: venName,
+                phone: r.vendor_contact || r.vendor_phone || 'N/A',
+                type: 'fuel',
+                address: 'N/A',
+                created_at: todayStr
+              };
+              vendorMap.set(lower, newVen.id);
+              fleet.vendors.unshift(newVen);
+            }
+          }
+
+          // Fuel Pump Auto-Setup
+          const rawPump = r.fuel_pumps || r.fuel_pump || r.fuel_pump_station || r.pump;
+          if (rawPump && String(rawPump).trim() && String(rawPump).trim() !== 'N/A' && String(rawPump).trim().toLowerCase() !== 'none') {
+            const pumpName = String(rawPump).trim();
+            const lower = pumpName.toLowerCase();
+            if (!pumpMap.has(lower)) {
+              const newPump = {
+                id: `pump_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                tenant_id,
+                user_id: r.user_id || 'user_1',
+                name: pumpName,
+                location: r.pump_location || 'N/A',
+                contact_person: 'Station Manager',
+                phone: 'N/A',
+                credit_limit: 500000,
+                opening_balance: 0,
+                current_balance: 0,
+                fuel_types: ['Diesel', 'Octane'],
+                payment_terms: 'Credit',
+                created_at: todayStr
+              };
+              pumpMap.set(lower, newPump.id);
+              fleet.pumps.unshift(newPump);
+            }
+          }
+
+          // Fuel Type Auto-Setup
+          const rawFuel = r.fuel_type || r.fuel;
+          if (rawFuel && String(rawFuel).trim() && String(rawFuel).trim() !== 'N/A') {
+            const fuelName = String(rawFuel).trim();
+            const lower = fuelName.toLowerCase();
+            if (!fuelMap.has(lower)) {
+              const unit = lower === 'cng' ? 'm3' : 'Liter';
+              const price = Number(r.fuel_price || r.price) || (lower === 'cng' ? 43.00 : lower === 'octane' ? 131.00 : lower === 'petrol' ? 126.00 : 108.50);
+              const newFuel = {
+                id: `fuel_${lower}_${tenant_id}`,
+                tenant_id,
+                user_id: r.user_id || 'user_1',
+                name: fuelName,
+                code: lower,
+                unit,
+                current_price: price,
+                price_history: [{ date: todayStr, price, changed_by: 'Fleet Bulk Import' }],
+                updated_at: todayStr
+              };
+              fuelMap.set(lower, newFuel.name);
+              fleet.fuelTypes.unshift(newFuel);
+            }
+          }
+        }
+
+        // 2. Map Vehicles with registered foreign keys
+        for (const r of rows) {
+          const rawNum = r.vehicle_reg_no || r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
           if (!rawNum) continue;
           const plate = String(rawNum).trim();
           if (!plate) continue;
@@ -3143,25 +3293,52 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
             (((v.vehicle_number || v.plate_number || '') + '').toLowerCase() === targetPlate)
           );
 
+          const catKey = (r.category || r.vehicle_category || '').toLowerCase().trim();
+          const matchedCatId = categoryMap.get(catKey) || (fleet.categories[0]?.id || 'cat_1');
+
+          const compKey = (r.assigned_company || r.company || '').toLowerCase().trim();
+          const matchedCompId = companyMap.get(compKey) || (fleet.companies[0]?.id || 'comp_1');
+
+          const venKey = (r.vendor_name || r.vendor || '').toLowerCase().trim();
+          const matchedVenId = vendorMap.get(venKey) || undefined;
+
+          const fuelKey = (r.fuel_type || '').toLowerCase().trim();
+          const matchedFuel = fuelMap.get(fuelKey) || (fleet.fuelTypes[0]?.name || 'Diesel');
+
+          const isRental = matchedVenId !== undefined || (r.ownership && String(r.ownership).toLowerCase() === 'rental');
+
+          let driverName = r.driver_name;
+          let driverPhone = r.driver_contact || r.driver_phone;
+          const combinedDriver = r['driver_&_contact'] || r.driver_and_contact || r['diver_&_contact'] || r.diver_and_contact;
+          if (combinedDriver && typeof combinedDriver === 'string' && combinedDriver.trim() && combinedDriver.trim() !== 'N/A') {
+            const phoneMatch = combinedDriver.match(/(?:\+?88)?01[3-9]\d{8}/);
+            if (phoneMatch) {
+              if (!driverPhone || driverPhone === 'N/A') driverPhone = phoneMatch[0];
+              if (!driverName || driverName === 'N/A') driverName = combinedDriver.replace(phoneMatch[0], '').replace(/[()\-:,]/g, '').trim();
+            } else if (!driverName || driverName === 'N/A') {
+              driverName = combinedDriver.trim();
+            }
+          }
+
           const vehicleItem: any = {
             id: r.id || 'veh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             tenant_id,
             user_id: r.user_id || 'user_1',
             vehicle_number: plate,
             plate_number: plate,
-            model: r.model || 'Commercial Vehicle',
-            category_id: r.category_id || r.category || 'cat_1',
-            company_id: r.company_id || r.company || 'comp_1',
-            vendor_id: r.vendor_id || r.vendor || undefined,
-            ownership: (r.ownership || (r.vendor_id || r.vendor ? 'rented' : 'owned')) as 'owned' | 'rented',
-            fuel_type_id: r.fuel_type_id || r.fuel_type || 'Diesel',
-            expected_benchmark: Number(r.expected_benchmark || r.benchmark || r.mileage_benchmark) || 8.0,
-            current_odometer: Number(r.current_odometer || r.initial_odometer || r.odometer) || 0,
-            driver_name: r.driver_name || 'Assigned Driver',
-            driver_phone: r.driver_phone || r.phone || '',
+            model: r.model || 'N/A',
+            category_id: matchedCatId,
+            company_id: matchedCompId,
+            vendor_id: matchedVenId,
+            ownership: isRental ? 'rented' : 'owned' as 'owned' | 'rented',
+            fuel_type_id: matchedFuel,
+            expected_benchmark: Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0,
+            current_odometer: Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0,
+            driver_name: (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A',
+            driver_phone: (driverPhone && String(driverPhone).trim()) ? String(driverPhone).trim() : 'N/A',
             fuel_tank_capacity: Number(r.fuel_tank_capacity || r.capacity) || 100,
             status: (r.status === 'maintenance' || r.status === 'idle') ? r.status : 'active',
-            notes: r.notes || 'Bulk imported via Excel/CSV',
+            notes: r.notes || 'Bulk imported via Fleet Master Excel/CSV',
             created_at: r.created_at || todayStr
           };
 
@@ -3631,6 +3808,44 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
     }
   });
 
+  app.patch('/api/fleet/fuel-entries/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.fuelEntries.findIndex(e => e.id === id);
+      if (idx >= 0) {
+        store.fuelEntries[idx] = { ...store.fuelEntries[idx], ...updates };
+        saveFleetData({ fuelEntries: store.fuelEntries });
+        await syncAllDataToMySQL({ fuelEntries: [store.fuelEntries[idx]] });
+        res.json({ success: true, entry: store.fuelEntries[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Fuel entry not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/vendors/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.vendors.findIndex(v => v.id === id);
+      if (idx >= 0) {
+        store.vendors[idx] = { ...store.vendors[idx], ...updates };
+        saveFleetData({ vendors: store.vendors });
+        await syncAllDataToMySQL({ vendors: [store.vendors[idx]] } as any);
+        res.json({ success: true, vendor: store.vendors[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Vendor not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
   app.post('/api/fleet/pumps', async (req: Request, res: Response) => {
     try {
       const pump = req.body;
@@ -3707,6 +3922,25 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
       saveFleetData({ payments: store.payments });
       await deletePaymentInDB(id);
       res.json({ success: true, message: 'Payment deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.patch('/api/fleet/payments/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const store = loadFleetData();
+      const idx = store.payments.findIndex(pm => pm.id === id);
+      if (idx >= 0) {
+        store.payments[idx] = { ...store.payments[idx], ...updates };
+        saveFleetData({ payments: store.payments });
+        await syncAllDataToMySQL({ payments: [store.payments[idx]] });
+        res.json({ success: true, payment: store.payments[idx] });
+      } else {
+        res.status(404).json({ success: false, message: 'Payment not found' });
+      }
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
     }

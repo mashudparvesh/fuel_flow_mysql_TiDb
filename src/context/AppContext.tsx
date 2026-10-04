@@ -115,7 +115,7 @@ interface AppContextType {
       custom_categories: boolean;
     };
     notes?: string;
-  }) => { success: boolean; tenantId: string };
+  }) => Promise<{ success: boolean; tenantId: string; tenant?: Tenant; superAdminUser?: User }>;
 
   updateTenantSubscription: (tenantId: string, subscriptionUpdates: Partial<TenantSubscription>) => void;
   extendTenantSubscription: (tenantId: string, additionalDays: number) => void;
@@ -236,6 +236,7 @@ interface AppContextType {
   rejectSubscriptionPayment: (id: string, reason?: string, reviewerName?: string) => Promise<{ success: boolean; message: string }>;
 
   deleteFuelEntry: (id: string) => void;
+  updateFuelEntry: (id: string, updates: Partial<FuelEntry>) => void;
 
   addPumpPayment: (paymentData: {
     pump_id: string;
@@ -246,6 +247,7 @@ interface AppContextType {
     notes?: string;
   }) => void;
   deletePumpPayment: (paymentId: string) => void;
+  updatePumpPayment: (id: string, updates: Partial<PumpPayment>) => void;
 
   addTanker: (tanker: Omit<TankerInventory, 'id' | 'tenant_id' | 'user_id'>) => void;
   updateTanker: (id: string, tanker: Partial<TankerInventory>) => void;
@@ -1429,6 +1431,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).catch(() => {});
   };
 
+  const updateFuelEntry = (id: string, updates: Partial<FuelEntry>) => {
+    const existing = fuelEntries.find(e => e.id === id);
+    if (!existing) return;
+
+    // Recalculate amount if liters or rate changed
+    const newLiters = updates.fuel_liters !== undefined ? Number(updates.fuel_liters) : existing.fuel_liters;
+    const newRate = updates.fuel_price_per_liter !== undefined ? Number(updates.fuel_price_per_liter) : existing.fuel_price_per_liter;
+    const newTotal = updates.total_amount !== undefined ? Number(updates.total_amount) : Number((newLiters * newRate).toFixed(2));
+
+    // Calculate updated mileage
+    const newDistance = updates.distance_traveled !== undefined ? Number(updates.distance_traveled) : existing.distance_traveled;
+    const calculatedMileage = newLiters > 0 ? Number((newDistance / newLiters).toFixed(2)) : existing.calculated_mileage;
+
+    // Adjust pump balance if pump changed or amount changed
+    if (existing.source_type === 'pump' && existing.pump_id) {
+      const amountDiff = newTotal - existing.total_amount;
+      if (amountDiff !== 0) {
+        setPumps(prev => prev.map(p => {
+          if (p.id === existing.pump_id) {
+            const updatedBal = (p.current_balance || 0) + amountDiff;
+            fetch(`/api/fleet/pumps/${p.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_balance: updatedBal })
+            }).catch(() => {});
+            return { ...p, current_balance: updatedBal };
+          }
+          return p;
+        }));
+      }
+    }
+
+    // Adjust bowzer stock if liters changed
+    if (existing.source_type === 'tanker' && existing.tanker_id) {
+      const literDiff = newLiters - existing.fuel_liters;
+      if (literDiff !== 0) {
+        setTankers(prev => prev.map(t => {
+          if (t.id === existing.tanker_id) {
+            const updatedStock = Math.max(0, t.current_stock_liters - literDiff);
+            fetch(`/api/fleet/tankers/${t.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_stock_liters: updatedStock })
+            }).catch(() => {});
+            return { ...t, current_stock_liters: updatedStock };
+          }
+          return t;
+        }));
+      }
+    }
+
+    const updatedEntry: FuelEntry = {
+      ...existing,
+      ...updates,
+      fuel_liters: newLiters,
+      fuel_price_per_liter: newRate,
+      total_amount: newTotal,
+      distance_traveled: newDistance,
+      calculated_mileage: calculatedMileage
+    };
+
+    setFuelEntries(prev => prev.map(e => e.id === id ? updatedEntry : e));
+    fetch(`/api/fleet/fuel-entries/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    }).catch(() => {});
+  };
+
   // Pump Payment Handlers
   const addPumpPayment = (paymentData: {
     pump_id: string;
@@ -1494,6 +1565,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPayments(prev => prev.filter(p => p.id !== paymentId));
     fetch(`/api/fleet/payments/${paymentId}`, {
       method: 'DELETE'
+    }).catch(() => {});
+  };
+
+  const updatePumpPayment = (id: string, updates: Partial<PumpPayment>) => {
+    const existing = payments.find(p => p.id === id);
+    if (!existing) return;
+
+    if (updates.amount !== undefined && updates.amount !== existing.amount) {
+      const diff = Number(updates.amount) - existing.amount;
+      // increasing payment reduces pump outstanding balance
+      setPumps(prev => prev.map(pump => {
+        if (pump.id === existing.pump_id) {
+          const newBal = (pump.current_balance || 0) - diff;
+          fetch(`/api/fleet/pumps/${pump.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_balance: newBal })
+          }).catch(() => {});
+          return { ...pump, current_balance: newBal };
+        }
+        return pump;
+      }));
+    }
+
+    setPayments(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    fetch(`/api/fleet/payments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
     }).catch(() => {});
   };
 
@@ -1888,7 +1988,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Subscriber / Tenant Creation & Management
-  const addTenantSubscriber = (data: {
+  const addTenantSubscriber = async (data: {
     name: string;
     code: string;
     contact_person: string;
@@ -1918,7 +2018,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       custom_categories: boolean;
     };
     notes?: string;
-  }) => {
+  }): Promise<{ success: boolean; tenantId: string; tenant: Tenant; superAdminUser: User }> => {
     const tenantId = 'tenant_' + Date.now();
     const today = new Date();
     const startDate = today.toISOString().split('T')[0];
@@ -1949,12 +2049,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       plan: data.plan,
       plan_name_bn: planNamesBn[data.plan] || 'Custom Plan',
       status: 'active',
+      is_approved: true,
       start_date: startDate,
       end_date: endDate,
       duration_type: data.duration_type,
       duration_val: data.duration_val,
       price_bdt: data.price_bdt,
-      payment_status: data.payment_status,
+      payment_status: 'paid',
       max_vehicles: data.max_vehicles,
       max_users: data.max_users,
       max_pumps: data.max_pumps,
@@ -1980,6 +2081,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contact_person: data.contact_person,
       email: data.email,
       status: 'active',
+      is_approved: true,
       deleted_at: null,
       created_at: startDate,
       subscription: newSubscription
@@ -2052,13 +2154,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Cross-Browser & Server-side tenant & user persistence (ISSUE 1 Fix)
     try {
-      fetch('/api/tenants', {
+      await fetch('/api/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTenant)
       }).catch(err => console.warn('Failed to sync tenant to server:', err));
 
-      fetch('/api/users', {
+      await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(superAdminUser)
@@ -2070,7 +2172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       channel.close();
     } catch (e) {}
 
-    return { success: true, tenantId };
+    return { success: true, tenantId, tenant: newTenant, superAdminUser };
   };
 
   const updateTenantSubscription = (tenantId: string, subscriptionUpdates: Partial<TenantSubscription>) => {
@@ -2705,29 +2807,243 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const serverUpdatedCount = data?.updated_count;
 
     if (entityType === 'vehicles') {
+      // 1. AUTO-SETUP MASTER DATA: Extract and deduplicate all unique categories, companies, vendors, pumps, fuel types
+      const categoryNameToIdMap = new Map<string, string>();
+      categories.forEach(c => categoryNameToIdMap.set((c.name || '').toLowerCase().trim(), c.id));
+      const newCategoriesToAdd: VehicleCategory[] = [];
+
+      const companyNameToIdMap = new Map<string, string>();
+      companies.forEach(c => companyNameToIdMap.set((c.name || '').toLowerCase().trim(), c.id));
+      const newCompaniesToAdd: Company[] = [];
+
+      const vendorNameToIdMap = new Map<string, string>();
+      vendors.forEach(v => vendorNameToIdMap.set((v.name || '').toLowerCase().trim(), v.id));
+      const newVendorsToAdd: Vendor[] = [];
+
+      const pumpNameToIdMap = new Map<string, string>();
+      pumps.forEach(p => pumpNameToIdMap.set((p.name || '').toLowerCase().trim(), p.id));
+      const newPumpsToAdd: FuelPump[] = [];
+
+      const fuelNameToIdMap = new Map<string, string>();
+      fuelTypes.forEach(f => fuelNameToIdMap.set((f.name || '').toLowerCase().trim(), f.name));
+      const newFuelsToAdd: FuelType[] = [];
+
+      // Pass 1: Discover and create missing Master Entities
+      for (const r of rows) {
+        // Categories Auto-Setup (e.g. 15 'Big Bus' -> 1 unique 'Big Bus' category)
+        const rawCat = r.category || r.vehicle_category || r.category_name;
+        if (rawCat && String(rawCat).trim() && String(rawCat).trim() !== 'N/A') {
+          const catName = String(rawCat).trim();
+          const lower = catName.toLowerCase();
+          if (!categoryNameToIdMap.has(lower)) {
+            const isLph = /excavator|generator|crane|earthmover|dozer|loader|bowzer/i.test(catName);
+            const bench = Number(r.benchmark_mileage || r.benchmark || r.expected_benchmark) || (isLph ? 18.0 : 8.0);
+            const newCat: VehicleCategory = {
+              id: `cat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              tenant_id: currentTenantId,
+              user_id: currentUser.id || 'user_1',
+              name: catName,
+              metric_type: isLph ? 'lph' : 'kmpl',
+              default_benchmark: bench,
+              tolerance_percentage: 15,
+              icon_name: isLph ? 'Excavator' : 'Truck',
+              description: 'Auto-configured from fleet sheet upload'
+            };
+            categoryNameToIdMap.set(lower, newCat.id);
+            newCategoriesToAdd.push(newCat);
+          }
+        }
+
+        // Assigned Company Auto-Setup
+        const rawComp = r.assigned_company || r.company || r.company_name;
+        if (rawComp && String(rawComp).trim() && String(rawComp).trim() !== 'N/A') {
+          const compName = String(rawComp).trim();
+          const lower = compName.toLowerCase();
+          if (!companyNameToIdMap.has(lower)) {
+            const cleanCode = compName.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase() || 'COMP';
+            const newComp: Company = {
+              id: `comp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              tenant_id: currentTenantId,
+              user_id: currentUser.id || 'user_1',
+              name: compName,
+              code: cleanCode,
+              contact_person: 'N/A',
+              phone: 'N/A',
+              email: '',
+              address: 'N/A',
+              created_at: todayStr
+            };
+            companyNameToIdMap.set(lower, newComp.id);
+            newCompaniesToAdd.push(newComp);
+          }
+        }
+
+        // Vendor Auto-Setup
+        const rawVen = r.vehicle_vendor || r.vendor_name || r.vendor || r.supplier;
+        if (rawVen && String(rawVen).trim() && String(rawVen).trim() !== 'N/A' && String(rawVen).trim().toLowerCase() !== 'own' && String(rawVen).trim().toLowerCase() !== 'none') {
+          const venName = String(rawVen).trim();
+          const lower = venName.toLowerCase();
+          if (!vendorNameToIdMap.has(lower)) {
+            const newVen: Vendor = {
+              id: `ven_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              tenant_id: currentTenantId,
+              user_id: currentUser.id || 'user_1',
+              name: venName,
+              phone: r.vendor_contact || r.vendor_phone || 'N/A',
+              type: 'fuel',
+              address: 'N/A',
+              created_at: todayStr
+            };
+            vendorNameToIdMap.set(lower, newVen.id);
+            newVendorsToAdd.push(newVen);
+          }
+        }
+
+        // Fuel Pump Auto-Setup
+        const rawPump = r.fuel_pumps || r.fuel_pump || r.fuel_pump_station || r.pump;
+        if (rawPump && String(rawPump).trim() && String(rawPump).trim() !== 'N/A' && String(rawPump).trim().toLowerCase() !== 'none') {
+          const pumpName = String(rawPump).trim();
+          const lower = pumpName.toLowerCase();
+          if (!pumpNameToIdMap.has(lower)) {
+            const newPump: FuelPump = {
+              id: `pump_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              tenant_id: currentTenantId,
+              user_id: currentUser.id || 'user_1',
+              name: pumpName,
+              location: r.pump_location || 'N/A',
+              contact_person: 'Station Manager',
+              phone: 'N/A',
+              credit_limit: 500000,
+              opening_balance: 0,
+              current_balance: 0,
+              fuel_types: ['Diesel', 'Octane'],
+              payment_terms: 'Credit',
+              created_at: todayStr
+            };
+            pumpNameToIdMap.set(lower, newPump.id);
+            newPumpsToAdd.push(newPump);
+          }
+        }
+
+        // Fuel Type Auto-Setup
+        const rawFuel = r.fuel_type || r.fuel;
+        if (rawFuel && String(rawFuel).trim() && String(rawFuel).trim() !== 'N/A') {
+          const fuelName = String(rawFuel).trim();
+          const lower = fuelName.toLowerCase();
+          if (!fuelNameToIdMap.has(lower)) {
+            const unit = lower === 'cng' ? 'm3' : 'Liter';
+            const price = Number(r.fuel_price || r.price) || (lower === 'cng' ? 43.00 : lower === 'octane' ? 131.00 : lower === 'petrol' ? 126.00 : 108.50);
+            const newFuel: FuelType = {
+              id: `fuel_${lower}_${currentTenantId}`,
+              tenant_id: currentTenantId,
+              user_id: currentUser.id || 'user_1',
+              name: fuelName,
+              code: lower,
+              unit,
+              current_price: price,
+              price_history: [{ date: todayStr, price, changed_by: 'Fleet Bulk Import' }],
+              updated_at: todayStr
+            };
+            fuelNameToIdMap.set(lower, newFuel.name);
+            newFuelsToAdd.push(newFuel);
+          }
+        }
+      }
+
+      // Commit newly discovered master data to local state
+      if (newCategoriesToAdd.length > 0) {
+        setCategories(prev => [...newCategoriesToAdd, ...prev]);
+        fetch('/api/fleet/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: currentTenantId, entity_type: 'categories', rows: newCategoriesToAdd })
+        }).catch(() => {});
+      }
+      if (newCompaniesToAdd.length > 0) {
+        setCompanies(prev => [...newCompaniesToAdd, ...prev]);
+        fetch('/api/fleet/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: currentTenantId, entity_type: 'companies', rows: newCompaniesToAdd })
+        }).catch(() => {});
+      }
+      if (newVendorsToAdd.length > 0) {
+        setVendors(prev => [...newVendorsToAdd, ...prev]);
+        fetch('/api/fleet/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: currentTenantId, entity_type: 'vendors', rows: newVendorsToAdd })
+        }).catch(() => {});
+      }
+      if (newPumpsToAdd.length > 0) {
+        setPumps(prev => [...newPumpsToAdd, ...prev]);
+        fetch('/api/fleet/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: currentTenantId, entity_type: 'pumps', rows: newPumpsToAdd })
+        }).catch(() => {});
+      }
+      if (newFuelsToAdd.length > 0) {
+        setFuelTypes(prev => [...newFuelsToAdd, ...prev]);
+        fetch('/api/fleet/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: currentTenantId, entity_type: 'fuel_types', rows: newFuelsToAdd })
+        }).catch(() => {});
+      }
+
+      // 2. Map Vehicles with exact Master Data Foreign Keys and Safe Defaults
       const itemsToApply = serverSuccess && serverItems.length > 0 ? serverItems : rows.map(r => {
-        const rawNum = r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
+        const rawNum = r.vehicle_reg_no || r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
         const plate = String(rawNum || '').trim();
         if (!plate) return null;
+
+        const catKey = (r.category || r.vehicle_category || '').toLowerCase().trim();
+        const matchedCatId = categoryNameToIdMap.get(catKey) || (categories[0]?.id || 'cat_1');
+
+        const compKey = (r.assigned_company || r.company || '').toLowerCase().trim();
+        const matchedCompId = companyNameToIdMap.get(compKey) || (companies[0]?.id || 'comp_1');
+
+        const venKey = (r.vendor_name || r.vendor || '').toLowerCase().trim();
+        const matchedVenId = vendorNameToIdMap.get(venKey) || undefined;
+
+        const fuelKey = (r.fuel_type || '').toLowerCase().trim();
+        const matchedFuel = fuelNameToIdMap.get(fuelKey) || (fuelTypes[0]?.name || 'Diesel');
+
+        const isRental = matchedVenId !== undefined || (r.ownership && String(r.ownership).toLowerCase() === 'rental');
+
+        let driverName = r.driver_name;
+        let driverPhone = r.driver_contact || r.driver_phone;
+        const combinedDriver = r['driver_&_contact'] || r.driver_and_contact || r['diver_&_contact'] || r.diver_and_contact;
+        if (combinedDriver && typeof combinedDriver === 'string' && combinedDriver.trim() && combinedDriver.trim() !== 'N/A') {
+          const phoneMatch = combinedDriver.match(/(?:\+?88)?01[3-9]\d{8}/);
+          if (phoneMatch) {
+            if (!driverPhone || driverPhone === 'N/A') driverPhone = phoneMatch[0];
+            if (!driverName || driverName === 'N/A') driverName = combinedDriver.replace(phoneMatch[0], '').replace(/[()\-:,]/g, '').trim();
+          } else if (!driverName || driverName === 'N/A') {
+            driverName = combinedDriver.trim();
+          }
+        }
+
         return {
           id: r.id || 'veh_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
           tenant_id: currentTenantId,
           user_id: currentUser.id || 'user_1',
           vehicle_number: plate,
           plate_number: plate,
-          model: r.model || 'Commercial Vehicle',
-          category_id: r.category_id || r.category || (categories[0]?.id || 'cat_1'),
-          company_id: r.company_id || r.company || (companies[0]?.id || 'comp_1'),
-          vendor_id: r.vendor_id || r.vendor || undefined,
-          ownership: (r.ownership || (r.vendor_id || r.vendor ? 'rented' : 'owned')) as 'owned' | 'rented',
-          fuel_type_id: r.fuel_type_id || r.fuel_type || (fuelTypes[0]?.name || 'Diesel'),
-          expected_benchmark: Number(r.expected_benchmark || r.benchmark || r.mileage_benchmark) || 8.0,
-          current_odometer: Number(r.current_odometer || r.initial_odometer || r.odometer) || 0,
-          driver_name: r.driver_name || 'Assigned Driver',
-          driver_phone: r.driver_phone || r.phone || '',
+          model: r.model || 'N/A',
+          category_id: matchedCatId,
+          company_id: matchedCompId,
+          vendor_id: matchedVenId,
+          ownership: isRental ? 'rented' : 'owned' as 'owned' | 'rented',
+          fuel_type_id: matchedFuel,
+          expected_benchmark: Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0,
+          current_odometer: Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0,
+          driver_name: (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A',
+          driver_phone: (driverPhone && String(driverPhone).trim()) ? String(driverPhone).trim() : 'N/A',
           fuel_tank_capacity: Number(r.fuel_tank_capacity || r.capacity) || 100,
           status: (r.status === 'maintenance' || r.status === 'idle') ? r.status : 'active',
-          notes: r.notes || 'Bulk imported via Excel/CSV',
+          notes: r.notes || 'Bulk imported via Fleet Master Excel/CSV',
           created_at: r.created_at || todayStr
         };
       }).filter(Boolean);
@@ -3317,9 +3633,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteVehicle,
 
         addFuelEntry,
+        updateFuelEntry,
         deleteFuelEntry,
 
         addPumpPayment,
+        updatePumpPayment,
         deletePumpPayment,
 
         addTanker,

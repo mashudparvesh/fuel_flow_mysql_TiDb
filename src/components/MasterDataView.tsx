@@ -38,6 +38,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
     deleteCompany,
     vendors,
     addVendor,
+    updateVendor,
     deleteVendor,
     pumps,
     addPump,
@@ -46,9 +47,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
     fuelTypes,
     updateFuelPrice,
     addFuelType,
+    updateFuelType,
     deleteFuelType,
     categories,
     addCategory,
+    updateCategory,
     deleteCategory
   } = useApp();
 
@@ -212,6 +215,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
   const [newVendorEmail, setNewVendorEmail] = useState('');
   const [newVendorAddress, setNewVendorAddress] = useState('');
 
+  // Edit Vendor Form State
+  const [showEditVendorModal, setShowEditVendorModal] = useState(false);
+  const [editVendorId, setEditVendorId] = useState('');
+  const [editVendorName, setEditVendorName] = useState('');
+  const [editVendorContact, setEditVendorContact] = useState('');
+  const [editVendorPhone, setEditVendorPhone] = useState('');
+  const [editVendorAddress, setEditVendorAddress] = useState('');
+
   // New Pump Form State
   const [showPumpModal, setShowPumpModal] = useState(false);
   const [newPumpName, setNewPumpName] = useState('');
@@ -220,6 +231,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
   const [newPumpPhone, setNewPumpPhone] = useState('');
   const [newPumpCreditLimit, setNewPumpCreditLimit] = useState('500000');
   const [newPumpOpeningBalance, setNewPumpOpeningBalance] = useState('0');
+
+  // Edit Pump Form State
+  const [showEditPumpModal, setShowEditPumpModal] = useState(false);
+  const [editPumpId, setEditPumpId] = useState('');
+  const [editPumpName, setEditPumpName] = useState('');
+  const [editPumpLocation, setEditPumpLocation] = useState('');
+  const [editPumpContact, setEditPumpContact] = useState('');
+  const [editPumpPhone, setEditPumpPhone] = useState('');
+  const [editPumpCreditLimit, setEditPumpCreditLimit] = useState('500000');
 
   // Price Updater State
   const [selectedFuelType, setSelectedFuelType] = useState<FuelType | null>(null);
@@ -231,6 +251,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
   const [newCatMetric, setNewCatMetric] = useState<'kmpl' | 'lph'>('kmpl');
   const [newCatBenchmark, setNewCatBenchmark] = useState('8.0');
   const [newCatDesc, setNewCatDesc] = useState('');
+
+  // Edit Category Modal State
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  const [editCategoryId, setEditCategoryId] = useState('');
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatMetric, setEditCatMetric] = useState<'kmpl' | 'lph'>('kmpl');
+  const [editCatBenchmark, setEditCatBenchmark] = useState('8.0');
+  const [editCatTolerance, setEditCatTolerance] = useState('15');
+  const [editCatDesc, setEditCatDesc] = useState('');
 
   const t = {
     title: 'Master Data Management (CRUD Modules)',
@@ -484,15 +513,89 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
     e.preventDefault();
     if (!newCatName.trim()) return;
     addCategory({
-      name: newCatName,
+      name: newCatName.trim(),
       metric_type: newCatMetric,
       default_benchmark: parseFloat(newCatBenchmark) || 8.0,
       icon_name: 'Truck',
-      description: newCatDesc
+      description: newCatDesc.trim()
     });
     setNewCatName('');
     setNewCatDesc('');
     setShowCategoryModal(false);
+    showNotification(`Category "${newCatName.trim()}" created successfully!`);
+  };
+
+  // Edit Category Handlers
+  const handleOpenEditCategory = (cat: any) => {
+    setEditCategoryId(cat.id);
+    setEditCatName(cat.name || '');
+    setEditCatMetric(cat.metric_type || 'kmpl');
+    setEditCatBenchmark(String(cat.default_benchmark || 8.0));
+    setEditCatTolerance(String(cat.tolerance_percentage || 15));
+    setEditCatDesc(cat.description || '');
+    setShowEditCategoryModal(true);
+  };
+
+  const handleSaveEditCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCatName.trim() || !editCategoryId) return;
+    updateCategory(editCategoryId, {
+      name: editCatName.trim(),
+      metric_type: editCatMetric,
+      default_benchmark: parseFloat(editCatBenchmark) || 8.0,
+      tolerance_percentage: parseFloat(editCatTolerance) || 15,
+      description: editCatDesc.trim()
+    });
+    setShowEditCategoryModal(false);
+    showNotification(`Category "${editCatName.trim()}" updated successfully!`);
+  };
+
+  // Edit Vendor Handlers
+  const handleOpenEditVendor = (v: any) => {
+    setEditVendorId(v.id);
+    setEditVendorName(v.name || '');
+    setEditVendorContact(v.contact_person || '');
+    setEditVendorPhone(v.phone || '');
+    setEditVendorAddress(v.address || '');
+    setShowEditVendorModal(true);
+  };
+
+  const handleSaveEditVendor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editVendorName.trim() || !editVendorId) return;
+    updateVendor(editVendorId, {
+      name: editVendorName.trim(),
+      contact_person: editVendorContact.trim(),
+      phone: editVendorPhone.trim(),
+      address: editVendorAddress.trim()
+    });
+    setShowEditVendorModal(false);
+    showNotification(`Vendor "${editVendorName.trim()}" updated successfully!`);
+  };
+
+  // Edit Pump Handlers
+  const handleOpenEditPump = (p: any) => {
+    setEditPumpId(p.id);
+    setEditPumpName(p.name || '');
+    setEditPumpLocation(p.location || '');
+    setEditPumpContact(p.contact_person || '');
+    setEditPumpPhone(p.phone || '');
+    setEditPumpCreditLimit(String(p.credit_limit || 500000));
+    setShowEditPumpModal(true);
+  };
+
+  const handleSaveEditPump = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPumpName.trim() || !editPumpId) return;
+    updatePump(editPumpId, {
+      name: editPumpName.trim(),
+      location: editPumpLocation.trim(),
+      contact_person: editPumpContact.trim(),
+      phone: editPumpPhone.trim(),
+      credit_limit: parseFloat(editPumpCreditLimit) || 500000
+    });
+    setShowEditPumpModal(false);
+    showNotification(`Fuel pump "${editPumpName.trim()}" updated successfully!`);
   };
 
   return (
@@ -686,13 +789,22 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                       <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{v.address}</td>
                       <td className="py-2.5 px-3 text-right">
                         {!isViewer ? (
-                          <button
-                            onClick={() => deleteVendor(v.id)}
-                            className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
-                            title={t.deleteTooltip}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleOpenEditVendor(v)}
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                              title="Edit Vendor"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteVendor(v.id)}
+                              className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                              title={t.deleteTooltip}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-slate-400 font-mono text-xs">—</span>
                         )}
@@ -769,15 +881,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                         {p.status.toUpperCase()}
                       </span>
                       {!isViewer && (
-                        <button
-                          type="button"
-                          onClick={() => setPumpToDelete(p)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-colors"
-                          title={t.deleteTooltip}
-                          aria-label={`${t.deleteTooltip} ${p.name}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPump(p)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                            title="Edit Fuel Pump"
+                            aria-label={`Edit ${p.name}`}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPumpToDelete(p)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-colors cursor-pointer"
+                            title={t.deleteTooltip}
+                            aria-label={`${t.deleteTooltip} ${p.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -960,13 +1083,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                 </div>
 
                 {!isViewer && (
-                  <button
-                    onClick={() => deleteCategory(cat.id)}
-                    className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                    title={t.deleteTooltip}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCategory(cat)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                      title="Edit Category"
+                      aria-label={`Edit ${cat.name}`}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteCategory(cat.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors cursor-pointer"
+                      title={t.deleteTooltip}
+                      aria-label={`Delete ${cat.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

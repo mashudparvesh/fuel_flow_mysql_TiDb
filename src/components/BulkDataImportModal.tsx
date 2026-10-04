@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 import {
@@ -46,50 +46,75 @@ interface EntityDefinition {
 const ENTITY_DEFINITIONS: Record<BulkEntityType, EntityDefinition> = {
   vehicles: {
     id: 'vehicles',
-    titleEn: 'Vehicles',
-    titleBn: 'Vehicles',
+    titleEn: 'Vehicles & Equipment (Master Fleet Setup)',
+    titleBn: 'Vehicles & Equipment',
     icon: Truck,
-    sampleFileName: 'Vehicle_List_Template',
-    fieldsDescription: 'plate_number, model, category, company, vendor, driver_name, driver_phone, fuel_type, fuel_tank_capacity, initial_odometer, status',
+    sampleFileName: 'Vehicle_Equipment_Master_Template',
+    fieldsDescription: 'Vehicle Reg No, Category, Assigned Company, Ownership, Fuel Type, Benchmark Mileage, Current Meter, Driver & Contact, Vehicle Vendor, Vendor Contact, Fuel Pump Station, Fuel Price (BDT/Unit), Tank Capacity (Ltr), Model / Make',
     sampleData: [
       {
-        plate_number: 'Dhaka Metro-Ta-11-2045',
-        model: 'Hino 500 Heavy Truck',
-        category: 'Heavy Truck',
-        company: 'Main Office Logistics',
-        vendor: 'Navana Motors',
-        driver_name: 'Rafiqul Islam',
-        driver_phone: '+8801711223344',
-        fuel_type: 'Diesel',
-        fuel_tank_capacity: 350,
-        initial_odometer: 45200,
-        status: 'active'
+        'Vehicle Reg No': 'Dhaka Metro-Ta-11-2045',
+        'Category': 'Big Bus',
+        'Assigned Company': 'Bashundhara Logistics & Transport Ltd',
+        'Ownership': 'Own',
+        'Fuel Type': 'Diesel',
+        'Benchmark Mileage': 4.5,
+        'Current Meter': 45200,
+        'Driver & Contact': 'Rafiqul Islam (01711223344)',
+        'Vehicle Vendor': 'N/A',
+        'Vendor Contact': 'N/A',
+        'Fuel Pump Station': 'Padma Filling Station & Express Refuel',
+        'Fuel Price (BDT/Unit)': 108.50,
+        'Tank Capacity (Ltr)': 350,
+        'Model / Make': 'Hino 500 Heavy Truck'
       },
       {
-        plate_number: 'Dhaka Metro-Ga-33-8890',
-        model: 'Toyota Hilux 4x4 Double Cabin',
-        category: 'Pickup / 4x4',
-        company: 'Civil Construction Wing',
-        vendor: 'Uttara Motors',
-        driver_name: 'Abul Kalam',
-        driver_phone: '+8801822334455',
-        fuel_type: 'Diesel',
-        fuel_tank_capacity: 80,
-        initial_odometer: 28900,
-        status: 'active'
+        'Vehicle Reg No': 'Dhaka Metro-Ba-14-5520',
+        'Category': 'Big Bus',
+        'Assigned Company': 'Bashundhara Logistics & Transport Ltd',
+        'Ownership': 'Rental',
+        'Fuel Type': 'Diesel',
+        'Benchmark Mileage': 4.5,
+        'Current Meter': 62300,
+        'Driver & Contact': 'Abul Kalam (01822334455)',
+        'Vehicle Vendor': 'Navana Fleet Rentals',
+        'Vendor Contact': '01711998877',
+        'Fuel Pump Station': 'Padma Filling Station & Express Refuel',
+        'Fuel Price (BDT/Unit)': 108.50,
+        'Tank Capacity (Ltr)': 350,
+        'Model / Make': 'Tata 1613 Commercial Bus'
       },
       {
-        plate_number: 'Chatto Metro-Kha-12-3456',
-        model: 'Nissan Urvan Microbus',
-        category: 'Passenger Van',
-        company: 'Headquarters Admin',
-        vendor: 'Pacific Motors',
-        driver_name: 'Kamrul Hasan',
-        driver_phone: '+8801933445566',
-        fuel_type: 'Octane',
-        fuel_tank_capacity: 65,
-        initial_odometer: 61450,
-        status: 'active'
+        'Vehicle Reg No': 'Chatto Metro-Kha-12-3456',
+        'Category': 'Pickup / 4x4',
+        'Assigned Company': 'Meghna Shipping & Haulage Ltd',
+        'Ownership': 'Own',
+        'Fuel Type': 'Octane',
+        'Benchmark Mileage': 10.5,
+        'Current Meter': 28900,
+        'Driver & Contact': 'Kamrul Hasan (01933445566)',
+        'Vehicle Vendor': 'N/A',
+        'Vendor Contact': 'N/A',
+        'Fuel Pump Station': 'Jamuna Oil Service Station',
+        'Fuel Price (BDT/Unit)': 131.00,
+        'Tank Capacity (Ltr)': 80,
+        'Model / Make': 'Toyota Hilux Double Cabin'
+      },
+      {
+        'Vehicle Reg No': 'Komi Metro-Da-55-1022',
+        'Category': 'Heavy Excavator',
+        'Assigned Company': 'Civil Engineering Wing',
+        'Ownership': 'Rental',
+        'Fuel Type': 'Diesel',
+        'Benchmark Mileage': 18.0,
+        'Current Meter': 1450,
+        'Driver & Contact': 'Md. Sumon Miah (01755667788)',
+        'Vehicle Vendor': 'Uttara Heavy Equipment Rentals',
+        'Vendor Contact': '01819223344',
+        'Fuel Pump Station': 'Padma Filling Station & Express Refuel',
+        'Fuel Price (BDT/Unit)': 108.50,
+        'Tank Capacity (Ltr)': 400,
+        'Model / Make': 'CAT 320D Hydraulic Excavator'
       }
     ]
   },
@@ -286,6 +311,23 @@ export const BulkDataImportModal: React.FC<Props> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Discovered Master Data from Vehicles sheet (Update 1 Auto Setup)
+  const autoSetupStats = useMemo(() => {
+    if (selectedEntity !== 'vehicles' || parsedRows.length === 0) return null;
+    const uniqueCats = Array.from(new Set(parsedRows.map(r => r.category).filter(c => c && c !== 'N/A')));
+    const uniqueComps = Array.from(new Set(parsedRows.map(r => r.assigned_company).filter(c => c && c !== 'N/A')));
+    const uniqueVendors = Array.from(new Set(parsedRows.map(r => r.vendor_name).filter(v => v && v !== 'N/A')));
+    const uniquePumps = Array.from(new Set(parsedRows.map(r => r.fuel_pump).filter(p => p && p !== 'N/A')));
+    const uniqueFuels = Array.from(new Set(parsedRows.map(r => r.fuel_type).filter(f => f && f !== 'N/A')));
+    return {
+      categories: uniqueCats,
+      companies: uniqueComps,
+      vendors: uniqueVendors,
+      pumps: uniquePumps,
+      fuelTypes: uniqueFuels
+    };
+  }, [selectedEntity, parsedRows]);
+
   if (!isOpen) return null;
 
   const currentDef = ENTITY_DEFINITIONS[selectedEntity];
@@ -346,11 +388,90 @@ export const BulkDataImportModal: React.FC<Props> = ({
               cleanRow[cleanKey] = typeof val === 'string' ? val.trim() : val;
             });
 
-            // Standardize vehicle identification
-            const rawVehNum = cleanRow.vehicle_number || cleanRow.plate_number || cleanRow.vehicle_no || cleanRow.plate_no || cleanRow.registration_number || cleanRow.reg_no || cleanRow.car_number;
+            // Standardize vehicle identification & full fleet metadata
+            const rawVehNum = cleanRow.vehicle_reg_no || cleanRow.vehicle_number || cleanRow.plate_number || cleanRow.vehicle_no || cleanRow.plate_no || cleanRow.registration_number || cleanRow.reg_no || cleanRow.car_number || cleanRow.gari_number || cleanRow.name;
             if (rawVehNum) {
-              cleanRow.vehicle_number = rawVehNum;
-              cleanRow.plate_number = rawVehNum;
+              cleanRow.vehicle_reg_no = String(rawVehNum).trim();
+              cleanRow.vehicle_number = String(rawVehNum).trim();
+              cleanRow.plate_number = String(rawVehNum).trim();
+            }
+
+            if (selectedEntity === 'vehicles') {
+              // Category (Auto-default N/A if blank)
+              const rawCat = cleanRow.category || cleanRow.vehicle_category || cleanRow.category_name || cleanRow.type || cleanRow.class;
+              cleanRow.category = (rawCat && String(rawCat).trim()) ? String(rawCat).trim() : 'N/A';
+
+              // Assigned Company (Auto-default N/A if blank)
+              const rawComp = cleanRow.assigned_company || cleanRow.company || cleanRow.company_name || cleanRow.concern || cleanRow.customer_company || cleanRow.project;
+              cleanRow.assigned_company = (rawComp && String(rawComp).trim()) ? String(rawComp).trim() : 'N/A';
+              cleanRow.company = cleanRow.assigned_company;
+
+              // Ownership (Default Own if blank)
+              const rawOwner = cleanRow.ownership || cleanRow.owner_type || cleanRow.vehicle_ownership;
+              cleanRow.ownership = (rawOwner && String(rawOwner).trim()) ? String(rawOwner).trim() : 'Own';
+
+              // Fuel Type (Default Diesel if blank)
+              const rawFuel = cleanRow.fuel_type || cleanRow.fuel || cleanRow.fuel_name || cleanRow.tel;
+              cleanRow.fuel_type = (rawFuel && String(rawFuel).trim()) ? String(rawFuel).trim() : 'Diesel';
+
+              // Benchmark Mileage
+              const rawBench = cleanRow.benchmark_mileage || cleanRow.benchmark || cleanRow.expected_benchmark || cleanRow.mileage || cleanRow.kmpl || cleanRow.target_mileage;
+              cleanRow.benchmark_mileage = (rawBench !== undefined && rawBench !== '' && !isNaN(Number(rawBench)) && Number(rawBench) > 0) ? Number(rawBench) : 8.0;
+              cleanRow.expected_benchmark = cleanRow.benchmark_mileage;
+
+              // Current Meter / Odometer (Default 0 if blank)
+              const rawMeter = cleanRow.current_meter || cleanRow.odometer || cleanRow.current_odometer || cleanRow.initial_odometer || cleanRow.meter || cleanRow.km_run;
+              cleanRow.current_meter = (rawMeter !== undefined && rawMeter !== '' && !isNaN(Number(rawMeter))) ? Number(rawMeter) : 0;
+              cleanRow.initial_odometer = cleanRow.current_meter;
+
+              // Driver Name & Contact (Auto extract from combined 'Driver & Contact' or separate columns)
+              const rawCombinedDriver = cleanRow['driver_&_contact'] || cleanRow.driver_and_contact || cleanRow['diver_&_contact'] || cleanRow.diver_and_contact || cleanRow.driver_contact_combined;
+              let parsedDriverName = cleanRow.driver_name || cleanRow.driver || cleanRow.chalok_name || cleanRow.operator || cleanRow.diver_name || cleanRow.diver;
+              let parsedDriverPhone = cleanRow.driver_contact || cleanRow.driver_phone || cleanRow.phone || cleanRow.contact || cleanRow.mobile || cleanRow.driver_mobile || cleanRow.diver_phone;
+
+              if (rawCombinedDriver && String(rawCombinedDriver).trim() && String(rawCombinedDriver).trim() !== 'N/A') {
+                const combinedStr = String(rawCombinedDriver).trim();
+                const phoneMatch = combinedStr.match(/(?:\+?88)?01[3-9]\d{8}/);
+                if (phoneMatch) {
+                  if (!parsedDriverPhone || parsedDriverPhone === 'N/A') {
+                    parsedDriverPhone = phoneMatch[0];
+                  }
+                  if (!parsedDriverName || parsedDriverName === 'N/A') {
+                    parsedDriverName = combinedStr.replace(phoneMatch[0], '').replace(/[()\-:,]/g, '').trim();
+                  }
+                } else if (!parsedDriverName || parsedDriverName === 'N/A') {
+                  parsedDriverName = combinedStr;
+                }
+              }
+
+              cleanRow.driver_name = (parsedDriverName && String(parsedDriverName).trim()) ? String(parsedDriverName).trim() : 'N/A';
+              cleanRow.driver_contact = (parsedDriverPhone && String(parsedDriverPhone).trim()) ? String(parsedDriverPhone).trim() : 'N/A';
+              cleanRow.driver_phone = cleanRow.driver_contact;
+
+              // Vendor (Auto-default N/A if blank)
+              const rawVendor = cleanRow.vehicle_vendor || cleanRow.vendor_name || cleanRow.vendor || cleanRow.supplier || cleanRow.rental_vendor;
+              cleanRow.vendor_name = (rawVendor && String(rawVendor).trim() && String(rawVendor).trim().toLowerCase() !== 'own' && String(rawVendor).trim().toLowerCase() !== 'none') ? String(rawVendor).trim() : 'N/A';
+              cleanRow.vendor = cleanRow.vendor_name;
+
+              const rawVendorContact = cleanRow.vendor_contact || cleanRow.vendor_phone || cleanRow.vendor_mobile;
+              cleanRow.vendor_phone = (rawVendorContact && String(rawVendorContact).trim()) ? String(rawVendorContact).trim() : 'N/A';
+
+              // Fuel Pump (Auto-default N/A if blank)
+              const rawPump = cleanRow.fuel_pumps || cleanRow.fuel_pump_station || cleanRow.fuel_pump || cleanRow.pump || cleanRow.pump_name || cleanRow.station || cleanRow.filling_station;
+              cleanRow.fuel_pump = (rawPump && String(rawPump).trim() && String(rawPump).trim().toLowerCase() !== 'none') ? String(rawPump).trim() : 'N/A';
+              cleanRow.pump_name = cleanRow.fuel_pump;
+
+              // Fuel Price / Default Rate (Auto-default from input or standard)
+              const rawPrice = cleanRow.fuel_price || cleanRow['fuel_price_(bdt/unit)'] || cleanRow.fuel_price_bdt_unit || cleanRow.default_fuel_price || cleanRow.price_per_liter || cleanRow.fuel_rate || cleanRow.unit_price;
+              cleanRow.fuel_price = (rawPrice !== undefined && rawPrice !== '' && !isNaN(Number(rawPrice)) && Number(rawPrice) > 0) ? Number(rawPrice) : 0;
+
+              // Fuel Tank Capacity
+              const rawCap = cleanRow.fuel_tank_capacity || cleanRow.tank_capacity || cleanRow['tank_capacity_(ltr)'] || cleanRow.capacity;
+              cleanRow.fuel_tank_capacity = (rawCap !== undefined && rawCap !== '' && !isNaN(Number(rawCap)) && Number(rawCap) > 0) ? Number(rawCap) : 100;
+
+              // Model / Make (Auto-default N/A if blank)
+              const rawModel = cleanRow.model || cleanRow.model_make || cleanRow.brand || cleanRow.make;
+              cleanRow.model = (rawModel && String(rawModel).trim()) ? String(rawModel).trim() : 'N/A';
             }
 
             // Standardize tanker identification
@@ -374,7 +495,7 @@ export const BulkDataImportModal: React.FC<Props> = ({
           setDetectedColumns(Object.keys(rawJson[0]));
           setFeedback({
             type: 'success',
-            message: `Loaded ${normalizedRows.length} records from "${file.name}". Review preview below and click Confirm Import.`
+            message: `Loaded ${normalizedRows.length} records from "${file.name}". All fields validated and empty cells safely assigned "N/A". Review preview below and click Confirm Import.`
           });
         }
       } catch (err: any) {
@@ -688,6 +809,58 @@ export const BulkDataImportModal: React.FC<Props> = ({
           {/* Live Data Preview */}
           {parsedRows.length > 0 && (
             <div className="space-y-3">
+              {/* Auto-Setup Discovery Banner for Vehicles Upload (Update 1) */}
+              {autoSetupStats && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-emerald-500/15 border-2 border-amber-500/40 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⚡</span>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      1-Click Full Fleet & Master Data Auto-Setup Detected
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+                    Uploading this single Excel/CSV file will automatically configure your <strong>Vehicles</strong> and auto-register all missing master data entities into your workspace without any manual data entry:
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 font-mono text-[11px]">
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-amber-500/30">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold">Categories</span>
+                      <strong className="text-amber-500 text-sm">{autoSetupStats.categories.length}</strong>
+                      <span className="block text-[9px] text-slate-500 truncate" title={autoSetupStats.categories.join(', ')}>
+                        {autoSetupStats.categories.join(', ') || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-blue-500/30">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold">Companies</span>
+                      <strong className="text-blue-500 text-sm">{autoSetupStats.companies.length}</strong>
+                      <span className="block text-[9px] text-slate-500 truncate" title={autoSetupStats.companies.join(', ')}>
+                        {autoSetupStats.companies.join(', ') || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-indigo-500/30">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold">Vendors</span>
+                      <strong className="text-indigo-400 text-sm">{autoSetupStats.vendors.length}</strong>
+                      <span className="block text-[9px] text-slate-500 truncate" title={autoSetupStats.vendors.join(', ')}>
+                        {autoSetupStats.vendors.join(', ') || 'None'}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-emerald-500/30">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold">Fuel Pumps</span>
+                      <strong className="text-emerald-500 text-sm">{autoSetupStats.pumps.length}</strong>
+                      <span className="block text-[9px] text-slate-500 truncate" title={autoSetupStats.pumps.join(', ')}>
+                        {autoSetupStats.pumps.join(', ') || 'None'}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-rose-500/30">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold">Fuel Types</span>
+                      <strong className="text-rose-500 text-sm">{autoSetupStats.fuelTypes.length}</strong>
+                      <span className="block text-[9px] text-slate-500 truncate" title={autoSetupStats.fuelTypes.join(', ')}>
+                        {autoSetupStats.fuelTypes.join(', ') || 'Diesel'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <FileText className="w-4 h-4 text-amber-500" />
