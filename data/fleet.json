@@ -1366,12 +1366,12 @@
       "current_price": 108.5,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-29",
-          "price": 108.5,
-          "changed_by": "Babul Hossain"
+          "price": 108.5
         }
       ],
-      "updated_at": "2026-09-29"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_octane_tenant_prema_mummk7ds_awv6",
@@ -1383,12 +1383,12 @@
       "current_price": 131,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-29",
-          "price": 131,
-          "changed_by": "Babul Hossain"
+          "price": 131
         }
       ],
-      "updated_at": "2026-09-29"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_petrol_tenant_prema_mummk7ds_awv6",
@@ -1400,12 +1400,12 @@
       "current_price": 126,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-29",
-          "price": 126,
-          "changed_by": "Babul Hossain"
+          "price": 126
         }
       ],
-      "updated_at": "2026-09-29"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_cng_tenant_prema_mummk7ds_awv6",
@@ -1417,12 +1417,12 @@
       "current_price": 43,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-29",
-          "price": 43,
-          "changed_by": "Babul Hossain"
+          "price": 43
         }
       ],
-      "updated_at": "2026-09-29"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_lpg_tenant_prema_mummk7ds_awv6",
@@ -1434,12 +1434,12 @@
       "current_price": 115,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-29",
-          "price": 115,
-          "changed_by": "Babul Hossain"
+          "price": 115
         }
       ],
-      "updated_at": "2026-09-29"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_diesel_tenant_prema_muo0mrwx_c6ni",
@@ -1451,12 +1451,12 @@
       "current_price": 108.5,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 108.5,
-          "changed_by": "Babul Hossain"
+          "price": 108.5
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_octane_tenant_prema_muo0mrwx_c6ni",
@@ -1468,12 +1468,12 @@
       "current_price": 131,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 131,
-          "changed_by": "Babul Hossain"
+          "price": 131
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_petrol_tenant_prema_muo0mrwx_c6ni",
@@ -1485,12 +1485,12 @@
       "current_price": 126,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 126,
-          "changed_by": "Babul Hossain"
+          "price": 126
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_cng_tenant_prema_muo0mrwx_c6ni",
@@ -1502,12 +1502,12 @@
       "current_price": 43,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 43,
-          "changed_by": "Babul Hossain"
+          "price": 43
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_lpg_tenant_prema_muo0mrwx_c6ni",
@@ -1519,12 +1519,12 @@
       "current_price": 115,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 115,
-          "changed_by": "Babul Hossain"
+          "price": 115
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_diesel_tenant_prema_muo23a7c_64qt",
@@ -1536,12 +1536,12 @@
       "current_price": 108.5,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 108.5,
-          "changed_by": "Babul Hossain"
+          "price": 108.5
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_octane_tenant_prema_muo23a7c_64qt",
@@ -1553,12 +1553,12 @@
       "current_price": 131,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 131,
-          "changed_by": "Babul Hossain"
+          "price": 131
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_petrol_tenant_prema_muo23a7c_64qt",
@@ -1570,12 +1570,12 @@
       "current_price": 126,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 126,
-          "changed_by": "Babul Hossain"
+          "price": 126
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_cng_tenant_prema_muo23a7c_64qt",
@@ -1587,12 +1587,12 @@
       "current_price": 43,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 43,
-          "changed_by": "Babul Hossain"
+          "price": 43
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_lpg_tenant_prema_muo23a7c_64qt",
@@ -1604,12 +1604,12 @@
       "current_price": 115,
       "price_history": [
         {
+          "changed_by": "Babul Hossain",
           "date": "2026-09-30",
-          "price": 115,
-          "changed_by": "Babul Hossain"
+          "price": 115
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:44.000Z"
     },
     {
       "id": "fuel_diesel_tenant_bengal_muo29k03_yhgj",
@@ -1621,12 +1621,12 @@
       "current_price": 108.5,
       "price_history": [
         {
+          "changed_by": "Tariqul Islam",
           "date": "2026-09-30",
-          "price": 108.5,
-          "changed_by": "Tariqul Islam"
+          "price": 108.5
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_octane_tenant_bengal_muo29k03_yhgj",
@@ -1638,12 +1638,12 @@
       "current_price": 131,
       "price_history": [
         {
+          "changed_by": "Tariqul Islam",
           "date": "2026-09-30",
-          "price": 131,
-          "changed_by": "Tariqul Islam"
+          "price": 131
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_petrol_tenant_bengal_muo29k03_yhgj",
@@ -1655,12 +1655,12 @@
       "current_price": 126,
       "price_history": [
         {
+          "changed_by": "Tariqul Islam",
           "date": "2026-09-30",
-          "price": 126,
-          "changed_by": "Tariqul Islam"
+          "price": 126
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_cng_tenant_bengal_muo29k03_yhgj",
@@ -1672,12 +1672,12 @@
       "current_price": 43,
       "price_history": [
         {
+          "changed_by": "Tariqul Islam",
           "date": "2026-09-30",
-          "price": 43,
-          "changed_by": "Tariqul Islam"
+          "price": 43
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_lpg_tenant_bengal_muo29k03_yhgj",
@@ -1689,12 +1689,12 @@
       "current_price": 115,
       "price_history": [
         {
+          "changed_by": "Tariqul Islam",
           "date": "2026-09-30",
-          "price": 115,
-          "changed_by": "Tariqul Islam"
+          "price": 115
         }
       ],
-      "updated_at": "2026-09-30"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_diesel_tenant_test_mupff3mc_4q9r",
@@ -1706,12 +1706,12 @@
       "current_price": 108.5,
       "price_history": [
         {
+          "changed_by": "Rahim Ahmed",
           "date": "2026-10-01",
-          "price": 108.5,
-          "changed_by": "Rahim Ahmed"
+          "price": 108.5
         }
       ],
-      "updated_at": "2026-10-01"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_octane_tenant_test_mupff3mc_4q9r",
@@ -1723,12 +1723,12 @@
       "current_price": 131,
       "price_history": [
         {
+          "changed_by": "Rahim Ahmed",
           "date": "2026-10-01",
-          "price": 131,
-          "changed_by": "Rahim Ahmed"
+          "price": 131
         }
       ],
-      "updated_at": "2026-10-01"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_petrol_tenant_test_mupff3mc_4q9r",
@@ -1740,12 +1740,12 @@
       "current_price": 126,
       "price_history": [
         {
+          "changed_by": "Rahim Ahmed",
           "date": "2026-10-01",
-          "price": 126,
-          "changed_by": "Rahim Ahmed"
+          "price": 126
         }
       ],
-      "updated_at": "2026-10-01"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_cng_tenant_test_mupff3mc_4q9r",
@@ -1757,12 +1757,12 @@
       "current_price": 43,
       "price_history": [
         {
+          "changed_by": "Rahim Ahmed",
           "date": "2026-10-01",
-          "price": 43,
-          "changed_by": "Rahim Ahmed"
+          "price": 43
         }
       ],
-      "updated_at": "2026-10-01"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_lpg_tenant_test_mupff3mc_4q9r",
@@ -1774,12 +1774,12 @@
       "current_price": 115,
       "price_history": [
         {
+          "changed_by": "Rahim Ahmed",
           "date": "2026-10-01",
-          "price": 115,
-          "changed_by": "Rahim Ahmed"
+          "price": 115
         }
       ],
-      "updated_at": "2026-10-01"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_bio_diesel_1791008835268",
@@ -1791,12 +1791,12 @@
       "current_price": 112.5,
       "price_history": [
         {
+          "changed_by": "Administrator",
           "date": "2026-10-03",
-          "price": 112.5,
-          "changed_by": "Administrator"
+          "price": 112.5
         }
       ],
-      "updated_at": "2026-10-03"
+      "updated_at": "2026-10-03T08:44:45.000Z"
     },
     {
       "id": "fuel_diesel_tenant_desh_mus371wo_yuzr",
