@@ -302,9 +302,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* TOP NAVBAR */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 transition-all">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0">
             {siteContent.branding?.logo_url ? (
               <img
                 src={siteContent.branding.logo_url}
@@ -312,92 +312,128 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 className="h-9 sm:h-11 max-w-[130px] sm:max-w-[170px] object-contain flex-shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30 flex-shrink-0">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/30 shrink-0">
                 <Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
               </div>
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-white truncate">
+                <span className="text-base sm:text-lg xl:text-xl font-black tracking-tight text-white whitespace-nowrap">
                   {siteContent.branding?.app_name || 'FuelNest'}
                 </span>
-                <span className="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                <span className="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono whitespace-nowrap shrink-0">
                   Enterprise Fleet
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block truncate">
-                {siteContent.branding?.tagline || 'Fleet & Fuel Commercial Intelligence'}
+              <p className="text-[11px] text-slate-400 hidden xl:block truncate max-w-[220px]">
+                {siteContent.branding?.tagline || 'Fleet & Fuel Intelligence'}
               </p>
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-slate-300">
-            <a href="#features" className="hover:text-amber-400 transition-colors">
+          {/* Desktop Navigation Links (Zero wrapping, responsive spacing) */}
+          <nav className="hidden xl:flex items-center gap-5 2xl:gap-6 text-sm font-semibold text-slate-300 whitespace-nowrap shrink-0">
+            <a href="#features" className="hover:text-amber-400 transition-colors whitespace-nowrap">
               Features
             </a>
             {siteContent.home?.video_url && (
-              <a href="#demo-video" className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-300">
-                <Video className="w-3.5 h-3.5 text-amber-400" />
+              <a href="#demo-video" className="hover:text-amber-400 transition-colors inline-flex items-center gap-1.5 text-amber-300 whitespace-nowrap">
+                <Video className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Video Tour</span>
               </a>
             )}
-            <a href="#dual-metrics" className="hover:text-amber-400 transition-colors">
+            <a href="#dual-metrics" className="hover:text-amber-400 transition-colors whitespace-nowrap">
               Dual Metrics
             </a>
-            <a href="#bowzer-depot" className="hover:text-amber-400 transition-colors">
+            <a href="#bowzer-depot" className="hover:text-amber-400 transition-colors whitespace-nowrap">
               Bowzer Depot
             </a>
-            <a href="#pricing" className="hover:text-amber-400 transition-colors">
+            <a href="#pricing" className="hover:text-amber-400 transition-colors whitespace-nowrap">
               Pricing
             </a>
             <button
               type="button"
               onClick={() => onNavigateToPublicPage?.('about')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer whitespace-nowrap"
             >
               About
             </button>
             <button
               type="button"
               onClick={() => onNavigateToPublicPage?.('contact')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer whitespace-nowrap"
             >
               Contact
             </button>
             <button
               type="button"
               onClick={() => onNavigateToPublicPage?.('faq')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer whitespace-nowrap"
             >
               FAQ
             </button>
           </nav>
 
+          {/* Laptop Medium Navigation Links (1024px to 1279px) */}
+          <nav className="hidden lg:flex xl:hidden items-center gap-3.5 text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">
+            <a href="#features" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+              Features
+            </a>
+            {siteContent.home?.video_url && (
+              <a href="#demo-video" className="hover:text-amber-400 transition-colors inline-flex items-center gap-1 text-amber-300 whitespace-nowrap">
+                <Video className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Video</span>
+              </a>
+            )}
+            <a href="#dual-metrics" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+              Dual Metrics
+            </a>
+            <a href="#bowzer-depot" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+              Bowzer
+            </a>
+            <a href="#pricing" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+              Pricing
+            </a>
+            <button
+              type="button"
+              onClick={() => onNavigateToPublicPage?.('about')}
+              className="hover:text-amber-400 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              About
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateToPublicPage?.('contact')}
+              className="hover:text-amber-400 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              Contact
+            </button>
+          </nav>
+
           {/* Desktop Header Action Buttons */}
-          <div className="hidden md:flex items-center gap-2.5">
+          <div className="hidden lg:flex items-center gap-2.5 shrink-0 whitespace-nowrap">
             {isAuthenticated ? (
               <button
                 onClick={onNavigateToDashboard}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer whitespace-nowrap"
               >
                 <span>Go to Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
             ) : (
               <>
                 <button
                   onClick={() => handleOpenRegister('trial_3days')}
-                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 cursor-pointer whitespace-nowrap"
                 >
-                  <Crown className="w-4 h-4" />
+                  <Crown className="w-4 h-4 shrink-0" />
                   <span>Register</span>
                 </button>
                 <button
                   onClick={onNavigateToLogin}
-                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 text-xs sm:text-sm font-black shadow-md transition-all transform active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 text-xs sm:text-sm font-black shadow-md transition-all transform active:scale-95 cursor-pointer whitespace-nowrap"
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-4 h-4 shrink-0" />
                   <span>Sign In</span>
                 </button>
               </>
@@ -405,22 +441,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Mobile Actions: Compact Quick Sign In + Hamburger Toggle */}
-          <div className="flex md:hidden items-center gap-1.5 flex-shrink-0">
+          <div className="flex lg:hidden items-center gap-1.5 shrink-0 whitespace-nowrap">
             {!isAuthenticated ? (
-              <button
-                type="button"
-                onClick={onNavigateToLogin}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 text-amber-400 border border-amber-500/30 text-xs font-bold active:scale-95 transition-all cursor-pointer"
-                title="Sign In"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>Sign In</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleOpenRegister('trial_3days')}
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-xs font-extrabold shadow-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <Crown className="w-3.5 h-3.5 shrink-0" />
+                  <span>Register</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onNavigateToLogin}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 text-amber-400 border border-amber-500/30 text-xs font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                  title="Sign In"
+                >
+                  <User className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sign In</span>
+                </button>
+              </>
             ) : (
               <button
                 type="button"
                 onClick={onNavigateToDashboard}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
                 <span>Dashboard</span>
               </button>
@@ -429,7 +475,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 transition-colors cursor-pointer shrink-0"
               aria-label="Toggle mobile menu"
             >
               {isMobileMenuOpen ? (
@@ -443,7 +489,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Mobile Dropdown Menu Drawer */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="lg:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex flex-col space-y-1 text-sm font-semibold text-slate-300">
               <a
                 href="#features"

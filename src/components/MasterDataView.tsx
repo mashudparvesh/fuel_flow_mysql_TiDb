@@ -1705,6 +1705,250 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
         </div>
       )}
 
+      {/* MODAL: Edit Category */}
+      {showEditCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Edit Vehicle Category</h3>
+              <button
+                type="button"
+                onClick={() => setShowEditCategoryModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditCategory} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.categoryNameLabel}</label>
+                <input
+                  type="text"
+                  value={editCatName}
+                  onChange={e => setEditCatName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.metricTypeLabel}</label>
+                  <select
+                    value={editCatMetric}
+                    onChange={e => setEditCatMetric(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                  >
+                    <option value="kmpl">{t.kmplOption}</option>
+                    <option value="lph">{t.lphOption}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.benchmarkInputLabel}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editCatBenchmark}
+                    onChange={e => setEditCatBenchmark(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tolerance Threshold (%)</label>
+                <input
+                  type="number"
+                  step="1"
+                  value={editCatTolerance}
+                  onChange={e => setEditCatTolerance(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.descriptionLabel}</label>
+                <input
+                  type="text"
+                  value={editCatDesc}
+                  onChange={e => setEditCatDesc(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditCategoryModal(false)}
+                  className="w-1/2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  {t.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 cursor-pointer shadow-xs"
+                >
+                  Update Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Vendor */}
+      {showEditVendorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Edit Vehicle Vendor</h3>
+              <button
+                type="button"
+                onClick={() => setShowEditVendorModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditVendor} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.vendorNameLabel}</label>
+                <input
+                  type="text"
+                  value={editVendorName}
+                  onChange={e => setEditVendorName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.contact}</label>
+                <input
+                  type="text"
+                  value={editVendorContact}
+                  onChange={e => setEditVendorContact(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.phone}</label>
+                <input
+                  type="text"
+                  value={editVendorPhone}
+                  onChange={e => setEditVendorPhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.address}</label>
+                <input
+                  type="text"
+                  value={editVendorAddress}
+                  onChange={e => setEditVendorAddress(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditVendorModal(false)}
+                  className="w-1/2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  {t.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 cursor-pointer shadow-xs"
+                >
+                  Update Vendor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Pump */}
+      {showEditPumpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Edit Fuel Pump Station</h3>
+              <button
+                type="button"
+                onClick={() => setShowEditPumpModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditPump} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.pumpNameLabel}</label>
+                <input
+                  type="text"
+                  value={editPumpName}
+                  onChange={e => setEditPumpName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.locationLabel}</label>
+                <input
+                  type="text"
+                  value={editPumpLocation}
+                  onChange={e => setEditPumpLocation(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.contact}</label>
+                <input
+                  type="text"
+                  value={editPumpContact}
+                  onChange={e => setEditPumpContact(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.phone}</label>
+                <input
+                  type="text"
+                  value={editPumpPhone}
+                  onChange={e => setEditPumpPhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">{t.creditLimitLabel}</label>
+                <input
+                  type="number"
+                  value={editPumpCreditLimit}
+                  onChange={e => setEditPumpCreditLimit(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditPumpModal(false)}
+                  className="w-1/2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  {t.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 cursor-pointer shadow-xs"
+                >
+                  Update Pump
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: Edit Company */}
       {showEditCompanyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">

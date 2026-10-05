@@ -22,7 +22,10 @@ import {
   Loader2,
   FileCheck,
   UserCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Edit2,
+  Trash2,
+  X
 } from 'lucide-react';
 
 export const ReportsView: React.FC = () => {
@@ -39,13 +42,28 @@ export const ReportsView: React.FC = () => {
     pumps,
     tankers,
     categories,
-    payments
+    payments,
+    updateFuelEntry,
+    deleteFuelEntry
   } = useApp();
 
   const a4ReportRef = useRef<HTMLDivElement>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfStatusMessage, setPdfStatusMessage] = useState('');
   const [pdfOrientation, setPdfOrientation] = useState<'landscape' | 'portrait'>('landscape');
+
+  // Edit Fuel Entry State
+  const [entryToEdit, setEntryToEdit] = useState<any | null>(null);
+  const [editSlipNo, setEditSlipNo] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editLiters, setEditLiters] = useState('');
+  const [editRate, setEditRate] = useState('');
+  const [editPrevMeter, setEditPrevMeter] = useState('');
+  const [editCurrMeter, setEditCurrMeter] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+
+  // Delete Fuel Entry State
+  const [entryToDelete, setEntryToDelete] = useState<any | null>(null);
 
   const [reportType, setReportType] = useState<
     'vehicle_performance' | 'company_monthly' | 'days_wise' | 'pump_reconciliation' | 'raw_ledger'
@@ -1444,12 +1462,13 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">{t.thTotalAmount}</th>
                   <th className="py-2.5 px-3 text-right">{t.thMileage}</th>
                   <th className="py-2.5 px-3 text-center">{t.thAnomalies}</th>
+                  <th className="py-2.5 px-3 text-center print:hidden">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-blue-900/40">
                 {scopedEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={10} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {t.noDataFound}
                     </td>
                   </tr>
@@ -1498,6 +1517,35 @@ export const ReportsView: React.FC = () => {
                           ) : (
                             <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">Normal</span>
                           )}
+                        </td>
+                        <td className="py-2.5 px-3 text-center print:hidden whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEntryToEdit(e);
+                                setEditSlipNo(e.slip_no);
+                                setEditDate(e.entry_date);
+                                setEditLiters(String(e.fuel_liters));
+                                setEditRate(String(e.unit_price || e.fuel_price_per_liter || 0));
+                                setEditPrevMeter(String(e.previous_meter));
+                                setEditCurrMeter(String(e.current_meter));
+                                setEditNotes(e.notes || '');
+                              }}
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
+                              title="Edit Entry"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEntryToDelete(e)}
+                              className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                              title="Delete Entry"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1586,6 +1634,225 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* EDIT FUEL ENTRY MODAL */}
+      {entryToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white dark:bg-[#0c162d] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 text-xs my-8 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Fuel className="w-5 h-5 text-amber-500" />
+                <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                  Edit Fuel Entry #{entryToEdit.slip_no}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEntryToEdit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const litersNum = parseFloat(editLiters);
+                const rateNum = parseFloat(editRate);
+                const prevNum = parseFloat(editPrevMeter) || 0;
+                const currNum = parseFloat(editCurrMeter) || 0;
+                if (isNaN(litersNum) || litersNum <= 0) return;
+
+                updateFuelEntry(entryToEdit.id, {
+                  slip_no: editSlipNo.trim(),
+                  entry_date: editDate,
+                  fuel_liters: litersNum,
+                  unit_price: rateNum,
+                  fuel_price_per_liter: rateNum,
+                  previous_meter: prevNum,
+                  current_meter: currNum,
+                  distance_traveled: Math.max(0, currNum - prevNum),
+                  total_amount: Number((litersNum * rateNum).toFixed(2)),
+                  notes: editNotes.trim()
+                });
+                setEntryToEdit(null);
+              }}
+              className="space-y-3.5"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Slip No / Voucher *
+                  </label>
+                  <input
+                    type="text"
+                    value={editSlipNo}
+                    onChange={(e) => setEditSlipNo(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Entry Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Fuel Quantity (Liters) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editLiters}
+                    onChange={(e) => setEditLiters(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Fuel Rate (BDT / Liter) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editRate}
+                    onChange={(e) => setEditRate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Previous Meter (Odo / Hr)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editPrevMeter}
+                    onChange={(e) => setEditPrevMeter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Current Meter (Odo / Hr)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editCurrMeter}
+                    onChange={(e) => setEditCurrMeter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Calculated Summary Preview */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-slate-500">Calculated Total: </span>
+                  <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
+                    BDT {((parseFloat(editLiters) || 0) * (parseFloat(editRate) || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Distance / Hrs: </span>
+                  <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                    {Math.max(0, (parseFloat(editCurrMeter) || 0) - (parseFloat(editPrevMeter) || 0))}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Notes / Driver Remarks
+                </label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#080e1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEntryToEdit(null)}
+                  className="w-1/2 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md cursor-pointer"
+                >
+                  Update Fuel Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE FUEL ENTRY CONFIRMATION MODAL */}
+      {entryToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0a1228] rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 dark:border-blue-900 text-xs space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                  Delete Fuel Entry?
+                </h3>
+                <p className="text-slate-500 text-[11px]">Slip #{entryToDelete.slip_no}</p>
+              </div>
+            </div>
+
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete this fuel entry of <strong>{entryToDelete.fuel_liters} Liters</strong> (BDT {entryToDelete.total_amount?.toLocaleString()})? If this was taken on pump credit, the pump balance will be automatically adjusted.
+            </p>
+
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setEntryToDelete(null)}
+                className="w-1/2 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteFuelEntry(entryToDelete.id);
+                  setEntryToDelete(null);
+                }}
+                className="w-1/2 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md cursor-pointer"
+              >
+                Delete Entry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

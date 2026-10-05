@@ -20,6 +20,7 @@ import {
   Printer,
   Search,
   Trash2,
+  Edit2,
   Filter,
   AlertCircle,
   ExternalLink,
@@ -47,7 +48,8 @@ export const PumpCreditView: React.FC = () => {
     payments,
     fuelEntries,
     addPumpPayment,
-    deletePumpPayment
+    deletePumpPayment,
+    updatePumpPayment
   } = useApp();
 
   const isViewer = currentUser?.role === 'client_viewer';
@@ -62,6 +64,14 @@ export const PumpCreditView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+
+  // Edit Payment State
+  const [paymentToEdit, setPaymentToEdit] = useState<any | null>(null);
+  const [editPayAmount, setEditPayAmount] = useState('');
+  const [editPayDate, setEditPayDate] = useState('');
+  const [editPayMethod, setEditPayMethod] = useState<'bank_transfer' | 'cheque' | 'cash' | 'mfs'>('bank_transfer');
+  const [editPayRef, setEditPayRef] = useState('');
+  const [editPayNotes, setEditPayNotes] = useState('');
 
   // Statement & Reconciliation Modal State
   const [statementPumpId, setStatementPumpId] = useState<string | null>(null);
@@ -1439,13 +1449,34 @@ export const PumpCreditView: React.FC = () => {
                       <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
                         {tx.type === 'payment' ? (
                           !isViewer ? (
-                            <button
-                              onClick={() => setPaymentToDelete(tx.id)}
-                              className="p-1 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-                              title="Delete Payment Record"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const p = payments.find(pay => pay.id === tx.id);
+                                  if (p) {
+                                    setPaymentToEdit(p);
+                                    setEditPayAmount(String(p.amount));
+                                    setEditPayDate(p.payment_date);
+                                    setEditPayMethod(p.payment_method);
+                                    setEditPayRef(p.transaction_ref || '');
+                                    setEditPayNotes(p.notes || '');
+                                  }
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
+                                title="Edit Payment"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPaymentToDelete(tx.id)}
+                                className="p-1 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Delete Payment Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-slate-400 dark:text-slate-500 text-[10px] font-mono">
                               Paid
@@ -1453,7 +1484,7 @@ export const PumpCreditView: React.FC = () => {
                           )
                         ) : (
                           <span className="text-slate-400 dark:text-slate-500 text-[10px] font-mono">
-                            Fuel
+                            Fuel Entry
                           </span>
                         )}
                       </td>
@@ -2085,6 +2116,129 @@ export const PumpCreditView: React.FC = () => {
                   className="w-1/2 py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-md"
                 >
                   {t.submitPaymentBtn}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------
+          EDIT PAYMENT MODAL
+          ------------------------------------------------------------- */}
+      {paymentToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0a1228] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-blue-900 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-blue-900/60 mb-4">
+              <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                Edit Payment Record
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPaymentToEdit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const amt = parseFloat(editPayAmount);
+                if (!amt || amt <= 0) return;
+                updatePumpPayment(paymentToEdit.id, {
+                  amount: amt,
+                  payment_date: editPayDate,
+                  payment_method: editPayMethod,
+                  transaction_ref: editPayRef,
+                  notes: editPayNotes
+                });
+                setPaymentToEdit(null);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Payment Date *
+                </label>
+                <input
+                  type="date"
+                  value={editPayDate}
+                  onChange={(e) => setEditPayDate(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-blue-900 bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Amount (BDT) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editPayAmount}
+                  onChange={(e) => setEditPayAmount(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-blue-900 bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={editPayMethod}
+                  onChange={(e) => setEditPayMethod(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-blue-900 bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white"
+                >
+                  <option value="bank_transfer">Bank Transfer / EFT / RTGS</option>
+                  <option value="cheque">Bank Cheque / Pay Order</option>
+                  <option value="cash">Direct Cash Payment</option>
+                  <option value="mfs">MFS (bKash / Nagad / Rocket)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Transaction / Cheque / Slip Ref
+                </label>
+                <input
+                  type="text"
+                  value={editPayRef}
+                  onChange={(e) => setEditPayRef(e.target.value)}
+                  placeholder="e.g. CHQ-991204 / TRX-778899"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-blue-900 bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Notes / Remarks
+                </label>
+                <textarea
+                  value={editPayNotes}
+                  onChange={(e) => setEditPayNotes(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-blue-900 bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentToEdit(null)}
+                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-md"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
