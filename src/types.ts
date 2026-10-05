@@ -199,6 +199,7 @@ export interface TenantSubscription {
   max_pumps: number;
   super_admin_username: string;
   super_admin_password?: string;
+  is_approved?: boolean;
   features: {
     tanker_bowzer: boolean;
     anomaly_ai: boolean;
@@ -334,6 +335,7 @@ export interface Vendor {
   phone: string;
   email: string;
   address: string;
+  type?: string;
   created_at: string;
 }
 
@@ -349,6 +351,8 @@ export interface FuelPump {
   opening_balance: number;
   current_balance: number; // calculated: opening + credit entries - payments
   status: 'active' | 'inactive';
+  payment_terms?: string;
+  fuel_types?: string[];
   created_at: string;
 }
 
@@ -416,6 +420,7 @@ export interface FuelEntry {
   distance_traveled: number; // or operating hours
   fuel_liters: number;
   unit_price: number;
+  fuel_price_per_liter?: number;
   total_amount: number;
   calculated_mileage: number; // distance / liters (or liters / hr for LPH)
   benchmark_mileage: number;

@@ -781,6 +781,32 @@ export async function sendAdminNotificationEmail({
 }
 
 // -------------------------------------------------------------
+// Telegram Instant Notification Dispatcher
+// -------------------------------------------------------------
+export async function sendTelegramAlert(message: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
+    return false;
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML'
+      })
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn('[Telegram Alert Error]:', e);
+    return false;
+  }
+}
+
+// -------------------------------------------------------------
 // Automated Tenant Provisioning & Default Credential Engine
 // -------------------------------------------------------------
 async function provisionNewTenant(payload: {
@@ -1270,9 +1296,9 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     }
   });
 
-  // 3. POST /api/tenants - Create new subscriber (SaaS Super Admin / Owner)
+  // 3. POST /api/tenants and /api/owner/subscribers/create - Create new subscriber (SaaS Super Admin / Owner)
   // Persists to disk immediately and to MySQL if connected
-  app.post('/api/tenants', async (req: Request, res: Response) => {
+  const handleCreateTenantRecord = async (req: Request, res: Response) => {
     try {
       const newTenant = req.body;
       if (!newTenant.id || !newTenant.name || !newTenant.code) {

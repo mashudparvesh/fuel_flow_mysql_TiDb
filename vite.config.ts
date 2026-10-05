@@ -12,8 +12,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      hmr: false,
-      watch: null,
+      port: 3000,
+      host: '0.0.0.0',
     },
   };
 });

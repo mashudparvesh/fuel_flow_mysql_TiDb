@@ -2889,6 +2889,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               tenant_id: currentTenantId,
               user_id: currentUser.id || 'user_1',
               name: venName,
+              contact_person: 'Vendor Manager',
+              email: 'N/A',
               phone: r.vendor_contact || r.vendor_phone || 'N/A',
               type: 'fuel',
               address: 'N/A',
@@ -2916,6 +2918,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               credit_limit: 500000,
               opening_balance: 0,
               current_balance: 0,
+              status: 'active',
               fuel_types: ['Diesel', 'Octane'],
               payment_terms: 'Credit',
               created_at: todayStr
