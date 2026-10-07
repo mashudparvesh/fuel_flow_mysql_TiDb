@@ -745,7 +745,10 @@ export default async function handler(req, res) {
   if (cleanUrl.includes('/api/subscribers/registration-requests') && method === 'GET') {
     try {
       const pool = getPool();
-      const [rows] = await pool.query('SELECT * FROM `tenants` ORDER BY `created_at` DESC');
+      // Only return pending unapproved registration requests, NEVER approved active subscribers
+      const [rows] = await pool.query(
+        'SELECT * FROM `tenants` WHERE (`is_approved` = 0 OR `status` = "pending") AND `deleted_at` IS NULL ORDER BY `created_at` DESC'
+      ).catch(() => [[]]);
       const requests = rows.map(t => {
         let sub = {};
         try { sub = typeof t.subscription_raw === 'string' ? JSON.parse(t.subscription_raw) : (t.subscription_raw || {}); } catch (e) {}
@@ -770,6 +773,45 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, requests });
     } catch (e) {
       return res.status(200).json({ success: true, requests: [] });
+    }
+  }
+
+  // 8b. Delete Registration Request & Permanent Wipe (DELETE /api/subscribers/registration-requests/:id)
+  if (cleanUrl.includes('/api/subscribers/registration-requests/') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const rawReqId = parts[parts.length - 1];
+      const targetTenantId = rawReqId.startsWith('reg_') ? rawReqId.substring(4) : rawReqId;
+      const pool = getPool();
+
+      if (rawReqId === 'all_test' || rawReqId === 'purge_all') {
+        // Purge all unapproved test registrations except active approved tenants
+        await pool.query('DELETE FROM `users` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `vehicles` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `fuel_entries` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `fuel_pumps` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `companies` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `vendors` WHERE `tenant_id` IN (SELECT `id` FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending")').catch(() => {});
+        await pool.query('DELETE FROM `tenants` WHERE `is_approved` = 0 OR `status` = "pending"').catch(() => {});
+        return res.status(200).json({ success: true, message: 'All pending test registration requests purged permanently.' });
+      }
+
+      if (targetTenantId) {
+        const tables = [
+          'fuel_entries', 'pump_payments', 'vehicles', 'fuel_pumps',
+          'vehicle_categories', 'companies', 'vendors', 'fuel_types',
+          'tanker_logs', 'tanker_inventories', 'users'
+        ];
+        for (const tbl of tables) {
+          await pool.query(`DELETE FROM \`${tbl}\` WHERE \`tenant_id\` = ?`, [targetTenantId]).catch(() => {});
+        }
+        await pool.query('DELETE FROM `tenants` WHERE `id` = ?', [targetTenantId]).catch(() => {});
+        await pool.query('DELETE FROM `admin_notifications` WHERE `details_json` LIKE ?', [`%${targetTenantId}%`]).catch(() => {});
+      }
+
+      return res.status(200).json({ success: true, message: 'Registration request deleted and all associated data purged.' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message || 'Failed to delete registration request' });
     }
   }
 
@@ -930,21 +972,27 @@ export default async function handler(req, res) {
       const [categories] = await pool.query('SELECT * FROM `vehicle_categories`').catch(() => [[]]);
       const [companies] = await pool.query('SELECT * FROM `companies`').catch(() => [[]]);
       const [vendors] = await pool.query('SELECT * FROM `vendors`').catch(() => [[]]);
+      const [fuelTypes] = await pool.query('SELECT * FROM `fuel_types`').catch(() => [[]]);
 
       return res.status(200).json({
         success: true,
         data: {
-          vehicles: vehicles || [],
+          vehicles: (vehicles || []).map(v => ({
+            ...v,
+            fuel_type_id: v.fuel_type_id || 'Diesel',
+            fuel_type: v.fuel_type_id || 'Diesel'
+          })),
           fuelEntries: fuelEntries || [],
           pumps: pumps || [],
           payments: payments || [],
           categories: categories || [],
           companies: companies || [],
-          vendors: vendors || []
+          vendors: vendors || [],
+          fuelTypes: fuelTypes || []
         }
       });
     } catch (e) {
-      return res.status(200).json({ success: true, data: { vehicles: [], fuelEntries: [] } });
+      return res.status(200).json({ success: true, data: { vehicles: [], fuelEntries: [], fuelTypes: [] } });
     }
   }
 
@@ -957,12 +1005,30 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, message: 'tenant_id, entity_type, and rows array required' });
       }
 
+      const addedItems = [];
+
       if (entity_type === 'vehicles') {
         const categoryMap = new Map();
         const companyMap = new Map();
         const vendorMap = new Map();
         const pumpMap = new Map();
         const fuelMap = new Map();
+
+        // Preload existing entities for this tenant so we NEVER create duplicate rows!
+        const [existCats] = await pool.query('SELECT id, name FROM `vehicle_categories` WHERE `tenant_id` = ?', [tenant_id]).catch(() => [[]]);
+        (existCats || []).forEach(c => c && c.name && categoryMap.set(String(c.name).trim().toLowerCase(), c.id));
+
+        const [existComps] = await pool.query('SELECT id, name FROM `companies` WHERE `tenant_id` = ?', [tenant_id]).catch(() => [[]]);
+        (existComps || []).forEach(c => c && c.name && companyMap.set(String(c.name).trim().toLowerCase(), c.id));
+
+        const [existVends] = await pool.query('SELECT id, name FROM `vendors` WHERE `tenant_id` = ?', [tenant_id]).catch(() => [[]]);
+        (existVends || []).forEach(v => v && v.name && vendorMap.set(String(v.name).trim().toLowerCase(), v.id));
+
+        const [existPumps] = await pool.query('SELECT id, name FROM `fuel_pumps` WHERE `tenant_id` = ?', [tenant_id]).catch(() => [[]]);
+        (existPumps || []).forEach(p => p && p.name && pumpMap.set(String(p.name).trim().toLowerCase(), p.id));
+
+        const [existFuels] = await pool.query('SELECT id, name FROM `fuel_types` WHERE `tenant_id` = ?', [tenant_id]).catch(() => [[]]);
+        (existFuels || []).forEach(f => f && f.name && fuelMap.set(String(f.name).trim().toLowerCase(), f.name));
 
         // 1. Auto-extract Categories, Companies, Vendors, Pumps, Fuel Types
         for (const r of rows) {
@@ -1034,7 +1100,7 @@ export default async function handler(req, res) {
           }
 
           // Fuel Type & Pricing Auto-Setup
-          const rawFuel = r.fuel_type || r.fuel;
+          const rawFuel = r.fuel_type || r.fuel || r.fuel_type_id || r.type_of_fuel;
           if (rawFuel && String(rawFuel).trim() && String(rawFuel).trim() !== 'N/A') {
             const fuelName = String(rawFuel).trim();
             const lower = fuelName.toLowerCase();
@@ -1053,7 +1119,7 @@ export default async function handler(req, res) {
           }
         }
 
-        // 2. Insert / Update Vehicles
+        // 2. Insert / Update Vehicles with exact fuel_type_id column
         for (const r of rows) {
           const rawNum = r.vehicle_reg_no || r.vehicle_number || r.plate_number || r.vehicle_no || r.plate_no || r.registration_number || r.registration_no || r.car_number || r.name;
           if (!rawNum) continue;
@@ -1066,6 +1132,11 @@ export default async function handler(req, res) {
           const venKey = (r.vendor_name || r.vendor || '').toLowerCase().trim();
           const matchedVen = vendorMap.get(venKey) || null;
           const isRented = matchedVen !== null || (r.ownership && String(r.ownership).toLowerCase() === 'rental');
+
+          // Resolve exact fuel type name
+          const rawVehicleFuel = r.fuel_type || r.fuel || r.fuel_type_id || r.type_of_fuel;
+          const fuelKey = (rawVehicleFuel ? String(rawVehicleFuel).trim().toLowerCase() : '');
+          const matchedFuelName = fuelMap.get(fuelKey) || (rawVehicleFuel && String(rawVehicleFuel).trim() !== 'N/A' ? String(rawVehicleFuel).trim() : 'Diesel');
 
           let driverName = r.driver_name;
           let driverPhone = r.driver_contact || r.driver_phone;
@@ -1080,22 +1151,53 @@ export default async function handler(req, res) {
             }
           }
 
+          const bench = Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0;
+          const odo = Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0;
+          const dName = (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A';
+          const dPhone = (driverPhone && String(driverPhone).trim()) ? String(driverPhone).trim() : 'N/A';
+
           await pool.query(
-            `INSERT INTO \`vehicles\` (\`id\`, \`tenant_id\`, \`vehicle_number\`, \`plate_number\`, \`model\`, \`category_id\`, \`company_id\`, \`vendor_id\`, \`ownership\`, \`fuel_type\`, \`expected_benchmark\`, \`current_odometer\`, \`driver_name\`, \`driver_phone\`, \`fuel_tank_capacity\`, \`status\`)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-             ON DUPLICATE KEY UPDATE \`vehicle_number\` = VALUES(\`vehicle_number\`), \`current_odometer\` = VALUES(\`current_odometer\`), \`driver_name\` = VALUES(\`driver_name\`), \`driver_phone\` = VALUES(\`driver_phone\`)`,
+            `INSERT INTO \`vehicles\` (\`id\`, \`tenant_id\`, \`vehicle_number\`, \`category_id\`, \`company_id\`, \`vendor_id\`, \`ownership\`, \`fuel_type_id\`, \`expected_benchmark\`, \`current_odometer\`, \`driver_name\`, \`driver_phone\`, \`status\`)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+             ON DUPLICATE KEY UPDATE
+               \`vehicle_number\` = VALUES(\`vehicle_number\`),
+               \`category_id\` = VALUES(\`category_id\`),
+               \`company_id\` = VALUES(\`company_id\`),
+               \`vendor_id\` = VALUES(\`vendor_id\`),
+               \`ownership\` = VALUES(\`ownership\`),
+               \`fuel_type_id\` = VALUES(\`fuel_type_id\`),
+               \`expected_benchmark\` = VALUES(\`expected_benchmark\`),
+               \`current_odometer\` = VALUES(\`current_odometer\`),
+               \`driver_name\` = VALUES(\`driver_name\`),
+               \`driver_phone\` = VALUES(\`driver_phone\`)`,
             [
-              vehId, tenant_id, plate, plate, r.model || 'N/A',
+              vehId, tenant_id, plate,
               matchedCat, matchedComp, matchedVen,
               isRented ? 'rented' : 'owned',
-              r.fuel_type || 'Diesel',
-              Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0,
-              Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0,
-              (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A',
-              (driverPhone && String(driverPhone).trim()) ? String(driverPhone).trim() : 'N/A',
-              Number(r.fuel_tank_capacity || r.capacity) || 100
+              matchedFuelName,
+              bench, odo, dName, dPhone
             ]
-          ).catch(() => {});
+          ).catch((e) => {
+            console.warn('[MySQL] Vehicle bulk insert error:', e);
+          });
+
+          addedItems.push({
+            id: vehId,
+            tenant_id,
+            vehicle_number: plate,
+            plate_number: plate,
+            category_id: matchedCat,
+            company_id: matchedComp,
+            vendor_id: matchedVen,
+            ownership: isRented ? 'rented' : 'owned',
+            fuel_type_id: matchedFuelName,
+            fuel_type: matchedFuelName,
+            expected_benchmark: bench,
+            current_odometer: odo,
+            driver_name: dName,
+            driver_phone: dPhone,
+            status: 'active'
+          });
         }
       }
 
@@ -1104,6 +1206,7 @@ export default async function handler(req, res) {
         count: rows.length,
         new_count: rows.length,
         updated_count: 0,
+        items: addedItems,
         message: `Bulk import completed! ${rows.length} records processed and registered.`
       });
     } catch (bulkErr) {
@@ -1112,7 +1215,139 @@ export default async function handler(req, res) {
     }
   }
 
-  // 12c. Fleet Entities PATCH & DELETE endpoints
+  // 12c. Fleet Entities POST, PATCH & DELETE endpoints
+  // Companies
+  if (cleanUrl.startsWith('/api/fleet/companies') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      await pool.query('DELETE FROM `companies` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Company deleted successfully' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/companies') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`companies\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Company updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  // Vendors
+  if (cleanUrl.startsWith('/api/fleet/vendors') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      await pool.query('DELETE FROM `vendors` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Vendor deleted successfully' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/vendors/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`vendors\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Vendor updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  // Pumps
+  if (cleanUrl.startsWith('/api/fleet/pumps') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      await pool.query('DELETE FROM `fuel_pumps` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Pump deleted successfully' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  if (cleanUrl.startsWith('/api/fleet/pumps/') && method === 'PATCH') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[4];
+      const pool = getPool();
+      const updates = req.body || {};
+      const fields = [];
+      const values = [];
+      Object.entries(updates).forEach(([k, v]) => {
+        fields.push(`\`${k}\` = ?`);
+        values.push(v);
+      });
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE \`fuel_pumps\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+      }
+      return res.status(200).json({ success: true, message: 'Pump updated' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  // Categories
+  if (cleanUrl.startsWith('/api/fleet/categories') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      await pool.query('DELETE FROM `vehicle_categories` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Category deleted successfully' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  // Vehicles
+  if (cleanUrl.startsWith('/api/fleet/vehicles') && method === 'DELETE') {
+    try {
+      const parts = cleanUrl.split('/');
+      const id = parts[parts.length - 1];
+      const pool = getPool();
+      await pool.query('DELETE FROM `vehicles` WHERE `id` = ?', [id]);
+      return res.status(200).json({ success: true, message: 'Vehicle deleted successfully' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+
+  // Fuel entries
   if (cleanUrl.startsWith('/api/fleet/fuel-entries/') && method === 'PATCH') {
     try {
       const parts = cleanUrl.split('/');
@@ -1142,94 +1377,6 @@ export default async function handler(req, res) {
       const pool = getPool();
       await pool.query('DELETE FROM `fuel_entries` WHERE `id` = ?', [id]);
       return res.status(200).json({ success: true, message: 'Fuel entry deleted' });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: err?.message });
-    }
-  }
-
-  if (cleanUrl.startsWith('/api/fleet/categories/') && method === 'PATCH') {
-    try {
-      const parts = cleanUrl.split('/');
-      const id = parts[4];
-      const pool = getPool();
-      const updates = req.body || {};
-      const fields = [];
-      const values = [];
-      Object.entries(updates).forEach(([k, v]) => {
-        fields.push(`\`${k}\` = ?`);
-        values.push(v);
-      });
-      if (fields.length > 0) {
-        values.push(id);
-        await pool.query(`UPDATE \`vehicle_categories\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
-      }
-      return res.status(200).json({ success: true, message: 'Category updated' });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: err?.message });
-    }
-  }
-
-  if (cleanUrl.startsWith('/api/fleet/vendors/') && method === 'PATCH') {
-    try {
-      const parts = cleanUrl.split('/');
-      const id = parts[4];
-      const pool = getPool();
-      const updates = req.body || {};
-      const fields = [];
-      const values = [];
-      Object.entries(updates).forEach(([k, v]) => {
-        fields.push(`\`${k}\` = ?`);
-        values.push(v);
-      });
-      if (fields.length > 0) {
-        values.push(id);
-        await pool.query(`UPDATE \`vendors\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
-      }
-      return res.status(200).json({ success: true, message: 'Vendor updated' });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: err?.message });
-    }
-  }
-
-  if (cleanUrl.startsWith('/api/fleet/pumps/') && method === 'PATCH') {
-    try {
-      const parts = cleanUrl.split('/');
-      const id = parts[4];
-      const pool = getPool();
-      const updates = req.body || {};
-      const fields = [];
-      const values = [];
-      Object.entries(updates).forEach(([k, v]) => {
-        fields.push(`\`${k}\` = ?`);
-        values.push(v);
-      });
-      if (fields.length > 0) {
-        values.push(id);
-        await pool.query(`UPDATE \`fuel_pumps\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
-      }
-      return res.status(200).json({ success: true, message: 'Pump updated' });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: err?.message });
-    }
-  }
-
-  if (cleanUrl.startsWith('/api/fleet/payments/') && method === 'PATCH') {
-    try {
-      const parts = cleanUrl.split('/');
-      const id = parts[4];
-      const pool = getPool();
-      const updates = req.body || {};
-      const fields = [];
-      const values = [];
-      Object.entries(updates).forEach(([k, v]) => {
-        fields.push(`\`${k}\` = ?`);
-        values.push(v);
-      });
-      if (fields.length > 0) {
-        values.push(id);
-        await pool.query(`UPDATE \`pump_payments\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
-      }
-      return res.status(200).json({ success: true, message: 'Payment updated' });
     } catch (err) {
       return res.status(500).json({ success: false, message: err?.message });
     }

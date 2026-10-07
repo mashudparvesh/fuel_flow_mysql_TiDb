@@ -1,329 +1,5 @@
 {
-  "vehicles": [
-    {
-      "id": "veh_1790154336935_t7ls3",
-      "tenant_id": "tenant_1",
-      "user_id": "user_1",
-      "vehicle_number": "Dhaka-Metro-Ta-11-2045",
-      "category_id": "cat_1",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_1",
-      "fuel_type_id": "Diesel",
-      "expected_benchmark": 8,
-      "current_odometer": 0,
-      "driver_name": "Assigned Driver",
-      "driver_phone": "",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_1790154390508_xgjow",
-      "tenant_id": "tenant_1",
-      "user_id": "user_1",
-      "vehicle_number": "Dhaka Metro-Ta-55-6677",
-      "category_id": "Heavy Truck",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "Padma Construction",
-      "fuel_type_id": "Diesel",
-      "expected_benchmark": 4.5,
-      "current_odometer": 52000,
-      "driver_name": "Kamal Hossain",
-      "driver_phone": "+8801700112233",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_1790154535738_uyriy",
-      "tenant_id": "tenant_1",
-      "user_id": "user_1",
-      "vehicle_number": "Chatto Metro-Ta-99-1122",
-      "category_id": "Heavy Truck",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_1",
-      "fuel_type_id": "Diesel",
-      "expected_benchmark": 8,
-      "current_odometer": 0,
-      "driver_name": "Assigned Driver",
-      "driver_phone": "",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_1790158364471_8otkk",
-      "tenant_id": "tenant_1789899108865",
-      "user_id": "user_1",
-      "vehicle_number": "Dhaka Metro-Ga-33-8890",
-      "category_id": "Pickup / 4x4",
-      "ownership": "rented",
-      "vendor_id": "Uttara Motors",
-      "company_id": "Civil Construction Wing",
-      "fuel_type_id": "Diesel",
-      "expected_benchmark": 8,
-      "current_odometer": 28900,
-      "driver_name": "Abul Kalam",
-      "driver_phone": "+8801822334455",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_1790158364471_edntu",
-      "tenant_id": "tenant_1789899108865",
-      "user_id": "user_1",
-      "vehicle_number": "Dhaka Metro-Ta-11-2045",
-      "category_id": "Heavy Truck",
-      "ownership": "rented",
-      "vendor_id": "Navana Motors",
-      "company_id": "Main Office Logistics",
-      "fuel_type_id": "Diesel",
-      "expected_benchmark": 8,
-      "current_odometer": 45200,
-      "driver_name": "Rafiqul Islam",
-      "driver_phone": "+8801711223344",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_1790158364471_ekkd0",
-      "tenant_id": "tenant_1789899108865",
-      "user_id": "user_1",
-      "vehicle_number": "Chatto Metro-Kha-12-3456",
-      "category_id": "Passenger Van",
-      "ownership": "rented",
-      "vendor_id": "Pacific Motors",
-      "company_id": "Headquarters Admin",
-      "fuel_type_id": "Octane",
-      "expected_benchmark": 8,
-      "current_odometer": 61450,
-      "driver_name": "Kamrul Hasan",
-      "driver_phone": "+8801933445566",
-      "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
-    },
-    {
-      "id": "veh_jamuna_01",
-      "tenant_id": "tenant_3",
-      "user_id": "usr_jamuna_admin",
-      "vehicle_number": "Sirajganj-Ta 11-4091",
-      "category_id": "cat_heavy_dump",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_jamuna",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 2.8,
-      "current_odometer": 84200,
-      "driver_name": "Mokbul Hossain",
-      "driver_phone": "+880 1718-223344",
-      "status": "active",
-      "created_at": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "veh_jamuna_02",
-      "tenant_id": "tenant_3",
-      "user_id": "usr_jamuna_admin",
-      "vehicle_number": "Dhaka Metro-Sha 15-8821",
-      "category_id": "cat_trailer",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_jamuna",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 2.2,
-      "current_odometer": 142000,
-      "driver_name": "Rafiqul Islam",
-      "driver_phone": "+880 1819-778899",
-      "status": "active",
-      "created_at": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "veh_bengal_02",
-      "tenant_id": "tenant_2",
-      "user_id": "usr_bengal_admin",
-      "vehicle_number": "Dhaka Metro-Da 14-3310",
-      "category_id": "cat_trailer",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_bengal",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 2.2,
-      "current_odometer": 118400,
-      "driver_name": "Khorshed Mia",
-      "driver_phone": "+880 1819-445522",
-      "status": "active",
-      "created_at": "2026-08-18T00:00:00.000Z"
-    },
-    {
-      "id": "veh_bengal_01",
-      "tenant_id": "tenant_2",
-      "user_id": "usr_bengal_admin",
-      "vehicle_number": "Dhaka Metro-Ta 18-9921",
-      "category_id": "cat_heavy_dump",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_bengal",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 3,
-      "current_odometer": 64200,
-      "driver_name": "Anowar Hossain",
-      "driver_phone": "+880 1711-332211",
-      "status": "active",
-      "created_at": "2026-08-16T00:00:00.000Z"
-    },
-    {
-      "id": "veh_pb_02",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "GEN-SITE-PB01 (Perkins 250kVA)",
-      "category_id": "cat_generator",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_pbrlp",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 22,
-      "current_odometer": 1650,
-      "driver_name": "Site Engineer Nur",
-      "driver_phone": "+880 1622-441199",
-      "status": "active",
-      "created_at": "2026-02-04T00:00:00.000Z"
-    },
-    {
-      "id": "veh_pb_01",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Sha 11-7714",
-      "category_id": "cat_minibus",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_pbrlp",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 6.2,
-      "current_odometer": 112450,
-      "driver_name": "Jasim Uddin",
-      "driver_phone": "+880 1719-887711",
-      "status": "active",
-      "created_at": "2026-02-02T00:00:00.000Z"
-    },
-    {
-      "id": "veh_nik_03",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "NK-CRANE-02 (Kato 50T)",
-      "category_id": "cat_crane",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_nikimth",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 13.5,
-      "current_odometer": 2890,
-      "driver_name": "Babul Akhter (Master Crane Op)",
-      "driver_phone": "+880 1915-998822",
-      "status": "active",
-      "created_at": "2026-01-22T00:00:00.000Z"
-    },
-    {
-      "id": "veh_ros_04",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "RNPP-EXC-07 (CAT 330D)",
-      "category_id": "cat_excavator",
-      "ownership": "rented",
-      "vendor_id": "vnd_bengal_heavy",
-      "company_id": "comp_rosatom",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 16,
-      "current_odometer": 3420,
-      "driver_name": "Khorshed Alam (Operator)",
-      "driver_phone": "+880 1718-445599",
-      "status": "active",
-      "created_at": "2026-01-20T00:00:00.000Z"
-    },
-    {
-      "id": "veh_nik_02",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Ch 19-3321",
-      "category_id": "cat_hiace",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_nikimth",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 9.2,
-      "current_odometer": 94100,
-      "driver_name": "Shah Alam",
-      "driver_phone": "+880 1823-110022",
-      "status": "active",
-      "created_at": "2026-01-18T00:00:00.000Z"
-    },
-    {
-      "id": "veh_nik_01",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Ba 14-9988",
-      "category_id": "cat_bus_40",
-      "ownership": "rented",
-      "vendor_id": "vnd_chowdhury",
-      "company_id": "comp_nikimth",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 4.4,
-      "current_odometer": 188400,
-      "driver_name": "Anwar Hossain",
-      "driver_phone": "+880 1711-554433",
-      "status": "active",
-      "created_at": "2026-01-16T00:00:00.000Z"
-    },
-    {
-      "id": "veh_ros_03",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Ga 33-8890",
-      "category_id": "cat_noah",
-      "ownership": "rented",
-      "vendor_id": "vnd_chowdhury",
-      "company_id": "comp_rosatom",
-      "fuel_type_id": "fuel_octane",
-      "expected_benchmark": 10.2,
-      "current_odometer": 64200,
-      "driver_name": "Sultan Mahmud",
-      "driver_phone": "+880 1912-778844",
-      "status": "active",
-      "created_at": "2026-01-15T00:00:00.000Z"
-    },
-    {
-      "id": "veh_ros_02",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Ch 11-4029",
-      "category_id": "cat_hiace",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_rosatom",
-      "fuel_type_id": "fuel_octane",
-      "expected_benchmark": 9.5,
-      "current_odometer": 78540,
-      "driver_name": "Abdul Matin",
-      "driver_phone": "+880 1819-331122",
-      "status": "active",
-      "created_at": "2026-01-11T00:00:00.000Z"
-    },
-    {
-      "id": "veh_ros_01",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "vehicle_number": "Dhaka Metro-Ba 15-4421",
-      "category_id": "cat_bus_40",
-      "ownership": "owned",
-      "vendor_id": null,
-      "company_id": "comp_rosatom",
-      "fuel_type_id": "fuel_diesel",
-      "expected_benchmark": 4.5,
-      "current_odometer": 142850,
-      "driver_name": "Md. Shamsul Haque",
-      "driver_phone": "+880 1714-220011",
-      "status": "active",
-      "created_at": "2026-01-10T00:00:00.000Z"
-    }
-  ],
+  "vehicles": [],
   "fuelEntries": [
     {
       "id": "entry_08",
@@ -598,116 +274,32 @@
   ],
   "pumps": [
     {
-      "id": "pump_1790154401459_k7840",
-      "tenant_id": "tenant_1",
-      "user_id": "user_1",
-      "name": "Sonargaon Highway Filling Station",
-      "location": "Sonargaon, Narayanganj",
-      "contact_person": "Al-Amin",
-      "phone": "+8801712998877",
-      "credit_limit": 1000000,
+      "id": "pump_1791205541444_86ps",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Nayeem Filling Station",
+      "location": "N/A",
+      "contact_person": "",
+      "phone": "",
+      "credit_limit": 500000,
       "opening_balance": 0,
       "current_balance": 0,
       "status": "active",
-      "created_at": "2026-09-23T00:00:00.000Z"
+      "created_at": "2026-10-05T13:05:41.000Z"
     },
     {
-      "id": "pump_sirajganj_depot",
-      "tenant_id": "tenant_3",
-      "user_id": "usr_jamuna_admin",
-      "name": "Sirajganj Central Fuel Depot & Station",
-      "location": "Station Road, Sirajganj",
-      "contact_person": "Farhan Chowdhury",
-      "phone": "+880 1715-442211",
-      "credit_limit": 600000,
-      "opening_balance": 75000,
-      "current_balance": 112000,
-      "status": "active",
-      "created_at": "2026-09-02T00:00:00.000Z"
-    },
-    {
-      "id": "pump_jamuna_bridge",
-      "tenant_id": "tenant_3",
-      "user_id": "usr_jamuna_admin",
-      "name": "Jamuna Bridge West Highway Fuel Hub",
-      "location": "Bangabandhu Bridge West Link, Sirajganj",
-      "contact_person": "Md. Tariqul Islam",
-      "phone": "+880 1712-998877",
-      "credit_limit": 800000,
-      "opening_balance": 150000,
-      "current_balance": 235400,
-      "status": "active",
-      "created_at": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "pump_bengal_fuel",
-      "tenant_id": "tenant_2",
-      "user_id": "bengal_admin",
-      "name": "Tejgaon Fuel & Energy Station",
-      "location": "Tejgaon Industrial Area, Dhaka",
-      "contact_person": "Mahmudur Rahman",
-      "phone": "+880 1819-338877",
-      "credit_limit": 750000,
-      "opening_balance": 95000,
-      "current_balance": 132000,
-      "status": "active",
-      "created_at": "2026-02-20T00:00:00.000Z"
-    },
-    {
-      "id": "pump_dhaka_express",
-      "tenant_id": "tenant_2",
-      "user_id": "bengal_admin",
-      "name": "Dhaka-Ctg Highway Central Pump",
-      "location": "Signboard, Narayanganj",
-      "contact_person": "Shafiqul Islam",
-      "phone": "+880 1711-229988",
-      "credit_limit": 1000000,
-      "opening_balance": 180000,
-      "current_balance": 245000,
-      "status": "active",
-      "created_at": "2026-02-15T00:00:00.000Z"
-    },
-    {
-      "id": "pump_meghna_express",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "name": "Meghna Express Petrol Pump",
-      "location": "Dashuria Junction, Pabna",
-      "contact_person": "Abu Sayeed",
-      "phone": "+880 1913-778899",
+      "id": "pump_1791205519519_x5cu",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Nayeem Filling Station",
+      "location": "N/A",
+      "contact_person": null,
+      "phone": null,
       "credit_limit": 500000,
-      "opening_balance": 50000,
-      "current_balance": 85600,
+      "opening_balance": 0,
+      "current_balance": 0,
       "status": "active",
-      "created_at": "2026-02-10T00:00:00.000Z"
-    },
-    {
-      "id": "pump_padma_central",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "name": "Padma Central Oil Filling Station",
-      "location": "Paksey Bridge Approach, Ishwardi",
-      "contact_person": "Nurul Islam",
-      "phone": "+880 1819-223344",
-      "credit_limit": 1200000,
-      "opening_balance": 220000,
-      "current_balance": 412000,
-      "status": "active",
-      "created_at": "2026-01-05T00:00:00.000Z"
-    },
-    {
-      "id": "pump_jamuna",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "name": "Jamuna Highway Fuel & CNG Station",
-      "location": "Rooppur Bypass, Ishwardi-Pabna Highway",
-      "contact_person": "Kabir Hossain (Manager)",
-      "phone": "+880 1716-550011",
-      "credit_limit": 800000,
-      "opening_balance": 150000,
-      "current_balance": 284500,
-      "status": "active",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-10-05T13:05:19.000Z"
     }
   ],
   "payments": [
@@ -1342,716 +934,200 @@
   ],
   "companies": [
     {
-      "id": "comp_1789893217574",
-      "tenant_id": "tenant_1",
-      "user_id": "usr_super_admin",
-      "name": "Prema Traders",
-      "code": "Prema",
-      "contact_person": "Md Babul Hossain",
-      "phone": "01775316434",
-      "email": "mashudrus@gmail.com",
-      "address": "Ruppur Mor, Paksey, Ishwardi, Pabna",
-      "created_at": "2026-09-20T00:00:00.000Z"
+      "id": "comp_1791205546090_no0t",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Roin World",
+      "code": "ROIN",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:46.000Z"
+    },
+    {
+      "id": "comp_1791205544986_py13",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Rossem",
+      "code": "ROSS",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:45.000Z"
+    },
+    {
+      "id": "comp_1791205543889_36wn",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Rosem",
+      "code": "ROSE",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:44.000Z"
+    },
+    {
+      "id": "comp_1791205543007_f101",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Office",
+      "code": "OFFI",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:43.000Z"
+    },
+    {
+      "id": "comp_1791205541892_ccuy",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "VDMU",
+      "code": "VDMU",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:42.000Z"
+    },
+    {
+      "id": "comp_1791205542783_1v2i",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "Orgon",
+      "code": "ORGO",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:42.000Z"
+    },
+    {
+      "id": "comp_1791205542338_hzs9",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "VDM",
+      "code": "VDM",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:42.000Z"
+    },
+    {
+      "id": "comp_1791205540984_ktml",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "NPCBL",
+      "code": "NPCB",
+      "contact_person": "N/A",
+      "phone": "N/A",
+      "email": "",
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:41.000Z"
     }
   ],
-  "vendors": [],
+  "vendors": [
+    {
+      "id": "ven_1791205541214_ehri",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": null,
+      "name": "M/S Biswas Traders",
+      "contact_person": null,
+      "phone": "01775316434",
+      "email": null,
+      "address": "N/A",
+      "created_at": "2026-10-05T13:05:41.000Z"
+    }
+  ],
   "fuelTypes": [
     {
-      "id": "fuel_diesel_tenant_prema_mummk7ds_awv6",
-      "tenant_id": "tenant_prema_mummk7ds_awv6",
-      "user_id": "usr_tenant_prema_mummk7ds_awv6_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-29",
-          "price": 108.5
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_octane_tenant_prema_mummk7ds_awv6",
-      "tenant_id": "tenant_prema_mummk7ds_awv6",
-      "user_id": "usr_tenant_prema_mummk7ds_awv6_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-29",
-          "price": 131
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_petrol_tenant_prema_mummk7ds_awv6",
-      "tenant_id": "tenant_prema_mummk7ds_awv6",
-      "user_id": "usr_tenant_prema_mummk7ds_awv6_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-29",
-          "price": 126
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_cng_tenant_prema_mummk7ds_awv6",
-      "tenant_id": "tenant_prema_mummk7ds_awv6",
-      "user_id": "usr_tenant_prema_mummk7ds_awv6_admin",
+      "id": "fuel_cng_tenant_ms_mutget9r_topz",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": "user_1",
       "name": "CNG",
       "code": "cng",
       "unit": "m3",
       "current_price": 43,
       "price_history": [
         {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-29",
+          "changed_by": "System Seed",
+          "date": "2026-10-04",
           "price": 43
         }
       ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
+      "updated_at": "2026-10-06T08:47:00.000Z"
     },
     {
-      "id": "fuel_lpg_tenant_prema_mummk7ds_awv6",
-      "tenant_id": "tenant_prema_mummk7ds_awv6",
-      "user_id": "usr_tenant_prema_mummk7ds_awv6_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-29",
-          "price": 115
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_diesel_tenant_prema_muo0mrwx_c6ni",
-      "tenant_id": "tenant_prema_muo0mrwx_c6ni",
-      "user_id": "usr_tenant_prema_muo0mrwx_c6ni_admin",
+      "id": "fuel_diesel_tenant_ms_mutget9r_topz",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": "user_1",
       "name": "Diesel",
       "code": "diesel",
       "unit": "Liter",
       "current_price": 108.5,
       "price_history": [
         {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
+          "changed_by": "System Seed",
+          "date": "2026-10-04",
           "price": 108.5
         }
       ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
+      "updated_at": "2026-10-06T08:46:59.000Z"
     },
     {
-      "id": "fuel_octane_tenant_prema_muo0mrwx_c6ni",
-      "tenant_id": "tenant_prema_muo0mrwx_c6ni",
-      "user_id": "usr_tenant_prema_muo0mrwx_c6ni_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 131
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_petrol_tenant_prema_muo0mrwx_c6ni",
-      "tenant_id": "tenant_prema_muo0mrwx_c6ni",
-      "user_id": "usr_tenant_prema_muo0mrwx_c6ni_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 126
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_cng_tenant_prema_muo0mrwx_c6ni",
-      "tenant_id": "tenant_prema_muo0mrwx_c6ni",
-      "user_id": "usr_tenant_prema_muo0mrwx_c6ni_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 43
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_lpg_tenant_prema_muo0mrwx_c6ni",
-      "tenant_id": "tenant_prema_muo0mrwx_c6ni",
-      "user_id": "usr_tenant_prema_muo0mrwx_c6ni_admin",
+      "id": "fuel_lpg_tenant_ms_mutget9r_topz",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": "user_1",
       "name": "LPG",
       "code": "lpg",
       "unit": "Kg",
       "current_price": 115,
       "price_history": [
         {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
+          "changed_by": "System Seed",
+          "date": "2026-10-04",
           "price": 115
         }
       ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
+      "updated_at": "2026-10-06T08:47:00.000Z"
     },
     {
-      "id": "fuel_diesel_tenant_prema_muo23a7c_64qt",
-      "tenant_id": "tenant_prema_muo23a7c_64qt",
-      "user_id": "usr_tenant_prema_muo23a7c_64qt_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 108.5
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_octane_tenant_prema_muo23a7c_64qt",
-      "tenant_id": "tenant_prema_muo23a7c_64qt",
-      "user_id": "usr_tenant_prema_muo23a7c_64qt_admin",
+      "id": "fuel_octane_tenant_ms_mutget9r_topz",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": "user_1",
       "name": "Octane",
       "code": "octane",
       "unit": "Liter",
       "current_price": 131,
       "price_history": [
         {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
+          "changed_by": "System Seed",
+          "date": "2026-10-04",
           "price": 131
         }
       ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
+      "updated_at": "2026-10-06T08:47:00.000Z"
     },
     {
-      "id": "fuel_petrol_tenant_prema_muo23a7c_64qt",
-      "tenant_id": "tenant_prema_muo23a7c_64qt",
-      "user_id": "usr_tenant_prema_muo23a7c_64qt_admin",
+      "id": "fuel_petrol_tenant_ms_mutget9r_topz",
+      "tenant_id": "tenant_ms_mutget9r_topz",
+      "user_id": "user_1",
       "name": "Petrol",
       "code": "petrol",
       "unit": "Liter",
       "current_price": 126,
       "price_history": [
         {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
+          "changed_by": "System Seed",
+          "date": "2026-10-04",
           "price": 126
         }
       ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_cng_tenant_prema_muo23a7c_64qt",
-      "tenant_id": "tenant_prema_muo23a7c_64qt",
-      "user_id": "usr_tenant_prema_muo23a7c_64qt_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 43
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_lpg_tenant_prema_muo23a7c_64qt",
-      "tenant_id": "tenant_prema_muo23a7c_64qt",
-      "user_id": "usr_tenant_prema_muo23a7c_64qt_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "changed_by": "Babul Hossain",
-          "date": "2026-09-30",
-          "price": 115
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:44.000Z"
-    },
-    {
-      "id": "fuel_diesel_tenant_bengal_muo29k03_yhgj",
-      "tenant_id": "tenant_bengal_muo29k03_yhgj",
-      "user_id": "usr_tenant_bengal_muo29k03_yhgj_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "changed_by": "Tariqul Islam",
-          "date": "2026-09-30",
-          "price": 108.5
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_octane_tenant_bengal_muo29k03_yhgj",
-      "tenant_id": "tenant_bengal_muo29k03_yhgj",
-      "user_id": "usr_tenant_bengal_muo29k03_yhgj_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "changed_by": "Tariqul Islam",
-          "date": "2026-09-30",
-          "price": 131
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_petrol_tenant_bengal_muo29k03_yhgj",
-      "tenant_id": "tenant_bengal_muo29k03_yhgj",
-      "user_id": "usr_tenant_bengal_muo29k03_yhgj_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "changed_by": "Tariqul Islam",
-          "date": "2026-09-30",
-          "price": 126
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_cng_tenant_bengal_muo29k03_yhgj",
-      "tenant_id": "tenant_bengal_muo29k03_yhgj",
-      "user_id": "usr_tenant_bengal_muo29k03_yhgj_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "changed_by": "Tariqul Islam",
-          "date": "2026-09-30",
-          "price": 43
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_lpg_tenant_bengal_muo29k03_yhgj",
-      "tenant_id": "tenant_bengal_muo29k03_yhgj",
-      "user_id": "usr_tenant_bengal_muo29k03_yhgj_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "changed_by": "Tariqul Islam",
-          "date": "2026-09-30",
-          "price": 115
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_diesel_tenant_test_mupff3mc_4q9r",
-      "tenant_id": "tenant_test_mupff3mc_4q9r",
-      "user_id": "usr_tenant_test_mupff3mc_4q9r_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "changed_by": "Rahim Ahmed",
-          "date": "2026-10-01",
-          "price": 108.5
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_octane_tenant_test_mupff3mc_4q9r",
-      "tenant_id": "tenant_test_mupff3mc_4q9r",
-      "user_id": "usr_tenant_test_mupff3mc_4q9r_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "changed_by": "Rahim Ahmed",
-          "date": "2026-10-01",
-          "price": 131
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_petrol_tenant_test_mupff3mc_4q9r",
-      "tenant_id": "tenant_test_mupff3mc_4q9r",
-      "user_id": "usr_tenant_test_mupff3mc_4q9r_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "changed_by": "Rahim Ahmed",
-          "date": "2026-10-01",
-          "price": 126
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_cng_tenant_test_mupff3mc_4q9r",
-      "tenant_id": "tenant_test_mupff3mc_4q9r",
-      "user_id": "usr_tenant_test_mupff3mc_4q9r_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "changed_by": "Rahim Ahmed",
-          "date": "2026-10-01",
-          "price": 43
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_lpg_tenant_test_mupff3mc_4q9r",
-      "tenant_id": "tenant_test_mupff3mc_4q9r",
-      "user_id": "usr_tenant_test_mupff3mc_4q9r_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "changed_by": "Rahim Ahmed",
-          "date": "2026-10-01",
-          "price": 115
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_bio_diesel_1791008835268",
-      "tenant_id": "tenant_1",
-      "user_id": "system",
-      "name": "Bio-Diesel Test",
-      "code": "bio_diesel",
-      "unit": "Liter",
-      "current_price": 112.5,
-      "price_history": [
-        {
-          "changed_by": "Administrator",
-          "date": "2026-10-03",
-          "price": 112.5
-        }
-      ],
-      "updated_at": "2026-10-03T08:44:45.000Z"
-    },
-    {
-      "id": "fuel_diesel_tenant_desh_mus371wo_yuzr",
-      "tenant_id": "tenant_desh_mus371wo_yuzr",
-      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 108.5,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_octane_tenant_desh_mus371wo_yuzr",
-      "tenant_id": "tenant_desh_mus371wo_yuzr",
-      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 131,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_petrol_tenant_desh_mus371wo_yuzr",
-      "tenant_id": "tenant_desh_mus371wo_yuzr",
-      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 126,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_cng_tenant_desh_mus371wo_yuzr",
-      "tenant_id": "tenant_desh_mus371wo_yuzr",
-      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 43,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_lpg_tenant_desh_mus371wo_yuzr",
-      "tenant_id": "tenant_desh_mus371wo_yuzr",
-      "user_id": "usr_tenant_desh_mus371wo_yuzr_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 115,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_diesel_tenant_desh_mus38ms7_5rtb",
-      "tenant_id": "tenant_desh_mus38ms7_5rtb",
-      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 108.5,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_octane_tenant_desh_mus38ms7_5rtb",
-      "tenant_id": "tenant_desh_mus38ms7_5rtb",
-      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 131,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_petrol_tenant_desh_mus38ms7_5rtb",
-      "tenant_id": "tenant_desh_mus38ms7_5rtb",
-      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 126,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_cng_tenant_desh_mus38ms7_5rtb",
-      "tenant_id": "tenant_desh_mus38ms7_5rtb",
-      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 43,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_lpg_tenant_desh_mus38ms7_5rtb",
-      "tenant_id": "tenant_desh_mus38ms7_5rtb",
-      "user_id": "usr_tenant_desh_mus38ms7_5rtb_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 115,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_diesel_tenant_desh_mus3971j_npu8",
-      "tenant_id": "tenant_desh_mus3971j_npu8",
-      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
-      "name": "Diesel",
-      "code": "diesel",
-      "unit": "Liter",
-      "current_price": 108.5,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 108.5,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_octane_tenant_desh_mus3971j_npu8",
-      "tenant_id": "tenant_desh_mus3971j_npu8",
-      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
-      "name": "Octane",
-      "code": "octane",
-      "unit": "Liter",
-      "current_price": 131,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 131,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_petrol_tenant_desh_mus3971j_npu8",
-      "tenant_id": "tenant_desh_mus3971j_npu8",
-      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
-      "name": "Petrol",
-      "code": "petrol",
-      "unit": "Liter",
-      "current_price": 126,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 126,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_cng_tenant_desh_mus3971j_npu8",
-      "tenant_id": "tenant_desh_mus3971j_npu8",
-      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
-      "name": "CNG",
-      "code": "cng",
-      "unit": "m3",
-      "current_price": 43,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 43,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
-    },
-    {
-      "id": "fuel_lpg_tenant_desh_mus3971j_npu8",
-      "tenant_id": "tenant_desh_mus3971j_npu8",
-      "user_id": "usr_tenant_desh_mus3971j_npu8_admin",
-      "name": "LPG",
-      "code": "lpg",
-      "unit": "Kg",
-      "current_price": 115,
-      "price_history": [
-        {
-          "date": "2026-10-03",
-          "price": 115,
-          "changed_by": "Engr. Rahman Chowdhury"
-        }
-      ],
-      "updated_at": "2026-10-03"
+      "updated_at": "2026-10-06T08:47:00.000Z"
     }
   ],
   "tankers": [],

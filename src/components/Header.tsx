@@ -139,65 +139,90 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Elegant Divider */}
           <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-800 hidden md:block shrink-0" />
 
-          {/* Company Brand (Logo on Left + Company Name on Right) */}
-          <div
-            id="company-header-brand"
-            className="flex items-center gap-2 sm:gap-2.5 bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/90 px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:border-amber-400/50 shadow-2xs group relative"
-          >
-            {/* Logo Container - Sized harmoniously to match the company name font size */}
-            <div className="relative shrink-0 flex items-center justify-center">
-              {currentTenant?.logo ? (
-                <img
-                  src={currentTenant.logo}
-                  alt={currentTenant?.name || 'Company Logo'}
-                  className="h-7 w-7 sm:h-8 sm:w-8 max-w-[32px] max-h-[32px] object-contain rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 p-0.5 shadow-2xs"
-                />
-              ) : (
-                <div className="w-7 h-7 sm:h-8 sm:w-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <Building className="w-4 h-4" />
-                </div>
-              )}
-
-              {/* Super Admin Quick Logo Upload Trigger */}
-              {isSuperAdmin && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 bg-amber-500 hover:bg-amber-400 text-slate-950 p-1 rounded-full shadow-xs border border-white dark:border-slate-900 transition-all duration-150 hover:scale-115 cursor-pointer"
-                    title="Super Admin: Click to upload company logo"
-                    aria-label="Upload Company Logo"
-                  >
-                    <Camera className="w-2.5 h-2.5" />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg, image/svg+xml, image/webp"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Company Name & Code */}
-            <div className="flex flex-col text-left min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-[280px]">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">
-                  {currentTenant?.name || 'FuelNest Fleet'}
-                </span>
-                {isSuperAdmin && (
-                  <span className="hidden lg:inline-block text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">
-                    Admin
+          {/* Header Brand: In Master Control Mode, display Central Master Control, NEVER subscriber company */}
+          {isSaasControlOpen ? (
+            <div
+              id="master-control-header-brand"
+              className="flex items-center gap-2 sm:gap-2.5 bg-gradient-to-r from-amber-500/15 via-blue-950/40 to-slate-900/90 border border-amber-500/30 px-2.5 py-1.5 rounded-xl shadow-xs"
+            >
+              <div className="w-7 h-7 sm:h-8 sm:w-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-xs shrink-0">
+                <Crown className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col text-left min-w-0 max-w-[140px] xs:max-w-[180px] sm:max-w-[260px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-black text-amber-500 dark:text-amber-400 truncate leading-tight">
+                    Central Master Control
                   </span>
+                  <span className="hidden sm:inline-block text-[9px] font-black text-slate-950 bg-amber-400 px-1 py-0.2 rounded">
+                    HQ
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-medium truncate">
+                  Platform Governance Console
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* Subscriber Company Brand (Logo on Left + Company Name on Right) */
+            <div
+              id="company-header-brand"
+              className="flex items-center gap-2 sm:gap-2.5 bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/90 px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:border-amber-400/50 shadow-2xs group relative"
+            >
+              {/* Logo Container */}
+              <div className="relative shrink-0 flex items-center justify-center">
+                {currentTenant?.logo ? (
+                  <img
+                    src={currentTenant.logo}
+                    alt={currentTenant?.name || 'Company Logo'}
+                    className="h-7 w-7 sm:h-8 sm:w-8 max-w-[32px] max-h-[32px] object-contain rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 p-0.5 shadow-2xs"
+                  />
+                ) : (
+                  <div className="w-7 h-7 sm:h-8 sm:w-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                    <Building className="w-4 h-4" />
+                  </div>
+                )}
+
+                {/* Super Admin Quick Logo Upload Trigger */}
+                {isSuperAdmin && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 bg-amber-500 hover:bg-amber-400 text-slate-950 p-1 rounded-full shadow-xs border border-white dark:border-slate-900 transition-all duration-150 hover:scale-115 cursor-pointer"
+                      title="Super Admin: Click to upload company logo"
+                      aria-label="Upload Company Logo"
+                    >
+                      <Camera className="w-2.5 h-2.5" />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/svg+xml, image/webp"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+                  </>
                 )}
               </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium truncate">
-                ID: {currentTenant?.code || 'DEFAULT'}
-              </span>
+
+              {/* Company Name & Code */}
+              <div className="flex flex-col text-left min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-[280px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">
+                    {currentTenant?.name || 'FuelNest Fleet'}
+                  </span>
+                  {isSuperAdmin && (
+                    <span className="hidden lg:inline-block text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium truncate">
+                  ID: {currentTenant?.code || 'DEFAULT'}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Center/Right Actions */}
@@ -207,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="saas-view-toggle-header-btn"
               onClick={() => setIsSaasControlOpen(!isSaasControlOpen)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs border shrink-0 whitespace-nowrap ${
                 isSaasControlOpen
                   ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-blue-500/20'
                   : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 font-black shadow-amber-500/20'
@@ -216,13 +241,13 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {isSaasControlOpen ? (
                 <>
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span className="hidden md:inline">{t.fleetViewBtn}</span>
+                  <LayoutDashboard className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline font-bold">{t.fleetViewBtn}</span>
                 </>
               ) : (
                 <>
-                  <Crown className="w-4 h-4" />
-                  <span className="hidden md:inline">{t.saasControlBtn}</span>
+                  <Crown className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline font-bold">{t.saasControlBtn}</span>
                 </>
               )}
             </button>
@@ -263,17 +288,75 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Logout</span>
           </button>
 
-          {/* Tenant Switcher - ONLY for Owner & Moderator. Subscribers see their Company badge without switch option */}
-          {(activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
-            <div className="relative">
-              <button
-                id="tenant-switcher-btn"
-                onClick={() => {
-                  setShowTenantMenu(!showTenantMenu);
-                  setShowUserMenu(false);
-                }}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-amber-300/80 dark:border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors"
-                title={t.switchTenant}
+          {/* Tenant Switcher: HIDE in Master Control Mode so subscriber workspace name never leaks */}
+          {!isSaasControlOpen && (
+            (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
+              <div className="relative">
+                <button
+                  id="tenant-switcher-btn"
+                  onClick={() => {
+                    setShowTenantMenu(!showTenantMenu);
+                    setShowUserMenu(false);
+                  }}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-amber-300/80 dark:border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors"
+                  title={t.switchTenant}
+                >
+                  {currentTenant?.logo ? (
+                    <img
+                      src={currentTenant.logo}
+                      alt={currentTenant?.name || 'Company'}
+                      className="h-4.5 w-auto max-w-[28px] max-h-[18px] object-contain rounded shrink-0"
+                    />
+                  ) : (
+                    <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  )}
+                  <div className="text-left hidden md:block">
+                    <span className="text-[10px] text-amber-700 dark:text-amber-400 block uppercase font-bold leading-none">
+                      {t.tenantBadge}
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[140px] block">
+                      {currentTenant?.code || 'DEFAULT'}
+                    </span>
+                  </div>
+                </button>
+
+                {showTenantMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 transition-opacity duration-150">
+                    <div className="px-2 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t.switchTenant}
+                    </div>
+                    {allTenants.map(ten => (
+                      <button
+                        key={ten?.id || Math.random()}
+                        onClick={() => {
+                          if (ten?.id) setCurrentTenantId(ten.id);
+                          setShowTenantMenu(false);
+                        }}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-colors flex items-center gap-2 mb-1 ${
+                          ten?.id === currentTenant?.id
+                            ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-500/30'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {ten?.logo ? (
+                          <img src={ten.logo} alt={ten.name || 'Company'} className="h-4 w-auto max-w-[24px] object-contain rounded shrink-0" />
+                        ) : (
+                          <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <div className="font-bold text-slate-900 dark:text-white truncate">{ten?.name || 'Unnamed Company'}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">ID: {ten?.id || ''} • {ten?.currency || 'BDT'}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                id="subscriber-company-pill"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-2xs"
+                title={`${currentTenant?.name || ''} (${currentTenant?.code || ''})`}
               >
                 {currentTenant?.logo ? (
                   <img
@@ -285,75 +368,34 @@ export const Header: React.FC<HeaderProps> = ({
                   <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 )}
                 <div className="text-left hidden md:block">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-400 block uppercase font-bold leading-none">
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none">
                     {t.tenantBadge}
                   </span>
                   <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[140px] block">
-                    {currentTenant?.code || 'DEFAULT'}
+                    {currentTenant?.name || 'FuelNest'}
                   </span>
                 </div>
-              </button>
+              </div>
+            )
+          )}
 
-              {showTenantMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0d172f] rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 transition-opacity duration-150">
-                  <div className="px-2 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    {t.switchTenant}
-                  </div>
-                  {allTenants.map(ten => (
-                    <button
-                      key={ten?.id || Math.random()}
-                      onClick={() => {
-                        if (ten?.id) setCurrentTenantId(ten.id);
-                        setShowTenantMenu(false);
-                      }}
-                      className={`w-full text-left p-2 rounded-lg text-xs transition-colors flex items-center gap-2 mb-1 ${
-                        ten?.id === currentTenant?.id
-                          ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-500/30'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {ten?.logo ? (
-                        <img src={ten.logo} alt={ten.name || 'Company'} className="h-4 w-auto max-w-[24px] object-contain rounded shrink-0" />
-                      ) : (
-                        <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      )}
-                      <div className="truncate">
-                        <div className="font-bold text-slate-900 dark:text-white truncate">{ten?.name || 'Unnamed Company'}</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">ID: {ten?.id || ''} • {ten?.currency || 'BDT'}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
+          {/* User & Role Badge: In Master Control, show Platform Master Owner info */}
+          {isSaasControlOpen ? (
             <div
-              id="subscriber-company-pill"
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-2xs"
-              title={`${currentTenant?.name || ''} (${currentTenant?.code || ''})`}
+              id="master-control-user-pill"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-2xs"
             >
-              {currentTenant?.logo ? (
-                <img
-                  src={currentTenant.logo}
-                  alt={currentTenant?.name || 'Company'}
-                  className="h-4.5 w-auto max-w-[28px] max-h-[18px] object-contain rounded shrink-0"
-                />
-              ) : (
-                <Building className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              )}
-              <div className="text-left hidden md:block">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none">
-                  {t.tenantBadge}
+              <Crown className="w-3.5 h-3.5 text-amber-500" />
+              <div className="text-left hidden lg:block">
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 block uppercase font-black leading-none">
+                  {activeAuthRole === 'saas_owner' ? 'Platform Owner' : 'Master Admin'}
                 </span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[140px] block">
-                  {currentTenant?.name || 'FuelNest'}
+                <span className="font-bold text-slate-900 dark:text-white truncate max-w-[130px] block">
+                  {activeAuthRole === 'saas_owner' ? (saasOwner.name || saasOwner.username) : (activeModerator?.name || 'Moderator')}
                 </span>
               </div>
             </div>
-          )}
-
-          {/* User & Role Badge - Dropdown ONLY for Owner & Moderator */}
-          {(activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
+          ) : (activeAuthRole === 'saas_owner' || activeAuthRole === 'saas_moderator') ? (
             <div className="relative">
               <button
                 id="user-switcher-btn"

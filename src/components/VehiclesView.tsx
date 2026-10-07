@@ -46,6 +46,19 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
 
   const isViewer = currentUser?.role === 'client_viewer';
 
+  // Helper to reliably resolve vehicle fuel type name so the column is never blank
+  const getVehicleFuelTypeName = (veh: Vehicle) => {
+    const ft = fuelTypes.find(f => f.id === veh.fuel_type_id || (f.name && f.name.toLowerCase() === (veh.fuel_type_id || '').toLowerCase()));
+    if (ft?.name && ft.name.trim()) return ft.name.trim();
+    if ((veh as any).fuel_type && String((veh as any).fuel_type).trim()) return String((veh as any).fuel_type).trim();
+    if (veh.fuel_type_id && !veh.fuel_type_id.startsWith('fuel_') && String(veh.fuel_type_id).trim()) return String(veh.fuel_type_id).trim();
+    if (veh.fuel_type_id && veh.fuel_type_id.startsWith('fuel_')) {
+      const parts = veh.fuel_type_id.split('_');
+      if (parts[1]) return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+    }
+    return 'Diesel';
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -176,7 +189,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
       const cat = categories.find(c => c.id === veh.category_id);
       const comp = companies.find(c => c.id === veh.company_id);
       const vnd = vendors.find(v => v.id === veh.vendor_id);
-      const ft = fuelTypes.find(f => f.id === veh.fuel_type_id);
+      const fuelName = getVehicleFuelTypeName(veh);
       const isLph = cat?.metric_type === 'lph';
       return [
         veh.vehicle_number,
@@ -184,7 +197,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
         comp?.name || '',
         veh.ownership === 'owned' ? 'Owned' : 'Rented',
         vnd?.name || 'N/A',
-        ft?.name || '',
+        fuelName,
         `${veh.expected_benchmark} ${isLph ? 'L/Hr' : 'KM/L'}`,
         `${veh.current_odometer} ${isLph ? 'Hrs' : 'KM'}`,
         veh.driver_name,
@@ -201,7 +214,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
       const cat = categories.find(c => c.id === veh.category_id);
       const comp = companies.find(c => c.id === veh.company_id);
       const vnd = vendors.find(v => v.id === veh.vendor_id);
-      const ft = fuelTypes.find(f => f.id === veh.fuel_type_id);
+      const fuelName = getVehicleFuelTypeName(veh);
       const isLph = cat?.metric_type === 'lph';
       return [
         veh.vehicle_number,
@@ -209,7 +222,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
         comp?.name || '',
         veh.ownership === 'owned' ? 'Owned' : 'Rented',
         vnd?.name || 'N/A',
-        ft?.name || '',
+        fuelName,
         `${veh.expected_benchmark} ${isLph ? 'L/Hr' : 'KM/L'}`,
         `${veh.current_odometer} ${isLph ? 'Hrs' : 'KM'}`,
         veh.driver_name,
@@ -430,7 +443,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
                   const cat = categories.find(c => c.id === veh.category_id);
                   const comp = companies.find(c => c.id === veh.company_id);
                   const vnd = vendors.find(v => v.id === veh.vendor_id);
-                  const ft = fuelTypes.find(f => f.id === veh.fuel_type_id);
+                  const ft = fuelTypes.find(f => f.id === veh.fuel_type_id || (f.name && f.name.toLowerCase() === (veh.fuel_type_id || '').toLowerCase()));
                   const isLph = cat?.metric_type === 'lph';
 
                   return (
@@ -470,8 +483,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
                       </td>
 
                       {/* Fuel Type */}
-                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-medium text-slate-600">
-                        {ft?.name}
+                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap font-medium text-slate-700">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                          {getVehicleFuelTypeName(veh)}
+                        </span>
                       </td>
 
                       {/* Benchmark */}

@@ -410,9 +410,15 @@ export const BulkDataImportModal: React.FC<Props> = ({
               const rawOwner = cleanRow.ownership || cleanRow.owner_type || cleanRow.vehicle_ownership;
               cleanRow.ownership = (rawOwner && String(rawOwner).trim()) ? String(rawOwner).trim() : 'Own';
 
-              // Fuel Type (Default Diesel if blank)
-              const rawFuel = cleanRow.fuel_type || cleanRow.fuel || cleanRow.fuel_name || cleanRow.tel;
-              cleanRow.fuel_type = (rawFuel && String(rawFuel).trim()) ? String(rawFuel).trim() : 'Diesel';
+              // Fuel Type (Comprehensive matching and auto-default Diesel if blank)
+              let rawFuel = cleanRow.fuel_type || cleanRow.fueltype || cleanRow.fuel || cleanRow.fuel_name || cleanRow.fuel_type_id || cleanRow.type_of_fuel || cleanRow.fuel_category || cleanRow.tel;
+              if (!rawFuel) {
+                const fuelCandidateKey = Object.keys(cleanRow).find(k => (k === 'fuel' || k.startsWith('fuel_') || k.startsWith('fuel')) && !k.includes('price') && !k.includes('rate') && !k.includes('tank') && !k.includes('pump'));
+                if (fuelCandidateKey) rawFuel = cleanRow[fuelCandidateKey];
+              }
+              const cleanFuel = (rawFuel && String(rawFuel).trim() && String(rawFuel).trim() !== 'N/A') ? String(rawFuel).trim() : 'Diesel';
+              cleanRow.fuel_type = cleanFuel;
+              cleanRow.fuel_type_id = cleanFuel;
 
               // Benchmark Mileage
               const rawBench = cleanRow.benchmark_mileage || cleanRow.benchmark || cleanRow.expected_benchmark || cleanRow.mileage || cleanRow.kmpl || cleanRow.target_mileage;

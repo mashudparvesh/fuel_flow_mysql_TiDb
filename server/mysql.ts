@@ -1300,13 +1300,68 @@ export async function deleteCategoryInDB(id: string): Promise<boolean> {
   }
 }
 
+export function getPool(): Pool | null {
+  return pool;
+}
+
+export async function deleteCompanyInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `companies` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting company:', err);
+    return false;
+  }
+}
+
+export async function deleteVendorInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `vendors` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting vendor:', err);
+    return false;
+  }
+}
+
 export async function deleteTankerInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
-    await pool.query('DELETE FROM `tanker_inventories` WHERE `id` = ?', [id]);
+    await pool.query('DELETE FROM `tanker_inventories` WHERE `id` = ? OR `tanker_id` = ?', [id, id]);
     return true;
   } catch (err) {
     console.error('[MySQL] Error deleting tanker:', err);
     return false;
+  }
+}
+
+export async function deleteFuelTypeInDB(id: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('DELETE FROM `fuel_types` WHERE `id` = ?', [id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error deleting fuel type:', err);
+    return false;
+  }
+}
+
+export async function purgeOrphanedDataInDB(): Promise<void> {
+  if (!pool || !lastStatus.connected) return;
+  try {
+    await pool.query('DELETE FROM `users` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `vehicles` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `fuel_entries` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `fuel_pumps` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `pump_payments` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `companies` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `vendors` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `fuel_types` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `tanker_inventories` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+    await pool.query('DELETE FROM `tanker_logs` WHERE `tenant_id` NOT IN (SELECT `id` FROM `tenants`)').catch(() => {});
+  } catch (e) {
+    console.warn('[MySQL] Error during purge:', e);
   }
 }

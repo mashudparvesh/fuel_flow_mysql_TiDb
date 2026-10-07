@@ -283,31 +283,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Tenant & User Status Card */}
           <div className="p-3 mb-2 rounded-xl bg-slate-50 dark:bg-[#080e1e] border border-slate-200 dark:border-blue-950">
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-2 truncate">
-                <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <div className="text-xs font-bold text-slate-800 dark:text-white truncate" title={currentTenant?.name || 'FuelNest'}>
-                  {currentTenant?.name || 'FuelNest'}
+            {isMasterMode ? (
+              <>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 truncate">
+                    <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <div className="text-xs font-black text-slate-900 dark:text-white truncate" title={saasOwner.name || 'Central Master Control'}>
+                      {saasOwner.name || saasOwner.username || 'Central Master Control'}
+                    </div>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500 text-slate-950 shrink-0">
+                    MASTER
+                  </span>
                 </div>
-              </div>
-              {activeAuthRole === 'saas_owner' && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500 text-slate-950 shrink-0">
-                  Admin
-                </span>
-              )}
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-blue-900/40 pt-1.5">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                <span className="capitalize font-semibold text-slate-700 dark:text-slate-300">
-                  {currentUser?.role ? currentUser.role.replace('_', ' ') : 'User'}
-                </span>
-              </span>
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                {labels.systemActive}
-              </span>
-            </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-blue-900/40 pt-1.5">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-amber-500" />
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      {activeAuthRole === 'saas_owner' ? 'Platform SuperAdmin' : (activeModerator?.name || 'Moderator')}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Master Active
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 truncate">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div className="text-xs font-bold text-slate-800 dark:text-white truncate" title={currentTenant?.name || 'FuelNest'}>
+                      {currentTenant?.name || 'FuelNest'}
+                    </div>
+                  </div>
+                  {activeAuthRole === 'saas_owner' && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500 text-slate-950 shrink-0">
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-blue-900/40 pt-1.5">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    <span className="capitalize font-semibold text-slate-700 dark:text-slate-300">
+                      {currentUser?.role ? currentUser.role.replace('_', ' ') : 'User'}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    {labels.systemActive}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Navigation Links */}

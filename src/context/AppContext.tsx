@@ -654,17 +654,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (json.success && json.data) {
           const fleetData = json.data;
 
-          // Helper to safely merge server items and local items ensuring unique IDs
-          const safeMergeEntities = <T extends { id?: string }>(serverItems: T[] = [], localItems: T[] = []) => {
+          // Helper to safely merge server items and local items ensuring unique IDs & unique names per tenant
+          const safeMergeEntities = <T extends { id?: string; name?: string; tenant_id?: string }>(serverItems: T[] = [], localItems: T[] = []) => {
             const map = new Map<string, T>();
+            const nameToIdMap = new Map<string, string>(); // (tenant_id + '::' + name.toLowerCase()) -> id
             (serverItems || []).forEach(item => {
-              if (item && item.id) map.set(item.id, item);
+              if (item && item.id) {
+                const nameKey = item.name ? ((item.tenant_id || '') + '::' + item.name.trim().toLowerCase()) : null;
+                if (nameKey && nameToIdMap.has(nameKey)) {
+                  // Duplicate name on server, skip duplicate
+                  return;
+                }
+                map.set(item.id, item);
+                if (nameKey) nameToIdMap.set(nameKey, item.id);
+              }
             });
             const missingOnServer: T[] = [];
             (localItems || []).forEach(item => {
               if (item && item.id) {
+                const nameKey = item.name ? ((item.tenant_id || '') + '::' + item.name.trim().toLowerCase()) : null;
+                const existingIdByName = nameKey ? nameToIdMap.get(nameKey) : null;
+                if (existingIdByName) {
+                  // Entity with same name already exists, merge attributes into existing
+                  const existing = map.get(existingIdByName)!;
+                  map.set(existingIdByName, { ...existing, ...item, id: existingIdByName });
+                  return;
+                }
                 if (!map.has(item.id)) {
                   map.set(item.id, item);
+                  if (nameKey) nameToIdMap.set(nameKey, item.id);
                   missingOnServer.push(item);
                 }
               }
@@ -946,15 +964,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Strict Tenant-scoped records (Zero cross-tenant data leakage)
   const scopedCompanies = useMemo(() => {
-    return companies.filter(c => c.tenant_id === currentTenantId);
+    const list = companies.filter(c => c.tenant_id === currentTenantId);
+    const seen = new Set<string>();
+    return list.filter(c => {
+      const key = (c.name || '').toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [companies, currentTenantId]);
 
   const scopedVendors = useMemo(() => {
-    return vendors.filter(v => v.tenant_id === currentTenantId);
+    const list = vendors.filter(v => v.tenant_id === currentTenantId);
+    const seen = new Set<string>();
+    return list.filter(v => {
+      const key = (v.name || '').toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [vendors, currentTenantId]);
 
   const scopedPumps = useMemo(() => {
-    return pumps.filter(p => p.tenant_id === currentTenantId);
+    const list = pumps.filter(p => p.tenant_id === currentTenantId);
+    const seen = new Set<string>();
+    return list.filter(p => {
+      const key = (p.name || '').toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [pumps, currentTenantId]);
 
   const scopedFuelTypes = useMemo(() => {
@@ -1064,10 +1103,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateCompany = (id: string, comp: Partial<Company>) => {
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...comp } : c));
+    fetch(`/api/fleet/companies/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(comp)
+    }).catch(() => {});
   };
 
   const deleteCompany = (id: string) => {
     setCompanies(prev => prev.filter(c => c.id !== id));
+    fetch(`/api/fleet/companies/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Vendor CRUD
@@ -1089,10 +1136,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateVendor = (id: string, vend: Partial<Vendor>) => {
     setVendors(prev => prev.map(v => v.id === id ? { ...v, ...vend } : v));
+    fetch(`/api/fleet/vendors/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(vend)
+    }).catch(() => {});
   };
 
   const deleteVendor = (id: string) => {
     setVendors(prev => prev.filter(v => v.id !== id));
+    fetch(`/api/fleet/vendors/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Pump CRUD
@@ -3010,8 +3065,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const venKey = (r.vendor_name || r.vendor || '').toLowerCase().trim();
         const matchedVenId = vendorNameToIdMap.get(venKey) || undefined;
 
-        const fuelKey = (r.fuel_type || '').toLowerCase().trim();
-        const matchedFuel = fuelNameToIdMap.get(fuelKey) || (fuelTypes[0]?.name || 'Diesel');
+        const fuelKey = (r.fuel_type || r.fuel || '').toLowerCase().trim();
+        const matchedFuel = fuelNameToIdMap.get(fuelKey) || (r.fuel_type && String(r.fuel_type).trim() !== 'N/A' ? String(r.fuel_type).trim() : null) || (fuelTypes[0]?.name || 'Diesel');
 
         const isRental = matchedVenId !== undefined || (r.ownership && String(r.ownership).toLowerCase() === 'rental');
 
@@ -3040,6 +3095,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           vendor_id: matchedVenId,
           ownership: isRental ? 'rented' : 'owned' as 'owned' | 'rented',
           fuel_type_id: matchedFuel,
+          fuel_type: matchedFuel,
           expected_benchmark: Number(r.benchmark_mileage || r.expected_benchmark || r.benchmark) || 8.0,
           current_odometer: Number(r.current_meter || r.current_odometer || r.initial_odometer) || 0,
           driver_name: (driverName && String(driverName).trim()) ? String(driverName).trim() : 'N/A',

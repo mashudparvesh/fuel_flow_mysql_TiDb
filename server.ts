@@ -4072,6 +4072,32 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
     }
   });
 
+  app.delete('/api/fleet/companies/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.companies = (store.companies || []).filter(c => c.id !== id);
+      saveFleetData({ companies: store.companies });
+      await deleteCompanyInDB(id).catch(() => {});
+      res.json({ success: true, message: 'Company deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.delete('/api/fleet/vendors/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const store = loadFleetData();
+      store.vendors = (store.vendors || []).filter(v => v.id !== id);
+      saveFleetData({ vendors: store.vendors });
+      await deleteVendorInDB(id).catch(() => {});
+      res.json({ success: true, message: 'Vendor deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
   app.post('/api/fleet/tanker-logs', async (req: Request, res: Response) => {
     try {
       const log = req.body;
