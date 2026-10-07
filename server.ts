@@ -43,6 +43,35 @@ const CONTACT_MESSAGES_FILE = path.join(DATA_DIR, 'contact_messages.json');
 const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site_content.json');
 const ADMIN_NOTIFICATIONS_FILE = path.join(DATA_DIR, 'admin_notifications.json');
 const SUBSCRIPTION_PAYMENTS_FILE = path.join(DATA_DIR, 'subscription_payments.json');
+const AUDIT_LOGS_FILE = path.join(DATA_DIR, 'audit_logs.json');
+
+function loadAuditLogs(): any[] {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(AUDIT_LOGS_FILE)) {
+      const raw = fs.readFileSync(AUDIT_LOGS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveAuditLog(log: { user_id?: string; user_name?: string; action: string; entity_type: string; details: string }) {
+  try {
+    ensureDataDir();
+    const logs = loadAuditLogs();
+    logs.unshift({
+      id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      ...log
+    });
+    if (logs.length > 200) logs.length = 200;
+    fs.writeFileSync(AUDIT_LOGS_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[Audit Log Error]:', e);
+  }
+}
 
 const DEFAULT_USERS: any[] = [];
 
@@ -76,6 +105,9 @@ function ensureDataDir() {
   }
   if (!fs.existsSync(SUBSCRIPTION_PAYMENTS_FILE)) {
     fs.writeFileSync(SUBSCRIPTION_PAYMENTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(AUDIT_LOGS_FILE)) {
+    fs.writeFileSync(AUDIT_LOGS_FILE, JSON.stringify([], null, 2), 'utf-8');
   }
 }
 
@@ -1926,6 +1958,26 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
   // Baniq Pay Gateway Integration & Webhook (API Key, API Secret & Webhook)
   // Supports automated verification for bKash, Nagad, Rocket & Bank
   // -------------------------------------------------------------
+  // Master Action Audit Trail Endpoints
+  app.get('/api/master/audit-logs', (req: Request, res: Response) => {
+    try {
+      const logs = loadAuditLogs();
+      res.json({ success: true, logs });
+    } catch (e: any) {
+      res.json({ success: true, logs: [] });
+    }
+  });
+
+  app.post('/api/master/audit-logs', (req: Request, res: Response) => {
+    try {
+      const log = req.body;
+      saveAuditLog(log);
+      res.json({ success: true, message: 'Audit log recorded' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e?.message });
+    }
+  });
+
   const handleBaniqPayCheckout = async (req: Request, res: Response) => {
     try {
       const { full_name, email, phone, amount, metadata } = req.body;

@@ -164,6 +164,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'owner_profile',
       label: 'Security & Access',
       icon: <Key className="w-5 h-5" />
+    },
+    {
+      id: 'audit_trail',
+      label: 'Action Audit Trail',
+      icon: <ShieldCheck className="w-5 h-5" />,
+      badge: 'Logs'
     }
   ];
 

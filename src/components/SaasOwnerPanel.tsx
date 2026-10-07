@@ -68,7 +68,8 @@ export type SaasOwnerTabType =
   | 'email'
   | 'cms_pages'
   | 'branding'
-  | 'promo_video';
+  | 'promo_video'
+  | 'audit_trail';
 
 export const SaasOwnerPanel: React.FC<{
   onOpenCompanyUserManagement?: () => void;
@@ -577,6 +578,38 @@ export const SaasOwnerPanel: React.FC<{
     }
   };
 
+  const handleRejectTenantPlan = async (tenant: any) => {
+    if (!tenant) return;
+    try {
+      setActionLoadingId(tenant.id);
+      await fetch(`/api/tenants/${tenant.id}/cascade`, {
+        method: 'DELETE'
+      });
+      deleteTenantSubscriber(tenant.id);
+      await Promise.all([
+        refreshTenantsFromServer?.(),
+        fetchRegistrationRequests()
+      ]);
+      try {
+        const ch = new BroadcastChannel('fuelflow_tenants_sync');
+        ch.postMessage({ type: 'REFRESH_TENANTS' });
+        ch.close();
+      } catch (e) {}
+      setActionFeedbackMsg({
+        text: `Registration request for "${tenant.name}" has been rejected and permanently removed from the database.`,
+        type: 'error'
+      });
+      setTimeout(() => setActionFeedbackMsg(null), 5000);
+    } catch (err: any) {
+      setActionFeedbackMsg({
+        text: err?.message || 'Error rejecting registration.',
+        type: 'error'
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleSuspendTenant = async (tenant: any) => {
     if (!tenant) return;
     try {
@@ -637,6 +670,23 @@ export const SaasOwnerPanel: React.FC<{
   const [emailTestResult, setEmailTestResult] = useState<any>(null);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [emailLogsLoading, setEmailLogsLoading] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLogsLoading, setAuditLogsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'audit_trail') {
+      setAuditLogsLoading(true);
+      fetch('/api/master/audit-logs')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.logs)) {
+            setAuditLogs(data.logs);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setAuditLogsLoading(false));
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'email') {
@@ -2068,6 +2118,17 @@ export const SaasOwnerPanel: React.FC<{
                                 <span>Approve Plan</span>
                               </>
                             )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRejectTenantPlan(tenant)}
+                            disabled={actionLoadingId === tenant.id}
+                            className="py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-md shadow-rose-600/20 cursor-pointer disabled:opacity-50 transition-transform active:scale-95 flex items-center gap-1.5"
+                            title="Reject Registration"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>Reject</span>
                           </button>
 
                           <button

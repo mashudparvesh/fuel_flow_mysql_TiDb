@@ -1329,6 +1329,7 @@ export async function deleteVendorInDB(id: string): Promise<boolean> {
 export async function deleteTankerInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
+    await pool.query('DELETE FROM `tanker_logs` WHERE `tanker_id` = ?', [id]).catch(() => {});
     await pool.query('DELETE FROM `tanker_inventories` WHERE `id` = ? OR `tanker_id` = ?', [id, id]);
     return true;
   } catch (err) {

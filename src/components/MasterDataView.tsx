@@ -1001,7 +1001,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                   </div>
                   <h4 className="font-extrabold text-slate-900 dark:text-white text-sm mb-1">{ft.name}</h4>
                   <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-                    BDT {ft.current_price.toFixed(2)} <span className="text-xs font-normal text-slate-600 dark:text-slate-300">/ {ft.unit}</span>
+                    BDT {Number(ft.current_price || 0).toFixed(2)} <span className="text-xs font-normal text-slate-600 dark:text-slate-300">/ {ft.unit}</span>
                   </div>
 
                   {/* Price history badge */}
@@ -1011,7 +1011,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
                       {ft.price_history && ft.price_history.slice(-3).reverse().map((h, i) => (
                         <li key={i} className="text-[10px] text-slate-600 dark:text-slate-300 flex justify-between font-mono">
                           <span>{h.date}:</span>
-                          <span>BDT {h.price.toFixed(2)}</span>
+                          <span>BDT {Number(h.price || 0).toFixed(2)}</span>
                         </li>
                       ))}
                     </ul>
@@ -1130,7 +1130,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ onOpenBulkImport
               {t.priceModalTitle}: {selectedFuelType.name}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              {t.currentPriceLabel} BDT {selectedFuelType.current_price.toFixed(2)}
+              {t.currentPriceLabel} BDT {Number(selectedFuelType.current_price || 0).toFixed(2)}
             </p>
 
             <form onSubmit={handleUpdatePrice} className="space-y-4">
