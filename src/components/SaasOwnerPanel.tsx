@@ -783,9 +783,9 @@ export const SaasOwnerPanel: React.FC<{
     name: '',
     code: '',
     contact_person: '',
-    phone: '',
+    phone: '01700000000',
     email: '',
-    address: '',
+    address: 'Dhaka, Bangladesh',
     currency: 'BDT',
     plan: 'plan_1month' as SubscriptionPlan,
     duration_type: 'months' as 'days' | 'months' | 'years',
@@ -797,9 +797,9 @@ export const SaasOwnerPanel: React.FC<{
     max_pumps: 15,
     super_admin_name: '',
     super_admin_username: '',
-    super_admin_password: '',
+    super_admin_password: 'admin123',
     super_admin_email: '',
-    super_admin_phone: '',
+    super_admin_phone: '01700000000',
     must_change_password: true,
     notes: ''
   });
@@ -919,46 +919,49 @@ export const SaasOwnerPanel: React.FC<{
     const generatedCode = name
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '_')
-      .slice(0, 12);
+      .slice(0, 12) || 'COMP_' + Math.floor(1000 + Math.random() * 9000);
     setNewSubForm(prev => ({
       ...prev,
       name,
       code: prev.code ? prev.code : generatedCode + '_01',
+      contact_person: prev.contact_person ? prev.contact_person : name + ' Representative',
+      email: prev.email ? prev.email : 'info@' + (name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company') + '.com',
       super_admin_name: prev.super_admin_name ? prev.super_admin_name : name + ' Admin',
-      super_admin_username: prev.super_admin_username ? prev.super_admin_username : 'admin_' + generatedCode.toLowerCase()
+      super_admin_username: prev.super_admin_username ? prev.super_admin_username : 'admin_' + generatedCode.toLowerCase(),
+      super_admin_email: prev.super_admin_email ? prev.super_admin_email : 'admin@' + (name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company') + '.com'
     }));
   };
 
   // Submit New Subscriber (Always ACTIVE immediately - No approval required)
   const handleCreateSubscriber = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubForm.name || !newSubForm.super_admin_username || !newSubForm.super_admin_password) {
-      alert('Please provide Company Name, Super Admin Username and Password.');
-      return;
-    }
+    const companyName = newSubForm.name || 'New Company';
+    const genCode = (companyName.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 8) || 'CO') + '_' + Math.floor(1000 + Math.random() * 9000);
+    const subCode = newSubForm.code || genCode;
+    const subUser = newSubForm.super_admin_username || 'admin_' + subCode.toLowerCase();
+    const subPass = newSubForm.super_admin_password || 'admin123';
 
-    const companyName = newSubForm.name;
     const subResult = await addTenantSubscriber({
       name: companyName,
-      code: newSubForm.code || 'CO_' + Date.now().toString().slice(-4),
+      code: subCode,
       contact_person: newSubForm.contact_person || companyName + ' Representative',
       phone: newSubForm.phone || '01700000000',
       email: newSubForm.email || 'info@' + companyName.toLowerCase().replace(/\s+/g, '') + '.com',
       address: newSubForm.address || 'Dhaka, Bangladesh',
       currency: newSubForm.currency || 'BDT',
-      plan: newSubForm.plan,
-      duration_type: newSubForm.duration_type,
+      plan: newSubForm.plan || 'plan_1month',
+      duration_type: newSubForm.duration_type || 'months',
       duration_val: Number(newSubForm.duration_val) || 1,
-      price_bdt: Number(newSubForm.price_bdt) || 15000,
-      payment_status: newSubForm.payment_status,
-      max_vehicles: Number(newSubForm.max_vehicles) || 50,
-      max_users: Number(newSubForm.max_users) || 10,
-      max_pumps: Number(newSubForm.max_pumps) || 10,
-      super_admin_name: newSubForm.super_admin_name || 'Admin',
-      super_admin_username: newSubForm.super_admin_username,
-      super_admin_password: newSubForm.super_admin_password,
+      price_bdt: Number(newSubForm.price_bdt) || 749,
+      payment_status: newSubForm.payment_status || 'paid',
+      max_vehicles: Number(newSubForm.max_vehicles) || 100,
+      max_users: Number(newSubForm.max_users) || 25,
+      max_pumps: Number(newSubForm.max_pumps) || 15,
+      super_admin_name: newSubForm.super_admin_name || companyName + ' Admin',
+      super_admin_username: subUser,
+      super_admin_password: subPass,
       super_admin_email: newSubForm.super_admin_email || newSubForm.email || 'admin@domain.com',
-      super_admin_phone: newSubForm.super_admin_phone || newSubForm.phone,
+      super_admin_phone: newSubForm.super_admin_phone || newSubForm.phone || '01700000000',
       must_change_password: newSubForm.must_change_password,
       notes: newSubForm.notes
     });
