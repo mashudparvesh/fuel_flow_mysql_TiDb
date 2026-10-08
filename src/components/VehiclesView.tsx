@@ -41,8 +41,25 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
     fuelEntries,
     addVehicle,
     updateVehicle,
-    deleteVehicle
+    deleteVehicle,
+    syncManager
   } = useApp();
+
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedVehicleIds(paginatedVehicles.map(v => v.id));
+    } else {
+      setSelectedVehicleIds([]);
+    }
+  };
+
+  const handleToggleSelectVehicle = (id: string) => {
+    setSelectedVehicleIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
   const isViewer = currentUser?.role === 'client_viewer';
 
@@ -420,6 +437,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
+                <th className="py-2.5 px-2 sm:px-2.5 lg:px-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={paginatedVehicles.length > 0 && paginatedVehicles.every(v => selectedVehicleIds.includes(v.id))}
+                    onChange={handleSelectAll}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3">{t.vehNumber}</th>
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3">{t.category}</th>
                 <th className="py-2.5 px-2 sm:px-2.5 lg:px-3">{t.company}</th>
@@ -434,7 +459,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
             <tbody className="divide-y divide-slate-200">
               {paginatedVehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
                     {t.noVehiclesFound}
                   </td>
                 </tr>
@@ -448,6 +473,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
 
                   return (
                     <tr key={veh.id ? `${veh.id}_${idx}` : `veh_${idx}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 px-2 sm:px-2.5 lg:px-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedVehicleIds.includes(veh.id)}
+                          onChange={() => handleToggleSelectVehicle(veh.id)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
                       {/* Vehicle Number */}
                       <td className="py-2.5 px-2 sm:px-2.5 lg:px-3 whitespace-nowrap">
                         <div className="font-extrabold text-slate-900">{veh.vehicle_number}</div>
@@ -563,6 +596,49 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ onSelectVehicleForEn
             itemName="vehicles"
           />
         </div>
+
+        {/* Floating Delete Selected Action Bar */}
+        {selectedVehicleIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-4 border border-slate-700 animate-bounce-short">
+            <div className="flex items-center space-x-2">
+              <span className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                {selectedVehicleIds.length}
+              </span>
+              <span className="text-xs font-semibold">vehicles selected</span>
+            </div>
+            <div className="h-4 w-px bg-slate-700"></div>
+            <button
+              onClick={async () => {
+                if (confirm(`Are you sure you want to permanently delete ${selectedVehicleIds.length} selected vehicles and all dependent fuel logs?`)) {
+                  await syncManager.bulkDeleteVehicles(selectedVehicleIds);
+                  setSelectedVehicleIds([]);
+                }
+              }}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Selected Vehicles</span>
+            </button>
+            <button
+              onClick={async () => {
+                if (confirm(`Are you sure you want to remove driver assignments for ${selectedVehicleIds.length} selected vehicles?`)) {
+                  await syncManager.bulkDeleteDrivers(selectedVehicleIds);
+                  setSelectedVehicleIds([]);
+                }
+              }}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Remove Drivers</span>
+            </button>
+            <button
+              onClick={() => setSelectedVehicleIds([])}
+              className="text-slate-400 hover:text-white text-xs font-medium underline cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MODAL: Register / Edit Vehicle */}

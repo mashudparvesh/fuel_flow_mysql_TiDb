@@ -59,6 +59,12 @@ interface AppContextType {
   clearTenantSuspensionNotice: () => void;
   refreshTenantsFromServer: () => Promise<void>;
   refreshUsersFromServer: () => Promise<void>;
+  syncManager: {
+    syncAll: () => Promise<void>;
+    reconcileState: () => Promise<void>;
+    bulkDeleteVehicles: (ids: string[]) => Promise<{ success: boolean; deletedCount?: number }>;
+    bulkDeleteDrivers: (vehicleIds: string[]) => Promise<{ success: boolean; clearedCount?: number }>;
+  };
   currentUser: User;
   setCurrentUserId: (userId: string) => void;
   allUsers: User[];
@@ -735,17 +741,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
 
           // Merge vehicles
-          if (Array.isArray(fleetData.vehicles) && fleetData.vehicles.length > 0) {
+          if (Array.isArray(fleetData.vehicles)) {
             setVehicles(prev => {
-              const { merged, missingOnServer } = safeMergeEntities(fleetData.vehicles, prev);
-              if (missingOnServer.length > 0) {
+              let deletedIds: string[] = [];
+              try {
+                deletedIds = JSON.parse(localStorage.getItem(STORAGE_KEY_PREFIX + 'deleted_vehicle_ids') || '[]');
+              } catch (e) {}
+
+              const cleanServerVehicles = (fleetData.vehicles || []).filter((v: any) => v && v.id && !deletedIds.includes(v.id));
+              const { merged, missingOnServer } = safeMergeEntities(cleanServerVehicles, prev);
+              const trulyMissing = missingOnServer.filter(item => item.id && !deletedIds.includes(item.id));
+              if (trulyMissing.length > 0) {
                 fetch('/api/fleet/sync', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ vehicles: missingOnServer })
+                  body: JSON.stringify({ vehicles: trulyMissing })
                 }).catch(() => {});
               }
-              return merged;
+              const finalVehicles = merged.filter(v => v && v.id && !deletedIds.includes(v.id));
+              try {
+                localStorage.setItem(STORAGE_KEY_PREFIX + 'vehicles', JSON.stringify(finalVehicles));
+              } catch (e) {}
+              return finalVehicles;
             });
           }
 
@@ -869,35 +886,103 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const bulkDeleteVehicles = async (ids: string[]) => {
+    if (!ids || ids.length === 0) return { success: false, deletedCount: 0 };
+    try {
+      const deletedIdsKey = STORAGE_KEY_PREFIX + 'deleted_vehicle_ids';
+      let existingDeleted: string[] = [];
+      try {
+        existingDeleted = JSON.parse(localStorage.getItem(deletedIdsKey) || '[]');
+      } catch (e) {}
+
+      ids.forEach(id => {
+        if (!existingDeleted.includes(id)) existingDeleted.push(id);
+      });
+      localStorage.setItem(deletedIdsKey, JSON.stringify(existingDeleted));
+
+      setVehicles(prev => {
+        const updated = prev.filter(v => !ids.includes(v.id));
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'vehicles', JSON.stringify(updated));
+        return updated;
+      });
+
+      setFuelEntries(prev => {
+        const updated = prev.filter(e => !ids.includes(e.vehicle_id));
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'fuel_entries', JSON.stringify(updated));
+        return updated;
+      });
+
+      const res = await fetch('/api/fleet/vehicles/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      const data = await res.json();
+      await SyncManager.syncAll();
+      return { success: true, deletedCount: ids.length, ...data };
+    } catch (e: any) {
+      return { success: false, message: e.message };
+    }
+  };
+
+  const bulkDeleteDrivers = async (vehicleIds: string[]) => {
+    if (!vehicleIds || vehicleIds.length === 0) return { success: false, clearedCount: 0 };
+    try {
+      setVehicles(prev => {
+        const updated = prev.map(v => vehicleIds.includes(v.id) ? { ...v, driver_name: 'N/A', driver_phone: 'N/A' } : v);
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'vehicles', JSON.stringify(updated));
+        return updated;
+      });
+
+      const res = await fetch('/api/fleet/drivers/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleIds })
+      });
+      const data = await res.json();
+      await SyncManager.syncAll();
+      return { success: true, clearedCount: vehicleIds.length, ...data };
+    } catch (e: any) {
+      return { success: false, message: e.message };
+    }
+  };
+
+  const SyncManager = useMemo(() => ({
+    syncAll: async () => {
+      try {
+        await Promise.all([
+          refreshTenantsFromServer(),
+          refreshUsersFromServer(),
+          refreshFleetDataFromServer()
+        ]);
+      } catch (e) {
+        console.error("SyncManager syncAll error:", e);
+      }
+    },
+    reconcileState: async () => {
+      await SyncManager.syncAll();
+    },
+    bulkDeleteVehicles,
+    bulkDeleteDrivers
+  }), [refreshTenantsFromServer, refreshUsersFromServer, refreshFleetDataFromServer, bulkDeleteVehicles, bulkDeleteDrivers]);
+
   useEffect(() => {
-    refreshTenantsFromServer();
-    refreshUsersFromServer();
-    refreshFleetDataFromServer();
+    SyncManager.syncAll();
 
     const handleFocus = () => {
-      refreshTenantsFromServer();
-      refreshUsersFromServer();
-      refreshFleetDataFromServer();
+      SyncManager.syncAll();
     };
     window.addEventListener('focus', handleFocus);
     const interval = setInterval(() => {
-      refreshTenantsFromServer();
-      refreshUsersFromServer();
-      refreshFleetDataFromServer();
+      SyncManager.syncAll();
     }, 6000);
 
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel('fuelflow_tenants_sync');
       channel.onmessage = (event) => {
-        if (event.data?.type === 'REFRESH_TENANTS') {
-          refreshTenantsFromServer();
-        }
-        if (event.data?.type === 'REFRESH_USERS') {
-          refreshUsersFromServer();
-        }
-        if (event.data?.type === 'REFRESH_FLEET') {
-          refreshFleetDataFromServer();
+        if (event.data?.type === 'REFRESH_TENANTS' || event.data?.type === 'REFRESH_USERS' || event.data?.type === 'REFRESH_FLEET') {
+          SyncManager.syncAll();
         }
       };
     } catch (e) {}
@@ -907,7 +992,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearInterval(interval);
       channel?.close();
     };
-  }, []);
+  }, [SyncManager]);
 
   // Filtered active tenants list for login and public selection (ISSUE 2 Fix)
   const activeTenants = useMemo(() => {
@@ -1352,9 +1437,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       entityName: veh ? `${veh.vehicle_number}` : id,
       onConfirm: async () => {
         try {
+          const deletedIdsKey = STORAGE_KEY_PREFIX + 'deleted_vehicle_ids';
+          const existingDeleted = JSON.parse(localStorage.getItem(deletedIdsKey) || '[]');
+          if (!existingDeleted.includes(id)) {
+            existingDeleted.push(id);
+            localStorage.setItem(deletedIdsKey, JSON.stringify(existingDeleted));
+          }
+        } catch (e) {}
+
+        setVehicles(prev => {
+          const updated = prev.filter(v => v.id !== id);
+          try {
+            localStorage.setItem(STORAGE_KEY_PREFIX + 'vehicles', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+
+        setFuelEntries(prev => {
+          const updated = prev.filter(e => e.vehicle_id !== id);
+          try {
+            localStorage.setItem(STORAGE_KEY_PREFIX + 'fuel_entries', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+
+        try {
           await fetch(`/api/fleet/vehicles/${id}`, { method: 'DELETE' });
-        } catch {}
-        setVehicles(prev => prev.filter(v => v.id !== id));
+        } catch (e) {}
       }
     });
   };
@@ -3705,6 +3814,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearTenantSuspensionNotice,
         refreshTenantsFromServer,
         refreshUsersFromServer,
+        syncManager: SyncManager,
         currentUser,
         setCurrentUserId: setCurrentUserIdState,
         allUsers: users,

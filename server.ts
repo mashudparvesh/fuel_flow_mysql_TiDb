@@ -17,6 +17,7 @@ import {
   syncAllDataToMySQL,
   fetchFleetDataFromDB,
   deleteVehicleInDB,
+  updateVehicleDriverInDB,
   deleteFuelEntryInDB,
   deletePumpInDB,
   deletePaymentInDB,
@@ -3846,10 +3847,57 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
     try {
       const { id } = req.params;
       const store = loadFleetData();
-      store.vehicles = store.vehicles.filter(v => v.id !== id);
-      saveFleetData({ vehicles: store.vehicles });
+      store.vehicles = (store.vehicles || []).filter(v => v.id !== id);
+      store.fuelEntries = (store.fuelEntries || []).filter(e => e.vehicle_id !== id);
+      saveFleetData({ vehicles: store.vehicles, fuelEntries: store.fuelEntries });
       await deleteVehicleInDB(id);
       res.json({ success: true, message: 'Vehicle deleted' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/vehicles/bulk-delete', async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: 'No vehicle IDs provided for bulk deletion.' });
+      }
+      const store = loadFleetData();
+      store.vehicles = (store.vehicles || []).filter(v => !ids.includes(v.id));
+      store.fuelEntries = (store.fuelEntries || []).filter(e => !ids.includes(e.vehicle_id));
+      saveFleetData({ vehicles: store.vehicles, fuelEntries: store.fuelEntries });
+
+      for (const id of ids) {
+        await deleteVehicleInDB(id);
+      }
+      res.json({ success: true, deletedCount: ids.length });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.post('/api/fleet/drivers/bulk-delete', async (req: Request, res: Response) => {
+    try {
+      const { vehicleIds } = req.body;
+      if (!Array.isArray(vehicleIds) || vehicleIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'No vehicle IDs provided for driver bulk removal.' });
+      }
+      const store = loadFleetData();
+      store.vehicles = (store.vehicles || []).map(v => {
+        if (vehicleIds.includes(v.id)) {
+          return { ...v, driver_name: 'N/A', driver_phone: 'N/A' };
+        }
+        return v;
+      });
+      saveFleetData({ vehicles: store.vehicles });
+
+      for (const id of vehicleIds) {
+        try {
+          await updateVehicleDriverInDB(id, 'N/A', 'N/A');
+        } catch (dbErr) {}
+      }
+      res.json({ success: true, clearedCount: vehicleIds.length });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
     }

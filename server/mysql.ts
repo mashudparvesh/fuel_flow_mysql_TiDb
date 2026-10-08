@@ -1257,6 +1257,17 @@ export async function deleteVehicleInDB(id: string): Promise<boolean> {
   }
 }
 
+export async function updateVehicleDriverInDB(id: string, driverName: string, driverPhone: string): Promise<boolean> {
+  if (!pool || !lastStatus.connected) return false;
+  try {
+    await pool.query('UPDATE `vehicles` SET `driver_name` = ?, `driver_phone` = ? WHERE `id` = ?', [driverName, driverPhone, id]);
+    return true;
+  } catch (err) {
+    console.error('[MySQL] Error updating vehicle driver:', err);
+    return false;
+  }
+}
+
 export async function deleteFuelEntryInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
