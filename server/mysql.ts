@@ -1248,6 +1248,7 @@ export async function fetchFleetDataFromDB(tenantId?: string): Promise<{
 export async function deleteVehicleInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
+    await pool.query('DELETE FROM `fuel_entries` WHERE `vehicle_id` = ?', [id]).catch(() => {});
     await pool.query('DELETE FROM `vehicles` WHERE `id` = ?', [id]);
     return true;
   } catch (err) {
@@ -1270,6 +1271,8 @@ export async function deleteFuelEntryInDB(id: string): Promise<boolean> {
 export async function deletePumpInDB(id: string): Promise<boolean> {
   if (!pool || !lastStatus.connected) return false;
   try {
+    await pool.query('DELETE FROM `fuel_entries` WHERE `pump_id` = ?', [id]).catch(() => {});
+    await pool.query('DELETE FROM `pump_payments` WHERE `pump_id` = ?', [id]).catch(() => {});
     await pool.query('DELETE FROM `fuel_pumps` WHERE `id` = ?', [id]);
     return true;
   } catch (err) {

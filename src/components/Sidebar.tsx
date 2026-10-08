@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (onCloseMobile) onCloseMobile();
     if (onClose) onClose();
   };
-  const { language, kpis, currentUser, currentTenant, activeAuthRole, saasOwner, logout } = useApp();
+  const { language, kpis, currentUser, currentTenant, activeAuthRole, saasOwner, activeModerator, logout } = useApp();
 
   const labels = {
     dashboard: 'Dashboard & Analytics',

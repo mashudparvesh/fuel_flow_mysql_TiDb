@@ -22,6 +22,8 @@ import {
   deletePaymentInDB,
   deleteCategoryInDB,
   deleteTankerInDB,
+  deleteCompanyInDB,
+  deleteVendorInDB,
   wipeAllDataFromDB,
   registerTenantWithTransaction,
   approveTenantWithTransaction
@@ -326,16 +328,16 @@ function saveFleetData(data: Partial<FleetStore>) {
     ensureDataDir();
     const current = loadFleetData();
     const merged: FleetStore = {
-      vehicles: data.vehicles !== undefined ? dedupeAndMergeById(current.vehicles, data.vehicles) : dedupeAndMergeById(current.vehicles),
-      fuelEntries: data.fuelEntries !== undefined ? dedupeAndMergeById(current.fuelEntries, data.fuelEntries) : dedupeAndMergeById(current.fuelEntries),
-      pumps: data.pumps !== undefined ? dedupeAndMergeById(current.pumps, data.pumps) : dedupeAndMergeById(current.pumps),
-      payments: data.payments !== undefined ? dedupeAndMergeById(current.payments, data.payments) : dedupeAndMergeById(current.payments),
-      categories: data.categories !== undefined ? dedupeAndMergeById(current.categories, data.categories) : dedupeAndMergeById(current.categories),
-      companies: data.companies !== undefined ? dedupeAndMergeById(current.companies, data.companies) : dedupeAndMergeById(current.companies),
-      vendors: data.vendors !== undefined ? dedupeAndMergeById(current.vendors, data.vendors) : dedupeAndMergeById(current.vendors),
-      fuelTypes: data.fuelTypes !== undefined ? dedupeAndMergeById(current.fuelTypes, data.fuelTypes) : dedupeAndMergeById(current.fuelTypes),
-      tankers: data.tankers !== undefined ? dedupeAndMergeById(current.tankers, data.tankers) : dedupeAndMergeById(current.tankers),
-      tankerLogs: data.tankerLogs !== undefined ? dedupeAndMergeById(current.tankerLogs, data.tankerLogs) : dedupeAndMergeById(current.tankerLogs)
+      vehicles: data.vehicles !== undefined ? data.vehicles : current.vehicles,
+      fuelEntries: data.fuelEntries !== undefined ? data.fuelEntries : current.fuelEntries,
+      pumps: data.pumps !== undefined ? data.pumps : current.pumps,
+      payments: data.payments !== undefined ? data.payments : current.payments,
+      categories: data.categories !== undefined ? data.categories : current.categories,
+      companies: data.companies !== undefined ? data.companies : current.companies,
+      vendors: data.vendors !== undefined ? data.vendors : current.vendors,
+      fuelTypes: data.fuelTypes !== undefined ? data.fuelTypes : current.fuelTypes,
+      tankers: data.tankers !== undefined ? data.tankers : current.tankers,
+      tankerLogs: data.tankerLogs !== undefined ? data.tankerLogs : current.tankerLogs
     };
     fs.writeFileSync(FLEET_FILE, JSON.stringify(merged, null, 2), 'utf-8');
   } catch (err) {
@@ -2659,24 +2661,22 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
     }
   });
 
-  // Reject a registration request
+  // Reject a registration request: removes it from database entirely upon rejection
   app.post('/api/subscribers/registration-requests/:id/reject', (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const requests = loadRegistrationRequests();
+      let requests = loadRegistrationRequests();
       const index = requests.findIndex((r: any) => r.id === id);
 
       if (index === -1) {
         return res.status(404).json({ success: false, message: 'Registration request not found.' });
       }
 
-      requests[index].status = 'rejected';
-      requests[index].rejected_at = new Date().toISOString();
-      requests[index].rejection_reason = reason || 'Declined by Administrator';
-
+      const item = requests[index];
+      requests = requests.filter((r: any) => r.id !== id);
       saveRegistrationRequests(requests);
-      res.json({ success: true, message: 'Registration request rejected.', request: requests[index] });
+      res.json({ success: true, message: 'Registration request rejected and removed entirely from database.', request: item });
     } catch (e: any) {
       res.status(500).json({ success: false, message: e?.message });
     }

@@ -256,6 +256,22 @@ interface AppContextType {
   addTankerDispenseOrAdjustment: (tankerId: string, liters: number, logType: 'dispense_out' | 'dip_adjustment', recipientOrReason: string, notes?: string) => void;
 
   resetToDefaultData: () => void;
+
+  // Generic Confirm Delete Modal State & Actions
+  confirmDeleteModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    entityName?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null;
+  requestConfirmDelete: (options: {
+    title?: string;
+    message: string;
+    entityName?: string;
+    onConfirm: () => Promise<void> | void;
+  }) => void;
+  closeConfirmDelete: () => void;
 }
 
 const STORAGE_KEY_PREFIX = 'fuelflow_v1_';
@@ -318,6 +334,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem(STORAGE_KEY_PREFIX + 'active_user_id');
       localStorage.removeItem(STORAGE_KEY_PREFIX + 'active_mod_id');
     } catch (e) {}
+  };
+
+  // Generic Confirm Delete Modal State
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    entityName?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+
+  const requestConfirmDelete = (options: {
+    title?: string;
+    message: string;
+    entityName?: string;
+    onConfirm: () => Promise<void> | void;
+  }) => {
+    setConfirmDeleteModal({
+      isOpen: true,
+      title: options.title || 'Confirm Deletion',
+      message: options.message,
+      entityName: options.entityName,
+      onConfirm: options.onConfirm
+    });
+  };
+
+  const closeConfirmDelete = () => {
+    setConfirmDeleteModal(null);
   };
 
   // Auth Mode: saas_owner | saas_moderator | company_user
@@ -1111,10 +1155,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCompany = (id: string) => {
-    setCompanies(prev => prev.filter(c => c.id !== id));
-    fetch(`/api/fleet/companies/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const comp = companies.find(c => c.id === id);
+    requestConfirmDelete({
+      title: 'Delete Customer Company',
+      message: 'Are you sure you want to permanently delete this customer company?',
+      entityName: comp ? `${comp.name} (${comp.code})` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/companies/${id}`, { method: 'DELETE' });
+        } catch {}
+        setCompanies(prev => prev.filter(c => c.id !== id));
+      }
+    });
   };
 
   // Vendor CRUD
@@ -1144,10 +1196,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteVendor = (id: string) => {
-    setVendors(prev => prev.filter(v => v.id !== id));
-    fetch(`/api/fleet/vendors/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const vend = vendors.find(v => v.id === id);
+    requestConfirmDelete({
+      title: 'Delete Vendor',
+      message: 'Are you sure you want to permanently delete this vendor?',
+      entityName: vend ? `${vend.name}` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/vendors/${id}`, { method: 'DELETE' });
+        } catch {}
+        setVendors(prev => prev.filter(v => v.id !== id));
+      }
+    });
   };
 
   // Pump CRUD
@@ -1178,10 +1238,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePump = (id: string) => {
-    setPumps(prev => prev.filter(p => p.id !== id));
-    fetch(`/api/fleet/pumps/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const pump = pumps.find(p => p.id === id);
+    requestConfirmDelete({
+      title: 'Delete Fuel Pump',
+      message: 'Are you sure you want to permanently delete this fuel pump? Once deleted, it will no longer appear for new fuel entries.',
+      entityName: pump ? `${pump.name} (${pump.location || ''})` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/pumps/${id}`, { method: 'DELETE' });
+        } catch {}
+        setPumps(prev => prev.filter(p => p.id !== id));
+      }
+    });
   };
 
   // Fuel Price Update
@@ -1236,10 +1304,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCategory = (id: string) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
-    fetch(`/api/fleet/categories/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const cat = categories.find(c => c.id === id);
+    requestConfirmDelete({
+      title: 'Delete Vehicle Category',
+      message: 'Are you sure you want to permanently delete this vehicle category?',
+      entityName: cat ? `${cat.name}` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/categories/${id}`, { method: 'DELETE' });
+        } catch {}
+        setCategories(prev => prev.filter(c => c.id !== id));
+      }
+    });
   };
 
   // Vehicle CRUD
@@ -1269,10 +1345,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteVehicle = (id: string) => {
-    setVehicles(prev => prev.filter(v => v.id !== id));
-    fetch(`/api/fleet/vehicles/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const veh = vehicles.find(v => v.id === id);
+    requestConfirmDelete({
+      title: 'Delete Vehicle',
+      message: 'Are you sure you want to permanently delete this vehicle and all its dependent fuel history logs?',
+      entityName: veh ? `${veh.vehicle_number}` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/vehicles/${id}`, { method: 'DELETE' });
+        } catch {}
+        setVehicles(prev => prev.filter(v => v.id !== id));
+      }
+    });
   };
 
   // Core Ultra-Fast Fuel Entry with Smart Calculations
@@ -1448,42 +1532,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteFuelEntry = (id: string) => {
     const target = fuelEntries.find(e => e.id === id);
-    if (target) {
-      // If pump entry, adjust pump balance (reduce due)
-      if (target.source_type === 'pump' && target.pump_id) {
-        setPumps(prev => prev.map(p => {
-          if (p.id === target.pump_id) {
-            const newBal = (p.current_balance || 0) - target.total_amount;
-            fetch(`/api/fleet/pumps/${p.id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ current_balance: newBal })
-            }).catch(() => {});
-            return { ...p, current_balance: newBal };
+    requestConfirmDelete({
+      title: 'Delete Fuel Entry',
+      message: 'Are you sure you want to permanently delete this fuel entry? If pump credit or tanker stock was affected, balances will be automatically restored.',
+      entityName: target ? `Slip #${target.slip_no} (${target.fuel_liters} Liters, BDT ${target.total_amount?.toLocaleString()})` : id,
+      onConfirm: async () => {
+        if (target) {
+          // If pump entry, adjust pump balance (reduce due)
+          if (target.source_type === 'pump' && target.pump_id) {
+            setPumps(prev => prev.map(p => {
+              if (p.id === target.pump_id) {
+                const newBal = (p.current_balance || 0) - target.total_amount;
+                fetch(`/api/fleet/pumps/${p.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ current_balance: newBal })
+                }).catch(() => {});
+                return { ...p, current_balance: newBal };
+              }
+              return p;
+            }));
           }
-          return p;
-        }));
-      }
-      // If tanker entry, restore fuel stock to tanker
-      if (target.source_type === 'tanker' && target.tanker_id) {
-        setTankers(prev => prev.map(t => {
-          if (t.id === target.tanker_id) {
-            const newStock = t.current_stock_liters + target.fuel_liters;
-            fetch(`/api/fleet/tankers/${t.id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ current_stock_liters: newStock })
-            }).catch(() => {});
-            return { ...t, current_stock_liters: newStock };
+          // If tanker entry, restore fuel stock to tanker
+          if (target.source_type === 'tanker' && target.tanker_id) {
+            setTankers(prev => prev.map(t => {
+              if (t.id === target.tanker_id) {
+                const newStock = t.current_stock_liters + target.fuel_liters;
+                fetch(`/api/fleet/tankers/${t.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ current_stock_liters: newStock })
+                }).catch(() => {});
+                return { ...t, current_stock_liters: newStock };
+              }
+              return t;
+            }));
           }
-          return t;
-        }));
+        }
+        try {
+          await fetch(`/api/fleet/fuel-entries/${id}`, { method: 'DELETE' });
+        } catch {}
+        setFuelEntries(prev => prev.filter(e => e.id !== id));
       }
-    }
-    setFuelEntries(prev => prev.filter(e => e.id !== id));
-    fetch(`/api/fleet/fuel-entries/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    });
   };
 
   const updateFuelEntry = (id: string, updates: Partial<FuelEntry>) => {
@@ -1602,25 +1693,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deletePumpPayment = (paymentId: string) => {
     const payment = payments.find(p => p.id === paymentId);
-    if (payment) {
-      // Revert the payment by restoring due to the pump
-      setPumps(prev => prev.map(p => {
-        if (p.id === payment.pump_id) {
-          const newBal = (p.current_balance || 0) + payment.amount;
-          fetch(`/api/fleet/pumps/${p.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_balance: newBal })
-          }).catch(() => {});
-          return { ...p, current_balance: newBal };
+    requestConfirmDelete({
+      title: 'Confirm Payment Deletion',
+      message: 'Are you sure you want to delete this payment record? The pump outstanding due will be restored.',
+      entityName: payment ? `Payment BDT ${payment.amount?.toLocaleString()} (${payment.payment_method})` : paymentId,
+      onConfirm: async () => {
+        if (payment) {
+          // Revert the payment by restoring due to the pump
+          setPumps(prev => prev.map(p => {
+            if (p.id === payment.pump_id) {
+              const newBal = (p.current_balance || 0) + payment.amount;
+              fetch(`/api/fleet/pumps/${p.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_balance: newBal })
+              }).catch(() => {});
+              return { ...p, current_balance: newBal };
+            }
+            return p;
+          }));
         }
-        return p;
-      }));
-    }
-    setPayments(prev => prev.filter(p => p.id !== paymentId));
-    fetch(`/api/fleet/payments/${paymentId}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+        try {
+          await fetch(`/api/fleet/payments/${paymentId}`, { method: 'DELETE' });
+        } catch {}
+        setPayments(prev => prev.filter(p => p.id !== paymentId));
+      }
+    });
   };
 
   const updatePumpPayment = (id: string, updates: Partial<PumpPayment>) => {
@@ -1678,10 +1776,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTanker = (id: string) => {
-    setTankers(prev => prev.filter(t => t.id !== id));
-    fetch(`/api/fleet/tankers/${id}`, {
-      method: 'DELETE'
-    }).catch(() => {});
+    const tanker = tankers.find(t => t.id === id);
+    requestConfirmDelete({
+      title: 'Delete Fuel Bowzer / Tanker',
+      message: 'Are you sure you want to delete this tanker bowzer?',
+      entityName: tanker ? `${tanker.tanker_name}` : id,
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/fleet/tankers/${id}`, { method: 'DELETE' });
+        } catch {}
+        setTankers(prev => prev.filter(t => t.id !== id));
+      }
+    });
   };
 
   // Tanker Stock In
@@ -3713,7 +3819,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rejectSubscriptionPayment,
         getFuelPriceForDate,
 
-        resetToDefaultData
+        resetToDefaultData,
+
+        // Generic Confirm Delete Modal State & Actions
+        confirmDeleteModal,
+        requestConfirmDelete,
+        closeConfirmDelete
       }}
     >
       {children}

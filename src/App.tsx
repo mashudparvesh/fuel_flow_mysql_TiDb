@@ -23,6 +23,7 @@ import { BulkDataImportModal, BulkEntityType } from './components/BulkDataImport
 import { SubscriptionNotificationBanner } from './components/SubscriptionNotificationBanner';
 import { SubscriptionRenewModal } from './components/SubscriptionRenewModal';
 import { DocumentationModal } from './components/DocumentationModal';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Footer } from './components/Footer';
 import { Fuel, QrCode, PanelLeftOpen } from 'lucide-react';
@@ -384,6 +385,9 @@ const AppContent: React.FC = () => {
         isOpen={isDocsModalOpen}
         onClose={() => setIsDocsModalOpen(false)}
       />
+
+      {/* Generic Confirm Delete Modal Dialog */}
+      <ConfirmDeleteModal />
     </div>
   );
 };
