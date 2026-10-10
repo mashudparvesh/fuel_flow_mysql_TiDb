@@ -2427,7 +2427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await fetch('/api/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTenant)
+        body: JSON.stringify({ tenant: newTenant, super_admin_user: superAdminUser })
       }).catch(err => console.warn('Failed to sync tenant to server:', err));
 
       await fetch('/api/users', {
@@ -2588,10 +2588,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTenantLogo = (tenantId: string, logo: string) => {
-    setTenants(prev => prev.map(t => {
-      if (t.id !== tenantId) return t;
-      return { ...t, logo };
-    }));
+    setTenants(prev => {
+      const exists = prev.some(t => t && t.id === tenantId);
+      if (!exists) {
+        const stub: Tenant = currentTenantId === tenantId ? currentTenant : {
+          id: tenantId,
+          name: 'Company Workspace',
+          code: 'COMP_' + tenantId.slice(-4),
+          currency: 'BDT',
+          phone: '',
+          address: '',
+          status: 'active'
+        };
+        return [{ ...stub, logo }, ...prev];
+      }
+      return prev.map(t => {
+        if (t.id !== tenantId) return t;
+        return { ...t, logo };
+      });
+    });
     try {
       fetch(`/api/tenants/${tenantId}`, {
         method: 'PATCH',

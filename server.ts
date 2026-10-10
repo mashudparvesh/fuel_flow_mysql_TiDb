@@ -1335,7 +1335,9 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // Persists to disk immediately and to MySQL if connected
   const handleCreateTenantRecord = async (req: Request, res: Response) => {
     try {
-      const newTenant = req.body;
+      const body = req.body;
+      const newTenant = body.tenant || body;
+      const superAdminUser = body.super_admin_user || body.user;
       if (!newTenant.id || !newTenant.name || !newTenant.code) {
         res.status(400).json({ success: false, message: 'Missing required tenant fields: id, name, code' });
         return;
@@ -1358,8 +1360,36 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
       }
 
       saveTenants(activeTenants);
-      // Persist to MySQL
-      await upsertTenantInDB(tenantRecord).catch(e => console.warn('[MySQL] Background tenant save error:', e));
+
+      let userRecord = superAdminUser;
+      if (!userRecord) {
+        activeUsers = loadUsers();
+        userRecord = activeUsers.find(u => u.tenant_id === tenantRecord.id && u.role === 'super_admin') || {
+          id: 'usr_' + Date.now(),
+          tenant_id: tenantRecord.id,
+          name: tenantRecord.name + ' Admin',
+          email: tenantRecord.email || 'admin@' + tenantRecord.code.toLowerCase() + '.com',
+          username: 'admin_' + tenantRecord.code.toLowerCase(),
+          password: hashPassword('admin123'),
+          phone: tenantRecord.phone || '01700000000',
+          role: 'super_admin',
+          role_title_bn: 'Company Super Admin',
+          status: 'active',
+          must_change_password: true,
+          allowed_category_ids: ['all'],
+          allowed_pump_ids: ['all'],
+          permissions: { can_add_fuel: true, can_manage_vehicles: true, can_manage_pumps: true, can_view_reports: true, can_manage_users: true, can_edit_settings: true },
+          created_at: tenantRecord.created_at
+        };
+      }
+
+      // Persist to MySQL via transaction
+      const registered = await registerTenantWithTransaction({ tenant: tenantRecord, user: userRecord }).catch(async (e) => {
+        console.warn('[MySQL] Transaction registration error, falling back to upsert:', e);
+        await upsertTenantInDB(tenantRecord).catch(() => {});
+        await upsertUserInDB(userRecord).catch(() => {});
+        return false;
+      });
 
       // 🚨 CRITICAL: Instant Notification Email to admin.fuelnest@gmail.com
       sendAdminNotificationEmail({
@@ -3684,7 +3714,12 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
         vehicles: fleet.vehicles,
         pumps: fleet.pumps,
         fuelEntries: fleet.fuelEntries,
-        payments: fleet.payments
+        payments: fleet.payments,
+        companies: fleet.companies,
+        vendors: fleet.vendors,
+        categories: fleet.categories,
+        fuelTypes: fleet.fuelTypes,
+        tankers: fleet.tankers
       }).catch(e => console.warn('[MySQL] Bulk sync warning:', e));
 
       res.json({

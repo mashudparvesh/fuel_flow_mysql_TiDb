@@ -450,13 +450,14 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
   try {
     const query = `
       INSERT INTO \`tenants\` (
-        \`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
+        \`id\`, \`name\`, \`code\`, \`logo\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
         \`status\`, \`deleted_at\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`,
         \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`, \`is_approved\`
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         \`name\` = VALUES(\`name\`),
         \`code\` = VALUES(\`code\`),
+        \`logo\` = VALUES(\`logo\`),
         \`currency\` = VALUES(\`currency\`),
         \`phone\` = VALUES(\`phone\`),
         \`address\` = VALUES(\`address\`),
@@ -483,6 +484,7 @@ export async function upsertTenantInDB(tenant: any): Promise<boolean> {
       tenant.id,
       tenant.name,
       tenant.code,
+      tenant.logo || sub.logo || null,
       tenant.currency || 'BDT',
       tenant.phone || '',
       tenant.address || '',
@@ -523,18 +525,22 @@ export async function registerTenantWithTransaction(params: {
 
     const tenant = params.tenant;
     const sub = { ...(tenant.subscription || {}) };
+    if (tenant.logo) {
+      sub.logo = tenant.logo;
+    }
     const safeStatus = tenant.status || 'pending';
     const isApproved = tenant.is_approved ? 1 : (safeStatus === 'active' ? 1 : 0);
 
     const tenantQuery = `
       INSERT INTO \`tenants\` (
-        \`id\`, \`name\`, \`code\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
+        \`id\`, \`name\`, \`code\`, \`logo\`, \`currency\`, \`phone\`, \`address\`, \`contact_person\`, \`email\`,
         \`status\`, \`deleted_at\`, \`created_at\`, \`subscription_plan\`, \`subscription_status\`,
         \`subscription_start_date\`, \`subscription_end_date\`, \`subscription_price\`, \`subscription_raw\`, \`is_approved\`
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         \`name\` = VALUES(\`name\`),
         \`code\` = VALUES(\`code\`),
+        \`logo\` = VALUES(\`logo\`),
         \`currency\` = VALUES(\`currency\`),
         \`phone\` = VALUES(\`phone\`),
         \`address\` = VALUES(\`address\`),
@@ -554,6 +560,7 @@ export async function registerTenantWithTransaction(params: {
       tenant.id,
       tenant.name,
       tenant.code,
+      tenant.logo || sub.logo || null,
       tenant.currency || 'BDT',
       tenant.phone || '',
       tenant.address || '',
@@ -850,6 +857,11 @@ export async function syncAllDataToMySQL(data: {
   fuelEntries?: any[];
   pumps?: any[];
   payments?: any[];
+  companies?: any[];
+  vendors?: any[];
+  categories?: any[];
+  fuelTypes?: any[];
+  tankers?: any[];
 }): Promise<{ success: boolean; synced: Record<string, number>; error?: string }> {
   if (!pool || !lastStatus.connected) {
     return { success: false, synced: {}, error: 'MySQL is not connected' };
