@@ -87,7 +87,11 @@ export const Header: React.FC<HeaderProps> = ({
       const result = reader.result as string;
       if (result && currentTenant?.id) {
         updateTenantLogo(currentTenant.id, result);
+        alert('Company logo uploaded and synced successfully!');
+      } else {
+        alert('Active tenant ID not found.');
       }
+      if (e.target) e.target.value = '';
     };
     reader.readAsDataURL(file);
   };

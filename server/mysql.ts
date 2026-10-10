@@ -2,6 +2,7 @@ import mysql from 'mysql2/promise';
 import type { Pool, PoolOptions } from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
+import { logDbAction } from './dbLogger';
 
 export interface DatabaseStatus {
   configured: boolean;
@@ -601,7 +602,7 @@ export async function registerTenantWithTransaction(params: {
       user.name,
       user.email,
       user.username,
-      user.password,
+      user.password || user.password_hash || '',
       user.phone || '',
       user.role || 'super_admin',
       user.role_title_bn || 'Company Super Admin',
@@ -1392,3 +1393,96 @@ export async function purgeOrphanedDataInDB(): Promise<void> {
     console.warn('[MySQL] Error during purge:', e);
   }
 }
+
+export async function safeDeleteTransaction(entityType: string, ids: string | string[]): Promise<{ success: boolean; count: number; error?: string }> {
+  if (!pool || !lastStatus.connected) {
+    return { success: false, count: 0, error: 'Database not connected' };
+  }
+  const idArray = Array.isArray(ids) ? ids : [ids];
+  if (idArray.length === 0) return { success: true, count: 0 };
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    let count = 0;
+
+    if (entityType === 'vehicles' || entityType === 'vehicle') {
+      for (const id of idArray) {
+        await connection.query('DELETE FROM `fuel_entries` WHERE `vehicle_id` = ?', [id]);
+        const [res]: any = await connection.query('DELETE FROM `vehicles` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'companies' || entityType === 'company' || entityType === 'customer') {
+      for (const id of idArray) {
+        await connection.query('DELETE FROM `fuel_entries` WHERE `company_id` = ?', [id]);
+        await connection.query('DELETE FROM `vehicles` WHERE `company_id` = ?', [id]);
+        const [res]: any = await connection.query('DELETE FROM `companies` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'drivers' || entityType === 'driver') {
+      for (const id of idArray) {
+        const [res]: any = await connection.query('UPDATE `vehicles` SET `driver_name` = \'N/A\', `driver_phone` = \'N/A\' WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'pumps' || entityType === 'pump') {
+      for (const id of idArray) {
+        await connection.query('DELETE FROM `fuel_entries` WHERE `pump_id` = ?', [id]);
+        await connection.query('DELETE FROM `pump_payments` WHERE `pump_id` = ?', [id]);
+        const [res]: any = await connection.query('DELETE FROM `fuel_pumps` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'categories' || entityType === 'category') {
+      for (const id of idArray) {
+        const [res]: any = await connection.query('DELETE FROM `vehicle_categories` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'tankers' || entityType === 'tanker') {
+      for (const id of idArray) {
+        await connection.query('DELETE FROM `tanker_logs` WHERE `tanker_id` = ?', [id]);
+        const [res]: any = await connection.query('DELETE FROM `tanker_inventories` WHERE `id` = ? OR `tanker_id` = ?', [id, id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'fuel_entries' || entityType === 'fuel_entry') {
+      for (const id of idArray) {
+        const [res]: any = await connection.query('DELETE FROM `fuel_entries` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'payments' || entityType === 'payment') {
+      for (const id of idArray) {
+        const [res]: any = await connection.query('DELETE FROM `pump_payments` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else if (entityType === 'tenants' || entityType === 'tenant') {
+      for (const id of idArray) {
+        await connection.query('DELETE FROM `users` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `vehicles` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `fuel_entries` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `fuel_pumps` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `pump_payments` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `companies` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `vendors` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `fuel_types` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `tanker_inventories` WHERE `tenant_id` = ?', [id]);
+        await connection.query('DELETE FROM `tanker_logs` WHERE `tenant_id` = ?', [id]);
+        const [res]: any = await connection.query('DELETE FROM `tenants` WHERE `id` = ?', [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    } else {
+      for (const id of idArray) {
+        const [res]: any = await connection.query(`DELETE FROM \`${entityType}\` WHERE \`id\` = ?`, [id]);
+        if (res.affectedRows > 0) count++;
+      }
+    }
+
+    await connection.commit();
+    connection.release();
+    logDbAction('DELETE_TRANSACTION', entityType, count, true, `Successfully deleted ${count} items in transaction`);
+    return { success: true, count };
+  } catch (err: any) {
+    await connection.rollback();
+    connection.release();
+    logDbAction('DELETE_TRANSACTION', entityType, idArray.length, false, `Transaction rollback due to error`, err);
+    return { success: false, count: 0, error: err?.message || 'Transaction failed' };
+  }
+}
+

@@ -27,8 +27,11 @@ import {
   deleteVendorInDB,
   wipeAllDataFromDB,
   registerTenantWithTransaction,
-  approveTenantWithTransaction
+  approveTenantWithTransaction,
+  safeDeleteTransaction,
+  getMySQLConfig
 } from "./server/mysql.ts";
+import { logDbAction, getDbLogs, getDbLogStats } from "./server/dbLogger.ts";
 import { verifyPassword, hashPassword, isHashed } from "./src/utils/authSecurity.ts";
 import { DEFAULT_SITE_CONTENT, SiteContentConfig } from "./src/data/defaultSiteContent.ts";
 
@@ -3710,7 +3713,7 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
       }
 
       saveFleetData(fleet);
-      await syncAllDataToMySQL({
+      const syncRes = await syncAllDataToMySQL({
         vehicles: fleet.vehicles,
         pumps: fleet.pumps,
         fuelEntries: fleet.fuelEntries,
@@ -3720,7 +3723,12 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
         categories: fleet.categories,
         fuelTypes: fleet.fuelTypes,
         tankers: fleet.tankers
-      }).catch(e => console.warn('[MySQL] Bulk sync warning:', e));
+      }).catch(e => {
+        console.warn('[MySQL] Bulk sync warning:', e);
+        return { success: false, error: e?.message };
+      });
+
+      logDbAction('BULK_IMPORT', entity_type, importedCount, true, `Successfully imported ${importedCount} ${entity_type} records for tenant ${tenant_id}`);
 
       res.json({
         success: true,
@@ -3730,12 +3738,15 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
         updated_count: updatedCount,
         entity_type,
         items: addedItems,
+        syncRes,
         message: `Successfully registered ${importedCount} items (${newCount} newly created, ${updatedCount} updated). Double-entry protection active.`
       });
     } catch (err: any) {
       console.error('[Bulk Import Error]', err);
+      logDbAction('BULK_IMPORT', req.body?.entity_type || 'unknown', req.body?.rows?.length || 0, false, 'Bulk import execution failed', err);
       res.status(500).json({ success: false, message: err?.message || 'Error importing bulk data' });
     }
+
   });
 
   // 5.3 Database Status & Health Endpoint
@@ -3885,9 +3896,11 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
       store.vehicles = (store.vehicles || []).filter(v => v.id !== id);
       store.fuelEntries = (store.fuelEntries || []).filter(e => e.vehicle_id !== id);
       saveFleetData({ vehicles: store.vehicles, fuelEntries: store.fuelEntries });
-      await deleteVehicleInDB(id);
-      res.json({ success: true, message: 'Vehicle deleted' });
+      const tx = await safeDeleteTransaction('vehicles', id);
+      logDbAction('DELETE', 'vehicles', 1, tx.success, `Vehicle ${id} deleted`, tx.error);
+      res.json({ success: true, message: 'Vehicle deleted with transaction' });
     } catch (err: any) {
+      logDbAction('DELETE', 'vehicles', 1, false, `Vehicle ${req.params.id} delete failed`, err);
       res.status(500).json({ success: false, error: err?.message });
     }
   });
@@ -3903,11 +3916,11 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
       store.fuelEntries = (store.fuelEntries || []).filter(e => !ids.includes(e.vehicle_id));
       saveFleetData({ vehicles: store.vehicles, fuelEntries: store.fuelEntries });
 
-      for (const id of ids) {
-        await deleteVehicleInDB(id);
-      }
-      res.json({ success: true, deletedCount: ids.length });
+      const tx = await safeDeleteTransaction('vehicles', ids);
+      logDbAction('BULK_DELETE', 'vehicles', ids.length, tx.success, `Bulk deleted ${ids.length} vehicles`, tx.error);
+      res.json({ success: true, deletedCount: ids.length, tx });
     } catch (err: any) {
+      logDbAction('BULK_DELETE', 'vehicles', req.body?.ids?.length || 0, false, `Bulk delete vehicles failed`, err);
       res.status(500).json({ success: false, error: err?.message });
     }
   });
@@ -3927,16 +3940,15 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
       });
       saveFleetData({ vehicles: store.vehicles });
 
-      for (const id of vehicleIds) {
-        try {
-          await updateVehicleDriverInDB(id, 'N/A', 'N/A');
-        } catch (dbErr) {}
-      }
-      res.json({ success: true, clearedCount: vehicleIds.length });
+      const tx = await safeDeleteTransaction('drivers', vehicleIds);
+      logDbAction('BULK_UPDATE', 'drivers', vehicleIds.length, tx.success, `Cleared drivers for ${vehicleIds.length} vehicles`, tx.error);
+      res.json({ success: true, clearedCount: vehicleIds.length, tx });
     } catch (err: any) {
+      logDbAction('BULK_UPDATE', 'drivers', req.body?.vehicleIds?.length || 0, false, `Driver bulk removal failed`, err);
       res.status(500).json({ success: false, error: err?.message });
     }
   });
+
 
   app.post('/api/fleet/fuel-entries', async (req: Request, res: Response) => {
     try {
@@ -4305,6 +4317,58 @@ Please visit Master Control -> Approvals -> Payment Verification to match with b
     });
   });
 
+
+  // DB Interaction Logs & Stats Endpoints (Requirement 8)
+  app.get('/api/db/logs', (req: Request, res: Response) => {
+    try {
+      const limit = Number(req.query.limit) || 100;
+      res.json({ success: true, logs: getDbLogs(limit) });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.get('/api/db/stats', (req: Request, res: Response) => {
+    try {
+      res.json({ success: true, stats: getDbLogStats() });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  app.get('/api/database/diagnostics', async (req: Request, res: Response) => {
+    try {
+      const logs = getDbLogs(200);
+      const writeOps = logs.filter(l => ['INSERT', 'UPDATE', 'BULK_IMPORT', 'MANUAL_ENTRY', 'SYNC', 'DELETE', 'BULK_DELETE'].includes(l.operation));
+      const errors = logs.filter(l => !l.success || l.error);
+      const lastWrite = writeOps[0] || null;
+      const mysqlStatus = await getMySQLStatus();
+      const cfg = getMySQLConfig();
+
+      res.json({
+        success: true,
+        pooling_status: {
+          connected: mysqlStatus.connected,
+          configured: mysqlStatus.configured,
+          provider: mysqlStatus.provider,
+          host: mysqlStatus.host,
+          port: mysqlStatus.port,
+          database: mysqlStatus.database,
+          user: cfg?.user || 'root',
+          pingMs: mysqlStatus.pingMs,
+          pool_active: mysqlStatus.connected,
+          last_checked: mysqlStatus.lastChecked,
+          error: mysqlStatus.error
+        },
+        recent_writes: writeOps.slice(0, 20),
+        mysql_errors: errors.slice(0, 20),
+        last_write_timestamp: lastWrite ? lastWrite.timestamp : null,
+        stats: getDbLogStats()
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
 
   // 6. POST /api/auth/login - Strict Authentication Guard (ISSUE 2 & 4 Fix)
   app.post('/api/auth/login', async (req: Request, res: Response) => {

@@ -1,20 +1,22 @@
 [
   {
-    "id": "tenant_ms_mutget9r_topz",
+    "id": "tenant_1791459545478",
     "name": "M/S Biswas Traders",
-    "code": "MBT715",
+    "code": "M_S_BISWAS_T_01",
     "logo": null,
     "currency": "BDT",
     "phone": "+880 1713-628082",
     "address": "Dhaka, Bangladesh",
     "contact_person": "Md Shohanur Rahman",
-    "email": "biswastradersnpp@gmail.com",
+    "email": "info@msbiswastraders.com",
     "status": "active",
     "is_approved": true,
     "deleted_at": null,
-    "created_at": "2026-10-04",
+    "created_at": "2026-10-08",
     "subscription": {
-      "end_date": "2027-10-04",
+      "duration_type": "months",
+      "duration_val": 6,
+      "end_date": "2027-04-08",
       "features": {
         "anomaly_ai": true,
         "custom_categories": true,
@@ -22,19 +24,19 @@
         "reports_export": true,
         "tanker_bowzer": true
       },
-      "is_approved": false,
+      "is_approved": true,
       "max_pumps": 15,
       "max_users": 25,
-      "max_vehicles": 100,
-      "notes": "Subscription - VIP Plan (7,999 BDT) (Pending Master Control approval)",
+      "max_vehicles": 250,
+      "notes": "",
       "payment_status": "paid",
-      "plan": "plan_12months",
-      "plan_name_bn": "VIP Plan (7,999 BDT)",
-      "price_bdt": 7999,
-      "start_date": "2026-10-04",
+      "plan": "plan_6months",
+      "plan_name_bn": "6 Months Plan",
+      "price_bdt": 3999,
+      "start_date": "2026-10-08",
       "status": "active",
-      "super_admin_password": "Ms@12345",
-      "super_admin_username": "ms_admin"
+      "super_admin_password": "MSBT@12345",
+      "super_admin_username": "MSBT_admin"
     }
   }
 ]

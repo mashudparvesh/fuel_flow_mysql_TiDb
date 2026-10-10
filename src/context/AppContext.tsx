@@ -2590,6 +2590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTenantLogo = (tenantId: string, logo: string) => {
     setTenants(prev => {
       const exists = prev.some(t => t && t.id === tenantId);
+      let updated: Tenant[];
       if (!exists) {
         const stub: Tenant = currentTenantId === tenantId ? currentTenant : {
           id: tenantId,
@@ -2600,12 +2601,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           address: '',
           status: 'active'
         };
-        return [{ ...stub, logo }, ...prev];
+        updated = [{ ...stub, logo }, ...prev];
+      } else {
+        updated = prev.map(t => {
+          if (t.id !== tenantId) return t;
+          return { ...t, logo };
+        });
       }
-      return prev.map(t => {
-        if (t.id !== tenantId) return t;
-        return { ...t, logo };
-      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'tenants', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
     });
     try {
       fetch(`/api/tenants/${tenantId}`, {
